@@ -6,12 +6,6 @@ import xarray as xr
 from functools import partial
 from score_samples import open_samples
 
-try:
-    import xskillscore
-except ImportError:
-    raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
-
-
 def process_sample(index, filepath, n_ensemble):
     truth, pred, _ = open_samples(filepath)
     truth = truth.isel(time=index).load()
@@ -22,7 +16,7 @@ def process_sample(index, filepath, n_ensemble):
     truth_flat = truth['precipitation'].values.flatten()
     pred_flat = pred['precipitation'].mean("ensemble").values.flatten() \
                 if "ensemble" in pred.dims else pred['precipitation'].values.flatten()
-    error = pred.mean("ensemble").expand_dims("ensemble") - truth
+    error = abs(pred.mean("ensemble").expand_dims("ensemble") - truth)
 
     return {
         "truth": truth_flat, "prediction": pred_flat, "error": error
@@ -100,7 +94,7 @@ def group_and_plot_monthly_mean(ds, output_path_prefix):
         # Save the figure
         plt.savefig(output_path_prefix + f"_monthly_mean_{var}.png")
 
-def create_prcp_pdf(filepath, output_path_prefix, n_ensemble=1):
+def compute_density_n_error(filepath, output_path_prefix, n_ensemble=1):
     truth, _, _ = open_samples(filepath)
     with multiprocessing.Pool(32) as pool:
         results = list(tqdm.tqdm(
@@ -116,3 +110,4 @@ def create_prcp_pdf(filepath, output_path_prefix, n_ensemble=1):
     plot_cdf(combined_truth, combined_pred, output_path_prefix + "_cdf.png")
 
     group_and_plot_monthly_mean(combined_error, output_path_prefix)
+    print(combined_error)

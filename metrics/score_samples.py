@@ -57,6 +57,7 @@ try:
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
+REF_GRID_NC = "../data/wrf_208x208_grid_coords.nc"
 
 def open_samples(f):
     """
@@ -79,6 +80,11 @@ def open_samples(f):
     pred = pred.set_coords(["lon", "lat"])
     return truth, pred, root
 
+
+def get_landmask():
+    ref = xr.open_dataset(REF_GRID_NC, engine='netcdf4')
+    grid = xr.Dataset({ "lat": ref.XLAT, "lon": ref.XLONG })
+    grid_coords = { key: ref.coords[key] for key in GRID_COORD_KEYS }
 
 # compute metrics in parallel for performance reasons
 def process(i, path, n_ensemble):
@@ -105,13 +111,6 @@ def process(i, path, n_ensemble):
         .assign_coords(metric=["rmse", "crps", "std_dev", "mae"])
         .load()
     )
-
-    # Points
-    truth_flat = truth['precipitation'].values.flatten()  # Flatten truth to a 1D array
-    pred_flat = pred['precipitation'].mean("ensemble").values.flatten() \
-                if "ensemble" in pred.dims else pred['precipitation'].values.flatten()
-    
-
     return metrics
 
 

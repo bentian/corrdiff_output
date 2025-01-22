@@ -1,13 +1,7 @@
 import os
-import argparse
 import pandas as pd
-import matplotlib.pyplot as plt
 from fpdf import FPDF
 from glob import glob
-
-from aggregate_metrics import aggregate_metrics
-from create_prcp_pdf import create_prcp_pdf
-from score_samples import main as score_samples
 
 def generate_summary_pdf(images_path, csv_files_path, output_pdf):
     """
@@ -61,20 +55,4 @@ def generate_summary_pdf(images_path, csv_files_path, output_pdf):
     pdf.output(output_pdf)
     print(f"PDF generated: {output_pdf}")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("output", type=str, help="Path for the output file.")
-    parser.add_argument("score", type=str, help="Path to the score file.")
-    parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
-    args = parser.parse_args()
-
-    # # CorrDiff scores
-    score_samples(args.output, args.score, args.n_ensemble)
-
-    # # Aggregate metrics
-    aggregate_metrics(args.score, args.score[:-3])
-
-    # # Create PRCP PDF
-    create_prcp_pdf(args.output, args.output[:-3], args.n_ensemble)
-
-    generate_summary_pdf("./plots", "./plots", args.output[:-3] + "_summary.pdf")
+generate_summary_pdf("./plots", "./plots", "summary.pdf")
