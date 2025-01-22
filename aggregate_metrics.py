@@ -67,8 +67,6 @@ def plot_monthly_metrics(ds, metrics, output_path):
     plt.savefig(output_path)
 
 def aggregate_metrics(input_file, output_path_prefix):
-    output_csv = output_path_prefix + ".csv"
-
     ds = xr.open_dataset(input_file, engine='netcdf4').rename({
         "precipitation": "prcp",
         "temperature_2m": "t2m",
@@ -76,13 +74,18 @@ def aggregate_metrics(input_file, output_path_prefix):
         "northward_wind_10m": "v10m",
     })
 
-    # Compute and plot mean of all metrics
+    # Compute mean of all metrics and save results
     metric_mean = ds.mean(dim="time")
-    plot_metrics(metric_mean, output_path_prefix + "_metrics.png")
-    metric_mean.to_dataframe().round(2).to_csv(output_csv, float_format="%.2f")
+    metric_mean.to_dataframe().round(2).to_csv(
+        f"{output_path_prefix}_metrics.csv", float_format="%.2f"
+    )
+    plot_metrics(metric_mean, f"{output_path_prefix}_metrics.png")
 
     # Plot monthly metrics and save results
-    plot_monthly_metrics(ds, ["mae", "rmse"], output_path_prefix + "_monthly_metrics.png")
+    plot_monthly_metrics(ds, ["mae", "rmse"], f"{output_path_prefix}_monthly_metrics.png")
     grouped = ds.groupby("time.month").mean(dim="time")
-    grouped.sel(metric="mae").to_dataframe().to_csv(output_csv, mode="a", float_format="%.2f")
-    grouped.sel(metric="rmse").to_dataframe().to_csv(output_csv, mode="a", float_format="%.2f")
+
+    grouped.sel(metric="mae").to_dataframe().to_csv(
+        f"{output_path_prefix}_monthly_mae.csv", float_format="%.2f")
+    grouped.sel(metric="rmse").to_dataframe().to_csv(
+        f"{output_path_prefix}_monthly_rmse.csv", mode="a", float_format="%.2f")
