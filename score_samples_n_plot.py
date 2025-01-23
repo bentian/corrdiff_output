@@ -23,12 +23,12 @@ REF_GRID_NC = "./data/wrf_208x208_grid_coords.nc"
 def apply_landmask(truth, pred):
     grid = xr.open_dataset(REF_GRID_NC, engine='netcdf4')
     landmask = grid.LANDMASK.rename({"south_north": "y", "west_east": "x"})
-    landmask_expanded = landmask.expand_dims(
-        dim={"time": truth.sizes["time"], "ensemble": pred.sizes["ensemble"]}
-    )
 
     # Apply the landmask to both datasets and fill NaN with 0
+    landmask_expanded = landmask.expand_dims(dim={"time": truth.sizes["time"]})
     truth = truth.where(landmask_expanded == 1, 0)
+
+    landmask_expanded = landmask_expanded.expand_dims(dim={"ensemble": pred.sizes["ensemble"]})
     pred = pred.where(landmask_expanded == 1, 0)
 
     return truth, pred
@@ -162,8 +162,9 @@ def plot_monthly_mean(ds, output_path_prefix):
 
     # Variables to plot
     variables = list(ds.data_vars.keys())
+    colormaps = ["Blues", "Oranges", "Greens", "Reds"]
 
-    for var in variables:
+    for index, var in enumerate(variables):
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
         axes = axes.flatten()
 
@@ -172,7 +173,7 @@ def plot_monthly_mean(ds, output_path_prefix):
             data = monthly_mean[var].sel(month=month).mean(dim="ensemble")  # Mean over ensemble
 
             # Plot the data for the current month
-            im = axes[month - 1].imshow(data, cmap="viridis_r", origin="lower")
+            im = axes[month - 1].imshow(data, cmap=colormaps[index], origin="lower")
             axes[month - 1].set_title(f"Month {month}", fontsize=10)
             axes[month - 1].set_axis_off()
             fig.colorbar(im, ax=axes[month - 1], shrink=0.8)
@@ -184,7 +185,7 @@ def plot_monthly_mean(ds, output_path_prefix):
         # Save the figure
         plt.savefig(output_path_prefix + f"_monthly_mean_{var}.png")
 
-def score_samples_n_plot(filepath, output_path_prefix, n_ensemble=1, masked=False):
+def score_samples_n_plot(filepath, output_path_prefix, n_ensemble=1, masked=True):
     truth, _, _ = open_samples(filepath, masked)
     with multiprocessing.Pool(32) as pool:
         results = list(tqdm.tqdm(
