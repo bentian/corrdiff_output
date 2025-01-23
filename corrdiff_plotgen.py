@@ -1,7 +1,9 @@
+import argparse
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 
+from score_samples_n_plot import score_samples_n_plot
 
 def plot_metrics(data, output_path):
     metrics = data["metric"].values
@@ -35,7 +37,6 @@ def plot_metrics(data, output_path):
 
     plt.tight_layout()
     plt.savefig(output_path)
-
 
 def plot_monthly_metrics(ds, metrics, output_path):
     fig, ax = plt.subplots(len(metrics), 1, figsize=(10, 6 * len(metrics)))
@@ -89,3 +90,15 @@ def aggregate_metrics(input_file, output_path_prefix):
         f"{output_path_prefix}_monthly_mae.csv", float_format="%.2f")
     grouped.sel(metric="rmse").to_dataframe().to_csv(
         f"{output_path_prefix}_monthly_rmse.csv", mode="a", float_format="%.2f")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output", type=str, help="Path for the output file.")
+    parser.add_argument("plotpath", type=str, help="Folder to save the plots.")
+    parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
+    args = parser.parse_args()
+
+    plot_prefix = f"{args.plotpath}/{args.output[:-3]}"
+    score_filename = score_samples_n_plot(args.output, plot_prefix, args.n_ensemble)
+
+    aggregate_metrics(score_filename, plot_prefix)
