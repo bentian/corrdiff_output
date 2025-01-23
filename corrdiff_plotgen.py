@@ -74,18 +74,18 @@ def aggregate_metrics(input_file, output_path_prefix):
     # Compute mean of all metrics and save results
     metric_mean = ds.mean(dim="time")
     metric_mean.to_dataframe().round(2).to_csv(
-        f"{output_path_prefix}_metrics.csv", float_format="%.2f"
+        f"{output_path_prefix}_metrics_mean.csv", float_format="%.2f"
     )
-    plot_metrics(metric_mean, f"{output_path_prefix}_metrics.png")
+    plot_metrics(metric_mean, f"{output_path_prefix}_metrics_mean.png")
 
     # Plot monthly metrics and save results
     plot_monthly_metrics(ds, ["mae", "rmse"], f"{output_path_prefix}_monthly_metrics.png")
     grouped = ds.groupby("time.month").mean(dim="time")
 
-    grouped.sel(metric="mae").to_dataframe().to_csv(
+    grouped.sel(metric="mae").drop_vars("metric").to_dataframe().to_csv(
         f"{output_path_prefix}_monthly_mae.csv", float_format="%.2f")
-    grouped.sel(metric="rmse").to_dataframe().to_csv(
-        f"{output_path_prefix}_monthly_rmse.csv", mode="a", float_format="%.2f")
+    grouped.sel(metric="rmse").drop_vars("metric").to_dataframe().to_csv(
+        f"{output_path_prefix}_monthly_rmse.csv", float_format="%.2f")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

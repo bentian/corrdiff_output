@@ -119,10 +119,13 @@ def combine_results(results):
     return combined_flat, combined_error, combined_metrics
 
 def plot_pdf(truth, prediction, output_path):
+    truth_title = f"{len(truth)} [{min(truth)}, {max(truth)}]"
+    pred_title = f"{len(prediction)} [{min(prediction)}, {max(prediction)}]"
+
     plt.figure(figsize=(10, 6))
     plt.hist(truth, bins=50, alpha=0.5, label="Truth", density=True)
     plt.hist(prediction, bins=50, alpha=0.5, label="Prediction", density=True)
-    plt.title("PDF of PRCP Truth and Prediction")
+    plt.title(f"PDF of PRCP\n Truth ({truth_title}) and\n Prediction ({pred_title})")
     plt.xlabel("PRCP (mm)")
     plt.ylabel("Density")
     plt.legend()
@@ -130,6 +133,9 @@ def plot_pdf(truth, prediction, output_path):
     plt.savefig(output_path)
 
 def plot_cdf(truth, prediction, output_path):
+    truth_title = f"{len(truth)} [{min(truth)}, {max(truth)}]"
+    pred_title = f"{len(prediction)} [{min(prediction)}, {max(prediction)}]"
+
     truth_sorted = np.sort(truth)
     pred_sorted = np.sort(prediction)
 
@@ -139,7 +145,7 @@ def plot_cdf(truth, prediction, output_path):
     plt.figure(figsize=(10, 6))
     plt.plot(truth_sorted, truth_cdf, label="Truth CDF", color="blue", linewidth=2)
     plt.plot(pred_sorted, pred_cdf, label="Prediction CDF", color="orange", linewidth=2)
-    plt.title("CDF of PRCP Truth and Prediction")
+    plt.title(f"CDF of PRCP\n Truth ({truth_title}) and\n Prediction ({pred_title})")
     plt.xlabel("PRCP (mm)")
     plt.ylabel("CDF")
     plt.legend()
