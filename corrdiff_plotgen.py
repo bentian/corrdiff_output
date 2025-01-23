@@ -1,9 +1,10 @@
+import os
 import argparse
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 
-from score_samples_n_plot import score_samples_n_plot
+from score_samples_n_plot import score_samples_n_plot, VAR_MAPPING
 
 def plot_metrics(data, output_path):
     metrics = data["metric"].values
@@ -68,12 +69,7 @@ def plot_monthly_metrics(ds, metrics, output_path):
     plt.savefig(output_path)
 
 def aggregate_metrics(input_file, output_path_prefix):
-    ds = xr.open_dataset(input_file, engine='netcdf4').rename({
-        "precipitation": "prcp",
-        "temperature_2m": "t2m",
-        "eastward_wind_10m": "u10m",
-        "northward_wind_10m": "v10m",
-    })
+    ds = xr.open_dataset(input_file, engine='netcdf4').rename(VAR_MAPPING)
 
     # Compute mean of all metrics and save results
     metric_mean = ds.mean(dim="time")
@@ -93,12 +89,13 @@ def aggregate_metrics(input_file, output_path_prefix):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("output", type=str, help="Path for the output file.")
+    parser.add_argument("netcdf", type=str, help="Path for the netcdf file.")
     parser.add_argument("plotpath", type=str, help="Folder to save the plots.")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
     args = parser.parse_args()
 
-    plot_prefix = f"{args.plotpath}/{args.output[:-3]}"
-    score_filename = score_samples_n_plot(args.output, plot_prefix, args.n_ensemble)
+    plot_prefix = os.path.join(args.plotpath,
+                               os.path.basename(args.netcdf)[:-3])
+    score_filename = score_samples_n_plot(args.netcdf, plot_prefix, args.n_ensemble)
 
     aggregate_metrics(score_filename, plot_prefix)

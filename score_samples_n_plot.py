@@ -12,6 +12,12 @@ try:
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
+VAR_MAPPING ={
+    "precipitation": "prcp",
+    "temperature_2m": "t2m",
+    "eastward_wind_10m": "u10m",
+    "northward_wind_10m": "v10m",
+}
 REF_GRID_NC = "./data/wrf_208x208_grid_coords.nc"
 
 def get_landmask():
@@ -164,7 +170,7 @@ def plot_monthly_mean(ds, output_path_prefix):
             fig.colorbar(im, ax=axes[month - 1], shrink=0.8)
 
         # Adjust layout and add a main title
-        fig.suptitle(f"Monthly Mean 2D Distribution of {var.replace('_', ' ').capitalize()}", fontsize=16)
+        fig.suptitle(f"Monthly Mean Error of {var.replace('_', ' ').capitalize()}", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Save the figure
@@ -184,7 +190,7 @@ def score_samples_n_plot(filepath, output_path_prefix, n_ensemble=1):
 
     # Plot results
     plot_density(combined_flat, output_path_prefix)
-    plot_monthly_mean(combined_error, output_path_prefix)
+    plot_monthly_mean(combined_error.rename(VAR_MAPPING), output_path_prefix)
 
     # Save metrics
     combined_metrics.attrs["n_ensemble"] = n_ensemble
