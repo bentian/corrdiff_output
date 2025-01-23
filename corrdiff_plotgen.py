@@ -15,7 +15,7 @@ def plot_metrics(data, output_path):
     x = np.arange(len(metrics))  # Metric indices
     width = 0.2  # Bar width
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    _, ax = plt.subplots(figsize=(10, 6))
     for i, var in enumerate(variables):
         bars = ax.bar(x + i * width, data_array[i], width, label=var)
         # Add value annotations on top of the bars
@@ -40,7 +40,7 @@ def plot_metrics(data, output_path):
     plt.savefig(output_path)
 
 def plot_monthly_metrics(ds, metrics, output_path):
-    fig, ax = plt.subplots(len(metrics), 1, figsize=(10, 6 * len(metrics)))
+    _, ax = plt.subplots(len(metrics), 1, figsize=(10, 6 * len(metrics)))
 
     if len(metrics) == 1:
         ax = [ax]

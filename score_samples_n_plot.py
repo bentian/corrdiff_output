@@ -20,11 +20,20 @@ VAR_MAPPING ={
 }
 REF_GRID_NC = "./data/wrf_208x208_grid_coords.nc"
 
-def get_landmask():
+def apply_landmask(truth, pred):
     grid = xr.open_dataset(REF_GRID_NC, engine='netcdf4')
-    return grid.LANDMASK
+    landmask = grid.LANDMASK.rename({"south_north": "y", "west_east": "x"})
+    landmask_expanded = landmask.expand_dims(
+        dim={"time": truth.sizes["time"], "ensemble": pred.sizes["ensemble"]}
+    )
 
-def open_samples(f):
+    # Apply the landmask to both datasets and fill NaN with 0
+    truth = truth.where(landmask_expanded == 1, 0)
+    pred = pred.where(landmask_expanded == 1, 0)
+
+    return truth, pred
+
+def open_samples(f, masked):
     """
     Open prediction and truth samples from a dataset file.
 
@@ -44,11 +53,10 @@ def open_samples(f):
     truth = truth.set_coords(["lon", "lat"])
     pred = pred.set_coords(["lon", "lat"])
 
-    # Apply landmask
-    landmask = get_landmask()
-    # truth_masked = truth.where(landmask == 1)
-    # pred_masked = pred.where(landmask == 1)
+    if not masked:
+        return truth, pred, root
 
+    truth, pred = apply_landmask(truth, pred)
     return truth, pred, root
 
 def compute_metrics(truth, pred):
@@ -90,8 +98,8 @@ def get_flat(truth, pred, var="precipitation"):
         }
     )
 
-def process_sample(index, filepath, n_ensemble):
-    truth, pred, _ = open_samples(filepath)
+def process_sample(index, filepath, n_ensemble, masked):
+    truth, pred, _ = open_samples(filepath, masked)
     truth = truth.isel(time=index).load()
     if n_ensemble > 0:
         pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
@@ -164,7 +172,7 @@ def plot_monthly_mean(ds, output_path_prefix):
             data = monthly_mean[var].sel(month=month).mean(dim="ensemble")  # Mean over ensemble
 
             # Plot the data for the current month
-            im = axes[month - 1].imshow(data, cmap="viridis", origin="lower")
+            im = axes[month - 1].imshow(data, cmap="viridis_r", origin="lower")
             axes[month - 1].set_title(f"Month {month}", fontsize=10)
             axes[month - 1].set_axis_off()
             fig.colorbar(im, ax=axes[month - 1], shrink=0.8)
@@ -176,12 +184,12 @@ def plot_monthly_mean(ds, output_path_prefix):
         # Save the figure
         plt.savefig(output_path_prefix + f"_monthly_mean_{var}.png")
 
-def score_samples_n_plot(filepath, output_path_prefix, n_ensemble=1):
-    truth, _, _ = open_samples(filepath)
+def score_samples_n_plot(filepath, output_path_prefix, n_ensemble=1, masked=False):
+    truth, _, _ = open_samples(filepath, masked)
     with multiprocessing.Pool(32) as pool:
         results = list(tqdm.tqdm(
             pool.imap(
-                partial(process_sample, filepath=filepath, n_ensemble=n_ensemble),
+                partial(process_sample, filepath=filepath, n_ensemble=n_ensemble, masked=masked),
                 range(truth.sizes["time"])),
             total=truth.sizes["time"]
         ))
