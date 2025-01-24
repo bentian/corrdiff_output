@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from score_samples_v2 import score_samples, VAR_MAPPING
 from generate_summary import generate_summary
 
-def plot_metrics(ds, output_path, precise):
+def plot_metrics(ds, output_path, format):
     metrics = ds["metric"].values
     variables = list(ds.data_vars.keys())
     data_array = np.array([ds[var] for var in variables])  # Shape: (4, 4)
@@ -23,9 +23,8 @@ def plot_metrics(ds, output_path, precise):
         # Add value annotations on top of the bars
         for bar in bars:
             height = bar.get_height()
-            text = f'{height:.3f}' if precise else f'{height:.2f}'
             ax.annotate(
-                text,                        # Text to display
+                f"{height:{format}}",        # Text to display
                 xy=(bar.get_x() + bar.get_width() / 2, height),  # X and Y position
                 xytext=(0, 5),               # Offset text by 5 units above the bar
                 textcoords="offset points",  # Interpret `xytext` as an offset
@@ -121,18 +120,17 @@ def plot_monthly_mean(ds, output_path_prefix):
         # Save the figure
         plt.savefig(f"{output_path_prefix}_monthly_mean_{var}.png")
 
-def save_to_csv(ds, output_path, precise=False):
-    format = "%.3f" if precise else "%.2f"
-    ds.to_dataframe().to_csv(output_path, float_format=format)
+def save_to_csv(ds, output_path, format=".2f"):
+    ds.to_dataframe().to_csv(output_path, float_format=f"%{format}")
 
 def save_metric_table_n_plot(ds, metric, output_path_prefix):
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
     save_to_csv(ds_filtered, f"{output_path_prefix}_monthly_{metric}.csv")
     plot_monthly_metrics(ds_filtered, metric, f"{output_path_prefix}_monthly_{metric}.png")
 
-def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, precise=False):
-    save_to_csv(ds_mean, f"{output_path_prefix}_metrics_mean.csv", precise)
-    plot_metrics(ds_mean, f"{output_path_prefix}_metrics_mean.png", precise)
+def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, format=".2f"):
+    save_to_csv(ds_mean, f"{output_path_prefix}_metrics_mean.csv", format)
+    plot_metrics(ds_mean, f"{output_path_prefix}_metrics_mean.png", format)
 
     for metric in ["mae", "rmse"]:
         save_metric_table_n_plot(ds_group_by_month, metric, output_path_prefix)
@@ -161,9 +159,9 @@ if __name__ == "__main__":
     # Plot PRCP PDF for original prcp & prcp clipped to 0
     truth_flat, pred_flat = prcp_flat["truth"], prcp_flat["prediction"]
     plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf.png")
-    truth_flat[truth_flat < 0] = 0
-    pred_flat[pred_flat < 0] = 0
-    plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf_clipped.png")
+    # truth_flat[truth_flat < 0] = 0
+    # pred_flat[pred_flat < 0] = 0
+    # plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf_clipped.png")
 
     # Aggregate metrics to create plots and tables
     metric_mean = metrics.mean(dim="time")
@@ -177,7 +175,7 @@ if __name__ == "__main__":
     metrics_mean_diff = metric_mean - metrics_reg.mean(dim="time")
     metrics_grouped_diff = metrics_grouped - metrics_reg.groupby("time.month").mean(dim="time")
     save_tables_n_plot(metrics_mean_diff, metrics_grouped_diff,
-                       f"{output_path_prefix}_minus_reg", precise=True)
+                       f"{output_path_prefix}_minus_reg", format=".3f")
 
     # Generate summary PDF
     if args.summarize:
