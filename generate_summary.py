@@ -62,13 +62,17 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
     print(f"PDF generated: {output_pdf}")
 
 
-# Example usage
 file_suffix_order = [
-    "metrics_mean.csv", "metrics_mean.png",
-    "monthly_mae.csv", "monthly_mae.png",
-    "monthly_rmse.csv", "monthly_rmse.png",
-    "pdf.png",
-    "monthly_mean_prcp.png", "monthly_mean_t2m.png",
-    "monthly_mean_u10m.png", "monthly_mean_v10m.png"
+    # regression + diffusion model
+    "all_metrics_mean.csv", "all_metrics_mean.png",
+    "all_monthly_mae.csv", "all_monthly_mae.png",
+    "all_monthly_rmse.csv", "all_monthly_rmse.png",
+    # regression + diffusion model minus regression model only
+    "minus_reg_metrics_mean.csv", "minus_reg_metrics_mean.png",
+    "minus_reg_monthly_mae.csv", "minus_reg_monthly_mae.png",
+    "minus_reg_monthly_rmse.csv", "minus_reg_monthly_rmse.png",
+    # regression + diffusion model
+    "all_pdf.png", "all_monthly_mean_prcp.png", "all_monthly_mean_t2m.png",
+    "all_monthly_mean_u10m.png", "all_monthly_mean_v10m.png"
 ]
 generate_summary_pdf("./plots", "summary.pdf", file_suffix_order)

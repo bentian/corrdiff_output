@@ -12,7 +12,7 @@ try:
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
-APPLY_LANDMASK = True # Whether to apply the landmask to the data
+APPLY_LANDMASK = False # Whether to apply the landmask to the data
 LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc" # Path to the landmask NetCDF file
 
 VAR_MAPPING ={

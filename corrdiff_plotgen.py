@@ -22,18 +22,20 @@ def plot_metrics(ds, output_path):
         # Add value annotations on top of the bars
         for bar in bars:
             height = bar.get_height()
-            ax.text(
-                bar.get_x() + bar.get_width() / 2,
-                height + 0.02,
-                f"{height:.2f}",
-                ha="center", va="bottom", fontsize=9
+            ax.annotate(
+                f'{height:.2f}',             # Text to display (formatted to 1 decimal)
+                xy=(bar.get_x() + bar.get_width() / 2, height),  # X and Y position
+                xytext=(0, 5),               # Offset text by 5 units above the bar
+                textcoords="offset points",  # Interpret `xytext` as an offset
+                ha='center', va='bottom',    # Align horizontally (center) and vertically (bottom)
+                fontsize=10, color='black'   # Optional styling
             )
 
-    ax.set_title("Metrics for TReAD channels", fontsize=14)
+    ax.set_title("Metrics Mean", fontsize=14)
     ax.set_xlabel("Metrics", fontsize=12)
     ax.set_ylabel("Values", fontsize=12)
     ax.set_xticks(x + width * (len(variables) - 1) / 2)
-    ax.set_xticklabels(metrics)
+    ax.set_xticklabels([metric.upper() for metric in metrics])
     ax.legend(title="Variables")
     ax.grid(alpha=0.3, linestyle="--")
 
@@ -133,19 +135,27 @@ if __name__ == "__main__":
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
     args = parser.parse_args()
 
+    output_path_prefix = os.path.join(args.outdir, args.prefix)
+
+    ### Regression + Diffusion Model
+
     # Process prediction and truth samples of the regression + diffusion model
     metrics, spatial_error, prcp_flat = score_samples(args.nc_all, args.n_ensemble)
 
     # Generate plots for spatial error and PRCP PDF
-    output_path_prefix = os.path.join(args.outdir, args.prefix)
-    plot_monthly_mean(spatial_error.rename(VAR_MAPPING), output_path_prefix)
-    plot_pdf(prcp_flat, f"{output_path_prefix}_prcp_pdf.png")
+    output_path_prefix_all = f"{output_path_prefix}_all"
+    plot_monthly_mean(spatial_error.rename(VAR_MAPPING), output_path_prefix_all)
+    plot_pdf(prcp_flat, f"{output_path_prefix_all}_prcp_pdf.png")
 
     # Aggregate metrics to create plots and tables
     metric_mean = metrics.mean(dim="time")
     metrics_grouped = metrics.groupby("time.month").mean(dim="time")
-    save_tables_n_plot(metric_mean, metrics_grouped, output_path_prefix)
+    save_tables_n_plot(metric_mean, metrics_grouped, output_path_prefix_all)
 
-    # Process prediction and truth samples of the regression only model
-    # metrics_reg = score_samples(args.nc_reg, args.n_ensemble, metrics_only=True)
+    ### Regression + Diffusion Model minus Regression modle only
 
+    # Compare Regression + Diffusion model with Regression only model
+    metrics_reg = score_samples(args.nc_reg, args.n_ensemble, metrics_only=True)
+    metrics_mean_diff = metric_mean - metrics_reg.mean(dim="time")
+    metrics_grouped_diff = metrics_grouped - metrics_reg.groupby("time.month").mean(dim="time")
+    save_tables_n_plot(metrics_mean_diff, metrics_grouped_diff, f"{output_path_prefix}_minus_reg")
