@@ -1,4 +1,3 @@
-import dask.diagnostics
 import dask
 import multiprocessing
 import matplotlib.pyplot as plt

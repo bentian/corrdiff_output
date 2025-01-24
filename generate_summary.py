@@ -3,6 +3,17 @@ import pandas as pd
 from fpdf import FPDF
 from glob import glob
 
+class PDF(FPDF):
+    def __init__(self):
+        super().__init__(orientation='L')
+        self.alias_nb_pages()
+
+    def footer(self):
+        # Add a page number at the bottom of each page
+        self.set_y(-15)  # Position the footer 15mm from the bottom
+        self.set_font("Arial", size=10)
+        self.cell(0, 10, f"Page {self.page_no()}/{self.alias_nb_pages()}", align="C")
+
 def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
     """
     Generate a summary PDF from PNG images and CSV files in the specified suffix order.
@@ -13,7 +24,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
         file_suffix_order (list of str): List of file suffixes specifying the desired order.
     """
     # Initialize FPDF
-    pdf = FPDF(orientation='L')
+    pdf = PDF()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Get all files and filter by suffix order
@@ -32,7 +43,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
 
             pdf.add_page()
             pdf.set_font("Arial", size=12)
-            pdf.cell(200, 10, txt=f"Table: {suffix}", ln=True, align="C")
+            pdf.cell(200, 10, txt=f"Table - {suffix[:-4]}", ln=True, align="C")
             pdf.ln(10)  # Line break
 
             # Add the table headers
@@ -54,8 +65,8 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
             # Process PNG file
             pdf.add_page()
             pdf.set_font("Arial", size=12)
-            pdf.cell(200, 10, txt=f"Image: {suffix}", ln=True, align="C")
-            pdf.image(file, x=30, y=30, w=220)
+            pdf.cell(200, 10, txt=f"Image - {suffix[:-4]}", ln=True, align="C")
+            pdf.image(file, x=10, y=30, w=220)
 
     # Save the PDF
     pdf.output(output_pdf)
