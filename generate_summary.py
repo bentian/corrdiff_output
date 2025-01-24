@@ -65,8 +65,9 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
 # Example usage
 file_suffix_order = [
     "metrics_mean.csv", "metrics_mean.png",
-    "monthly_mae.csv", "monthly_rmse.csv", "monthly_metrics.png",
-    "pdf.png", "cdf.png",
+    "monthly_mae.csv", "monthly_mae.png",
+    "monthly_rmse.csv", "monthly_rmse.png",
+    "pdf.png",
     "monthly_mean_prcp.png", "monthly_mean_t2m.png",
     "monthly_mean_u10m.png", "monthly_mean_v10m.png"
 ]
