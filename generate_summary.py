@@ -13,7 +13,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
         file_suffix_order (list of str): List of file suffixes specifying the desired order.
     """
     # Initialize FPDF
-    pdf = FPDF()
+    pdf = FPDF(orientation='L')
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Get all files and filter by suffix order
@@ -55,24 +55,28 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
             pdf.add_page()
             pdf.set_font("Arial", size=12)
             pdf.cell(200, 10, txt=f"Image: {suffix}", ln=True, align="C")
-            pdf.image(file, x=10, y=30, w=180)
+            pdf.image(file, x=30, y=30, w=220)
 
     # Save the PDF
     pdf.output(output_pdf)
     print(f"PDF generated: {output_pdf}")
 
+def generate_summary(folder, prefix=''):
+    file_suffix_order = [
+        # regression + diffusion model
+        "all_metrics_mean.csv", "all_metrics_mean.png",
+        "all_monthly_mae.csv", "all_monthly_mae.png",
+        "all_monthly_rmse.csv", "all_monthly_rmse.png",
+        # regression + diffusion model minus regression model only
+        "minus_reg_metrics_mean.csv", "minus_reg_metrics_mean.png",
+        "minus_reg_monthly_mae.csv", "minus_reg_monthly_mae.png",
+        "minus_reg_monthly_rmse.csv", "minus_reg_monthly_rmse.png",
+        # regression + diffusion model
+        "_pdf.png", "all_monthly_mean_prcp.png", "all_monthly_mean_t2m.png",
+        "all_monthly_mean_u10m.png", "all_monthly_mean_v10m.png"
+    ]
 
-file_suffix_order = [
-    # regression + diffusion model
-    "all_metrics_mean.csv", "all_metrics_mean.png",
-    "all_monthly_mae.csv", "all_monthly_mae.png",
-    "all_monthly_rmse.csv", "all_monthly_rmse.png",
-    # regression + diffusion model minus regression model only
-    "minus_reg_metrics_mean.csv", "minus_reg_metrics_mean.png",
-    "minus_reg_monthly_mae.csv", "minus_reg_monthly_mae.png",
-    "minus_reg_monthly_rmse.csv", "minus_reg_monthly_rmse.png",
-    # regression + diffusion model
-    "all_pdf.png", "all_monthly_mean_prcp.png", "all_monthly_mean_t2m.png",
-    "all_monthly_mean_u10m.png", "all_monthly_mean_v10m.png"
-]
-generate_summary_pdf("./plots", "summary.pdf", file_suffix_order)
+    generate_summary_pdf(folder, f"{prefix}_summary.pdf", file_suffix_order)
+
+if __name__ == "__main__":
+    generate_summary("./plots")
