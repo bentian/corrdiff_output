@@ -114,11 +114,11 @@ def plot_monthly_mean(ds, output_path_prefix):
             fig.colorbar(im, ax=axes[month - 1], shrink=0.8)
 
         # Adjust layout and add a main title
-        fig.suptitle(f"Monthly Mean Error of {var.replace('_', ' ').capitalize()}", fontsize=16)
+        fig.suptitle(f"Monthly Mean Error of {var}", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Save the figure
-        plt.savefig(f"{output_path_prefix}_monthly_mean_{var}.png")
+        plt.savefig(f"{output_path_prefix}_monthly_mean_{VAR_MAPPING[var]}.png")
 
 def save_to_csv(ds, output_path, format=".2f"):
     ds.to_dataframe().to_csv(output_path, float_format=f"%{format}")
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     # Plot monthly mean of spatial error
     output_path_prefix_all = f"{output_path_prefix}_all"
-    plot_monthly_mean(spatial_error.rename(VAR_MAPPING), output_path_prefix_all)
+    plot_monthly_mean(spatial_error, output_path_prefix_all)
 
     # Plot PRCP PDF for original prcp & prcp clipped to 0
     truth_flat, pred_flat = prcp_flat["truth"], prcp_flat["prediction"]
