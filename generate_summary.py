@@ -83,7 +83,8 @@ def generate_summary(folder, prefix=''):
         "minus_reg_monthly_mae.csv", "minus_reg_monthly_mae.png",
         "minus_reg_monthly_rmse.csv", "minus_reg_monthly_rmse.png",
         # regression + diffusion model
-        "_pdf.png", "all_monthly_mean_prcp.png", "all_monthly_mean_t2m.png",
+        "_pdf.png", "_pdf_clipped.png",
+        "all_monthly_mean_prcp.png", "all_monthly_mean_t2m.png",
         "all_monthly_mean_u10m.png", "all_monthly_mean_v10m.png"
     ]
 

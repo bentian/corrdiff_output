@@ -48,7 +48,7 @@ def plot_monthly_metrics(ds, metric, output_path):
     _, ax = plt.subplots(figsize=(10, 6))
 
     df_grouped = ds.to_dataframe().round(2)
-    for variable in df_grouped.columns[:-1]:
+    for variable in df_grouped.columns:
         ax.plot(df_grouped.index, df_grouped[variable], marker="o", label=variable)
         for x, y in zip(df_grouped.index, df_grouped[variable]):
             ax.annotate(f"{y:.2f}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=8)
@@ -63,17 +63,25 @@ def plot_monthly_metrics(ds, metric, output_path):
     plt.tight_layout()
     plt.savefig(output_path)
 
-def plot_pdf(ds, output_path):
-    truth, prediction = ds["truth"], ds["prediction"]
+def get_bin_count_n_note(ds, bin_width=1):
+    min_val, max_val = ds.min().item(), ds.max().item()
+    bin_count = int((max_val - min_val) / bin_width)
+    return bin_count, f"({len(ds):,} pts in [{min_val:.1f}, {max_val:.1f}])"
+
+def plot_pdf(truth, pred, output_path):
+    truth_bin_count, truth_note = get_bin_count_n_note(truth)
+    pred_bin_count, pred_note = get_bin_count_n_note(pred)
+    print(f"PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
 
     plt.figure(figsize=(10, 6))
-    plt.hist(truth, bins=50, alpha=0.5, label="Truth", density=True)
-    plt.hist(prediction, bins=50, alpha=0.5, label="Prediction", density=True)
-    plt.title(f"PDF of PRCP Truth and Prediction")
+    plt.hist(truth, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
+    plt.hist(pred, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
+    plt.title(f"PDF of PRCP:\nTruth {truth_note} /\nPrediction {pred_note}")
     plt.xlabel("PRCP (mm)")
     plt.ylabel("Density")
     plt.legend()
     plt.grid()
+    plt.xlim([-5, 15])
 
     # Save the figure
     plt.savefig(output_path)
@@ -111,7 +119,7 @@ def plot_monthly_mean(ds, output_path_prefix):
         plt.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Save the figure
-        plt.savefig(output_path_prefix + f"_monthly_mean_{var}.png")
+        plt.savefig(f"{output_path_prefix}_monthly_mean_{var}.png")
 
 def save_to_csv(ds, output_path, precise=False):
     format = "%.3f" if precise else "%.2f"
@@ -146,10 +154,16 @@ if __name__ == "__main__":
     # Process prediction and truth samples of the regression + diffusion model
     metrics, spatial_error, prcp_flat = score_samples(args.nc_all, args.n_ensemble)
 
-    # Generate plots for spatial error and PRCP PDF
+    # Plot monthly mean of spatial error
     output_path_prefix_all = f"{output_path_prefix}_all"
     plot_monthly_mean(spatial_error.rename(VAR_MAPPING), output_path_prefix_all)
-    plot_pdf(prcp_flat, f"{output_path_prefix_all}_prcp_pdf.png")
+
+    # Plot PRCP PDF for original prcp & prcp clipped to 0
+    truth_flat, pred_flat = prcp_flat["truth"], prcp_flat["prediction"]
+    plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf.png")
+    truth_flat[truth_flat < 0] = 0
+    pred_flat[pred_flat < 0] = 0
+    plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf_clipped.png")
 
     # Aggregate metrics to create plots and tables
     metric_mean = metrics.mean(dim="time")
@@ -162,7 +176,8 @@ if __name__ == "__main__":
     metrics_reg = score_samples(args.nc_reg, args.n_ensemble, metrics_only=True)
     metrics_mean_diff = metric_mean - metrics_reg.mean(dim="time")
     metrics_grouped_diff = metrics_grouped - metrics_reg.groupby("time.month").mean(dim="time")
-    save_tables_n_plot(metrics_mean_diff, metrics_grouped_diff, f"{output_path_prefix}_minus_reg", precise=True)
+    save_tables_n_plot(metrics_mean_diff, metrics_grouped_diff,
+                       f"{output_path_prefix}_minus_reg", precise=True)
 
     # Generate summary PDF
     if args.summarize:
