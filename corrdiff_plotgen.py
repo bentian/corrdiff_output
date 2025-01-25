@@ -77,28 +77,27 @@ def main():
     Main function to process models and generate plots and summary PDFs.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("nc_all", type=str, help="The NetCDF file path of regression + diffusion.")
-    parser.add_argument("nc_reg", type=str, help="The NetCDF file path of regression only.")
-    parser.add_argument("outdir", type=str, help="Folder to save the plots.")
-    parser.add_argument("--prefix", type=str, default="B", help="Prefix for the output files.")
-    parser.add_argument("--summary", type=str, default="False", help="Generate summary or not.")
+    parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
     args = parser.parse_args()
 
     # Ensure output directory exists
-    Path(args.outdir).mkdir(parents=True, exist_ok=True)
+    out_dir = os.path.join(args.in_dir, "plot")
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
 
     # Process regression + diffusion model
-    metrics_all, spatial_error, truth_flat, pred_flat = score_samples(args.nc_all, args.n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(args.outdir, "all"))
+    nc_all = os.path.join(args.in_dir, "netcdf", "output_0_all.nc")
+    metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, args.n_ensemble)
+    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(out_dir, "all"))
 
     # Process regression-only model and compare
-    metrics_reg = score_samples(args.nc_reg, args.n_ensemble, metrics_only=True)
-    compare_models(metrics_all, metrics_reg, os.path.join(args.outdir, "minus_reg"))
+    nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
+    metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
+    compare_models(metrics_all, metrics_reg, os.path.join(out_dir, "minus_reg"))
 
     # Generate summary PDF
-    if args.summary.lower() == "true":
-        generate_summary(args.outdir, os.path.join(args.outdir, f"{args.prefix}_summary.pdf"))
+    hydra_config = os.path.join(args.in_dir, "hydra", "config.yaml")
+    generate_summary(out_dir, os.path.join(args.in_dir, "summary.pdf"), hydra_config)
 
 
 if __name__ == "__main__":
