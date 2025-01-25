@@ -1,4 +1,5 @@
 import os
+import argparse
 import pandas as pd
 from fpdf import FPDF
 from glob import glob
@@ -85,7 +86,7 @@ def add_figure(pdf, file, filename, idx):
     pdf.image(file, x=10, y=30, w=220)
 
 
-def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path):
+def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path=None):
     """
     Generate a summary PDF from PNG images and CSV files in the specified suffix order.
 
@@ -99,7 +100,8 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path)
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Add configuration page
-    add_config_page(pdf, config_path)
+    if config_path:
+        add_config_page(pdf, config_path)
 
     # Get all files and filter by suffix order
     all_files = glob(os.path.join(files_path, "*"))
@@ -127,7 +129,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path)
     print(f"PDF generated => {output_pdf}")
 
 
-def generate_summary(folder, output_pdf, config_path):
+def generate_summary(folder, output_pdf, config_path=None):
     file_suffix_order = [
         # regression + diffusion model
         "all-metrics_mean.csv", "all-metrics_mean.png",
@@ -146,7 +148,11 @@ def generate_summary(folder, output_pdf, config_path):
 
     generate_summary_pdf(folder, output_pdf, file_suffix_order, config_path)
 
+
 if __name__ == "__main__":
-    generate_summary("data/Baseline/plot",
-                     "data/Baseline/summary.pdf",
-                     "data/Baseline/hydra/overrides.yaml")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config")
+    parser.add_argument("--config-path", type=int, help="Path to YAML file of config")
+    args = parser.parse_args()
+
+    generate_summary(args.in_dir, "summary.pdf")
