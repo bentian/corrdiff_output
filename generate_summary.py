@@ -62,9 +62,10 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
 
     # Add files into PDF
     for file in filtered_files:
-        ext = os.path.basename(file).split(".")[-1]
+        filename = os.path.basename(file)
+        ext = filename.split(".")[-1]
         if ext in handlers:
-            handlers[ext](pdf, file, os.path.basename(file), indices[ext])
+            handlers[ext](pdf, file, filename, indices[ext])
             indices[ext] += 1
 
     # Save the PDF
@@ -74,17 +75,17 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
 def generate_summary(folder, prefix=''):
     file_suffix_order = [
         # regression + diffusion model
-        "all_metrics_mean.csv", "all_metrics_mean.png",
-        "all_monthly_mae.csv", "all_monthly_mae.png",
-        "all_monthly_rmse.csv", "all_monthly_rmse.png",
+        "all-metrics_mean.csv", "all-metrics_mean.png",
+        "all-monthly_mae.csv", "all-monthly_mae.png",
+        "all-monthly_rmse.csv", "all-monthly_rmse.png",
         # regression + diffusion model minus regression model only
-        "minus_reg_metrics_mean.csv", "minus_reg_metrics_mean.png",
-        "minus_reg_monthly_mae.csv", "minus_reg_monthly_mae.png",
-        "minus_reg_monthly_rmse.csv", "minus_reg_monthly_rmse.png",
+        "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
+        "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
+        "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
         # regression + diffusion model
         "_pdf.png", "_pdf_clipped.png",
-        "all_monthly_mean_prcp.png", "all_monthly_mean_t2m.png",
-        "all_monthly_mean_u10m.png", "all_monthly_mean_v10m.png"
+        "all-monthly_error_prcp.png", "all-monthly_error_t2m.png",
+        "all-monthly_error_u10m.png", "all-monthly_error_v10m.png"
     ]
 
     generate_summary_pdf(folder, f"{prefix}_summary.pdf", file_suffix_order)

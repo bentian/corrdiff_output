@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from score_samples_v2 import score_samples, VAR_MAPPING
 from generate_summary import generate_summary
 
-def plot_metrics(ds, output_path, format):
+def plot_metrics(ds, output_path, number_format):
     metrics = ds["metric"].values
     variables = list(ds.data_vars.keys())
     data_array = np.array([ds[var] for var in variables])  # Shape: (4, 4)
@@ -24,7 +24,7 @@ def plot_metrics(ds, output_path, format):
         for bar in bars:
             height = bar.get_height()
             ax.annotate(
-                f"{height:{format}}",        # Text to display
+                f"{height:{number_format}}", # Text to display
                 xy=(bar.get_x() + bar.get_width() / 2, height),  # X and Y position
                 xytext=(0, 5),               # Offset text by 5 units above the bar
                 textcoords="offset points",  # Interpret `xytext` as an offset
@@ -85,7 +85,7 @@ def plot_pdf(truth, pred, output_path):
     # Save the figure
     plt.savefig(output_path)
 
-def plot_monthly_mean(ds, output_path_prefix):
+def plot_monthly_error(ds, output_path_prefix):
     """
     Group variables by month, compute the monthly mean, and plot the results.
 
@@ -118,19 +118,22 @@ def plot_monthly_mean(ds, output_path_prefix):
         plt.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Save the figure
-        plt.savefig(f"{output_path_prefix}_monthly_mean_{VAR_MAPPING[var]}.png")
+        plt.savefig(f"{output_path_prefix}-monthly_error_{VAR_MAPPING[var]}.png")
 
-def save_to_csv(ds, output_path, format=".2f"):
-    ds.to_dataframe().to_csv(output_path, float_format=f"%{format}")
+def save_to_csv(ds, output_path, number_format=".2f"):
+    ds.to_dataframe().to_csv(output_path, float_format=f"%{number_format}")
 
 def save_metric_table_n_plot(ds, metric, output_path_prefix):
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
-    save_to_csv(ds_filtered, f"{output_path_prefix}_monthly_{metric}.csv")
-    plot_monthly_metrics(ds_filtered, metric, f"{output_path_prefix}_monthly_{metric}.png")
+    filename = f"{output_path_prefix}-monthly_{metric}"
 
-def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, format=".2f"):
-    save_to_csv(ds_mean, f"{output_path_prefix}_metrics_mean.csv", format)
-    plot_metrics(ds_mean, f"{output_path_prefix}_metrics_mean.png", format)
+    save_to_csv(ds_filtered, f"{filename}.csv")
+    plot_monthly_metrics(ds_filtered, metric, f"{filename}.png")
+
+def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, number_format=".2f"):
+    filename = f"{output_path_prefix}-metrics_mean"
+    save_to_csv(ds_mean, f"{filename}.csv", number_format)
+    plot_metrics(ds_mean, f"{filename}.png", number_format)
 
     for metric in ["mae", "rmse"]:
         save_metric_table_n_plot(ds_group_by_month, metric, output_path_prefix)
@@ -145,20 +148,18 @@ if __name__ == "__main__":
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
     args = parser.parse_args()
 
-    output_path_prefix = os.path.join(args.outdir, args.prefix)
-
     ### Regression + Diffusion Model
 
     # Process prediction and truth samples of the regression + diffusion model
     metrics, spatial_error, prcp_flat = score_samples(args.nc_all, args.n_ensemble)
 
     # Plot monthly mean of spatial error
-    output_path_prefix_all = f"{output_path_prefix}_all"
-    plot_monthly_mean(spatial_error, output_path_prefix_all)
+    output_path_prefix_all = os.path.join(args.outdir, "all")
+    plot_monthly_error(spatial_error, output_path_prefix_all)
 
     # Plot PRCP PDF for original prcp & prcp clipped to 0
     truth_flat, pred_flat = prcp_flat["truth"], prcp_flat["prediction"]
-    plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf.png")
+    plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}-prcp_pdf.png")
     # truth_flat[truth_flat < 0] = 0
     # pred_flat[pred_flat < 0] = 0
     # plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf_clipped.png")
@@ -175,7 +176,7 @@ if __name__ == "__main__":
     metrics_mean_diff = metric_mean - metrics_reg.mean(dim="time")
     metrics_grouped_diff = metrics_grouped - metrics_reg.groupby("time.month").mean(dim="time")
     save_tables_n_plot(metrics_mean_diff, metrics_grouped_diff,
-                       f"{output_path_prefix}_minus_reg", format=".3f")
+                       os.path.join(args.outdir, "minus_reg"), number_format=".3f")
 
     # Generate summary PDF
     if args.summarize:

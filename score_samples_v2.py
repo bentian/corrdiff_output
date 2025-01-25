@@ -60,12 +60,10 @@ def open_samples(f):
 def compute_metrics(truth, pred):
     dim = ["x", "y"]
 
-    # RMSE and CRPS
-    a = xskillscore.rmse(truth, pred.mean("ensemble"), dim=dim)
-    b = xskillscore.crps_ensemble(truth, pred, member_dim="ensemble", dim=dim)
+    rmse = xskillscore.rmse(truth, pred.mean("ensemble"), dim=dim)
+    crps = xskillscore.crps_ensemble(truth, pred, member_dim="ensemble", dim=dim)
 
-    # STD_DEV and MAE
-    c = pred.std("ensemble").mean(dim)
+    std_dev = pred.std("ensemble").mean(dim)
     crps_mean = xskillscore.crps_ensemble(
         truth,
         pred.mean("ensemble").expand_dims("ensemble"),
@@ -74,8 +72,8 @@ def compute_metrics(truth, pred):
     )
 
     return (
-        xr.concat([a, b, c, crps_mean], dim="metric")
-        .assign_coords(metric=["rmse", "crps", "std_dev", "mae"])
+        xr.concat([rmse, crps_mean, crps, std_dev], dim="metric")
+        .assign_coords(metric=["rmse", "mae", "crps", "std_dev"])
         .load()
     )
 
