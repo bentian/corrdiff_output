@@ -136,7 +136,7 @@ def generate_summary(folder, output_pdf, config_path):
         "all-monthly_mae.csv", "all-monthly_mae.png",
         "all-monthly_rmse.csv", "all-monthly_rmse.png",
         "pdf_prcp.png", "pdf_t2m.png",
-        "pdf_u10m.png", "pdf_v10m.png"
+        "pdf_u10m.png", "pdf_v10m.png",
         "monthly_error_prcp.png", "monthly_error_t2m.png",
         "monthly_error_u10m.png", "monthly_error_v10m.png",
 
