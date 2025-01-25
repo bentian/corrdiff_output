@@ -77,18 +77,39 @@ def compute_metrics(truth, pred):
         .load()
     )
 
-def get_flat(truth, pred, var="precipitation"):
-    truth_flat = truth[var].values.flatten()
-    pred_flat = pred[var].mean("ensemble").values.flatten() \
-                if "ensemble" in pred.dims else pred[var].values.flatten()
+def get_flat(truth, pred):
+    """
+    Extract flattened truth and prediction for all variables in the truth dataset.
 
-    return xr.Dataset(
-        {
-            "truth": ("points", truth_flat),
-            "prediction": ("points", pred_flat)
-        },
-        coords={"points": np.arange(len(truth_flat))},
+    Parameters:
+        truth (xarray.Dataset): The truth dataset.
+        pred (xarray.Dataset): The prediction dataset.
+
+    Returns:
+        tuple: Two xarray.Datasets, one for truth and one for prediction.
+    """
+    truth_data = {}
+    pred_data = {}
+
+    for var in truth.data_vars:
+        if var in pred:
+            truth_flat = truth[var].values.flatten()
+            pred_flat = pred[var].mean("ensemble").values.flatten() \
+                        if "ensemble" in pred.dims else pred[var].values.flatten()
+
+            truth_data[var] = ("points", truth_flat)
+            pred_data[var] = ("points", pred_flat)
+
+    combined_truth = xr.Dataset(
+        truth_data,
+        coords={"points": np.arange(len(next(iter(truth_data.values()))[1]))},
     )
+    combined_pred = xr.Dataset(
+        pred_data,
+        coords={"points": np.arange(len(next(iter(pred_data.values()))[1]))},
+    )
+
+    return combined_truth, combined_pred
 
 def process_sample(index, filepath, n_ensemble, metrics_only):
     truth, pred, _ = open_samples(filepath)
@@ -99,7 +120,7 @@ def process_sample(index, filepath, n_ensemble, metrics_only):
 
     result = { "metrics": compute_metrics(truth, pred) }
     if not metrics_only:
-        result["flat"] = get_flat(truth, pred)
+        result["truth_flat"], result["pred_flat"] = get_flat(truth, pred)
         result["error"] = abs(pred.mean("ensemble").expand_dims("ensemble") - truth)
 
     return result
@@ -125,8 +146,9 @@ def score_samples(filepath, n_ensemble=1, metrics_only=False):
     if metrics_only:
         return combined_metrics
 
-    # Combine spatial error and flat data
+    # Combine spatial error and flattened data
     combined_error = xr.concat([res["error"] for res in results], dim="time")
-    combined_flat = xr.concat([res["flat"] for res in results], dim="points")
+    combined_truth_flat = xr.concat([res["truth_flat"] for res in results], dim="points")
+    combined_pred_flat = xr.concat([res["pred_flat"] for res in results], dim="points")
 
-    return combined_metrics, combined_error, combined_flat
+    return combined_metrics, combined_error, combined_truth_flat, combined_pred_flat

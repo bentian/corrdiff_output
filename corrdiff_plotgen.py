@@ -67,23 +67,40 @@ def get_bin_count_n_note(ds, bin_width=1):
     bin_count = int((max_val - min_val) / bin_width)
     return bin_count, f"({len(ds):,} pts in [{min_val:.1f}, {max_val:.1f}])"
 
-def plot_pdf(truth, pred, output_path):
-    truth_bin_count, truth_note = get_bin_count_n_note(truth)
-    pred_bin_count, pred_note = get_bin_count_n_note(pred)
-    print(f"PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
+def plot_pdf(truth, pred, output_path_prefix):
+    """
+    Plot PDFs for all variables in the truth dataset, comparing with prediction.
 
-    plt.figure(figsize=(10, 6))
-    plt.hist(truth, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
-    plt.hist(pred, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
-    plt.title(f"PDF of PRCP:\nTruth {truth_note} /\nPrediction {pred_note}")
-    plt.xlabel("PRCP (mm)")
-    plt.ylabel("Density")
-    plt.legend()
-    plt.grid()
-    plt.xlim([-5, 15])
+    Parameters:
+        truth (xarray.Dataset): Truth dataset.
+        pred (xarray.Dataset): Prediction dataset.
+        output_path_prefix (str): Path prefix for saving output plots.
+    """
+    for var in truth.data_vars:
+        if var in pred:  # Ensure the variable exists in the prediction dataset
+            truth_flat = truth[var].values.flatten()
+            pred_flat = pred[var].mean("ensemble").values.flatten() \
+                        if "ensemble" in pred.dims else pred[var].values.flatten()
 
-    # Save the figure
-    plt.savefig(output_path)
+            truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
+            pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
+            print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
+
+            plt.figure(figsize=(10, 6))
+            plt.hist(truth_flat, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
+            plt.hist(pred_flat, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
+            plt.title(f"PDF of {var}:\nTruth {truth_note} /\nPrediction {pred_note}")
+            plt.xlabel(f"{var} (units)")
+            plt.ylabel("Density")
+            plt.legend()
+            plt.grid()
+
+            if var == 'precipitation':
+                plt.xlim([-5, 15])  # Adjust x-limits based on expected variable range
+
+            # Save the figure with variable-specific filename
+            plt.savefig(f"{output_path_prefix}-pdf_{VAR_MAPPING[var]}.png")
+            plt.close()
 
 def plot_monthly_error(ds, output_path_prefix):
     """
@@ -151,18 +168,12 @@ if __name__ == "__main__":
     ### Regression + Diffusion Model
 
     # Process prediction and truth samples of the regression + diffusion model
-    metrics, spatial_error, prcp_flat = score_samples(args.nc_all, args.n_ensemble)
+    metrics, spatial_error, truth_flat, pred_flat = score_samples(args.nc_all, args.n_ensemble)
 
-    # Plot monthly mean of spatial error
+    # Plot monthly mean of spatial error, and PDF
     output_path_prefix_all = os.path.join(args.outdir, "all")
     plot_monthly_error(spatial_error, output_path_prefix_all)
-
-    # Plot PRCP PDF for original prcp & prcp clipped to 0
-    truth_flat, pred_flat = prcp_flat["truth"], prcp_flat["prediction"]
-    plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}-prcp_pdf.png")
-    # truth_flat[truth_flat < 0] = 0
-    # pred_flat[pred_flat < 0] = 0
-    # plot_pdf(truth_flat, pred_flat, f"{output_path_prefix_all}_prcp_pdf_clipped.png")
+    plot_pdf(truth_flat, pred_flat, output_path_prefix_all)
 
     # Aggregate metrics to create plots and tables
     metric_mean = metrics.mean(dim="time")

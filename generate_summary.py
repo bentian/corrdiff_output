@@ -78,14 +78,15 @@ def generate_summary(folder, prefix=''):
         "all-metrics_mean.csv", "all-metrics_mean.png",
         "all-monthly_mae.csv", "all-monthly_mae.png",
         "all-monthly_rmse.csv", "all-monthly_rmse.png",
+        "pdf_prcp.png", "pdf_t2m.png",
+        "pdf_u10m.png", "pdf_v10m.png"
+        "monthly_error_prcp.png", "monthly_error_t2m.png",
+        "monthly_error_u10m.png", "monthly_error_v10m.png",
+
         # regression + diffusion model minus regression model only
         "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
         "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
         "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
-        # regression + diffusion model
-        "_pdf.png", "_pdf_clipped.png",
-        "all-monthly_error_prcp.png", "all-monthly_error_t2m.png",
-        "all-monthly_error_u10m.png", "all-monthly_error_v10m.png"
     ]
 
     generate_summary_pdf(folder, f"{prefix}_summary.pdf", file_suffix_order)
