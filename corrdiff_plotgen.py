@@ -77,6 +77,9 @@ def plot_pdf(truth, pred, output_path_prefix):
         output_path_prefix (str): Path prefix for saving output plots.
     """
     for var in truth.data_vars:
+        if var != 'precipitation':
+            continue # Plot for only 'precipitation' now.
+
         if var in pred:  # Ensure the variable exists in the prediction dataset
             truth_flat = truth[var].values.flatten()
             pred_flat = pred[var].mean("ensemble").values.flatten() \
@@ -85,11 +88,12 @@ def plot_pdf(truth, pred, output_path_prefix):
             truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
             pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
             print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
+            title_prefix = 'Zoomed ' if var == 'precipitation' else ''
 
             plt.figure(figsize=(10, 6))
             plt.hist(truth_flat, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
             plt.hist(pred_flat, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
-            plt.title(f"PDF of {var}:\nTruth {truth_note} /\nPrediction {pred_note}")
+            plt.title(f"{title_prefix}PDF of {var}:\nTruth {truth_note} /\nPrediction {pred_note}")
             plt.xlabel(f"{var} (units)")
             plt.ylabel("Density")
             plt.legend()
@@ -117,6 +121,9 @@ def plot_monthly_error(ds, output_path_prefix):
     colormaps = ["Blues", "Oranges", "Greens", "Reds"]
 
     for index, var in enumerate(variables):
+        if var != 'precipitation':
+            continue # Plot for only 'precipitation' now.
+
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
         axes = axes.flatten()
 
