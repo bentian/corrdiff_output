@@ -97,7 +97,7 @@ def main():
 
     # Generate summary PDF
     hydra_config = os.path.join(args.in_dir, "hydra", "config.yaml")
-    generate_summary(out_dir, hydra_config)
+    generate_summary(out_dir, os.path.join(args.in_dir, "summary.pdf"), hydra_config)
 
 
 if __name__ == "__main__":

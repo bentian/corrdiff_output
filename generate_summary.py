@@ -129,7 +129,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path)
     print(f"PDF generated => {output_pdf}")
 
 
-def generate_summary(folder, config_path):
+def generate_summary(folder, output_pdf, config_path):
     file_suffix_order = [
         # regression + diffusion model
         "all-metrics_mean.csv", "all-metrics_mean.png",
@@ -146,8 +146,9 @@ def generate_summary(folder, config_path):
         "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
     ]
 
-    generate_summary_pdf(
-        folder, os.path.join(folder, "summary.pdf"), file_suffix_order, config_path)
+    generate_summary_pdf(folder, output_pdf, file_suffix_order, config_path)
 
 if __name__ == "__main__":
-    generate_summary("data/Baseline/plot", "data/Baseline/hydra/config.yaml")
+    generate_summary("data/Baseline/plot",
+                     "data/Baseline/summary.pdf",
+                     "data/Baseline/hydra/config.yaml")
