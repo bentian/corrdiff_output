@@ -5,6 +5,57 @@ from glob import glob
 
 FONT = "Times"
 
+def add_config_page(pdf, config_path):
+    """
+    Add a configuration page to the PDF from a YAML file, formatted as a table.
+    """
+    import yaml
+
+    # Load the YAML configuration
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+
+    # Flatten the YAML structure into key-value pairs for a table
+    def flatten_dict(d, parent_key='', sep='.'):
+        """
+        Recursively flattens a nested dictionary.
+        """
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+
+    flat_config = flatten_dict(config)
+
+    # Add a new page for the config table
+    pdf.add_page(orientation="L")
+    pdf.set_font(FONT, size=14, style="B")
+    pdf.cell(0, 10, txt="Configuration", ln=True, align="C")
+    pdf.ln(10)  # Line break
+
+    # Table column setup
+    pdf.set_font(FONT, size=10)
+    col_widths = [90, 190]  # Adjust column widths as needed (key and value columns)
+    row_height = 8
+
+    # Add table headers
+    pdf.set_font(FONT, size=12, style="B")
+    pdf.cell(col_widths[0], row_height, "Parameter", border=1, align="C")
+    pdf.cell(col_widths[1], row_height, "Value", border=1, align="C")
+    pdf.ln(row_height)
+
+    # Add table rows (key-value pairs)
+    pdf.set_font(FONT, size=10)
+    for key, value in flat_config.items():
+        pdf.cell(col_widths[0], row_height, str(key), border=1, align="L")
+        pdf.cell(col_widths[1], row_height, str(value), border=1, align="L")
+        pdf.ln(row_height)
+
+
 def add_table(pdf, file, filename, idx):
     df = pd.read_csv(file)
 
@@ -28,13 +79,15 @@ def add_table(pdf, file, filename, idx):
             pdf.cell(col_width, row_height, str(value), border=1, align="C")
         pdf.ln(row_height)
 
+
 def add_figure(pdf, file, filename, idx):
     pdf.add_page()
     pdf.set_font(FONT, size=12, style="B")
     pdf.cell(200, 10, txt=f"Figure {idx}. {filename[:-4]}", ln=True, align="C")
     pdf.image(file, x=10, y=30, w=220)
 
-def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
+
+def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path):
     """
     Generate a summary PDF from PNG images and CSV files in the specified suffix order.
 
@@ -46,6 +99,9 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
     # Initialize FPDF
     pdf = FPDF(orientation='L')
     pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Add configuration page
+    add_config_page(pdf, config_path)
 
     # Get all files and filter by suffix order
     all_files = glob(os.path.join(files_path, "*"))
@@ -73,7 +129,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
     print(f"PDF generated => {output_pdf}")
 
 
-def generate_summary(folder, output_path):
+def generate_summary(folder, config_path):
     file_suffix_order = [
         # regression + diffusion model
         "all-metrics_mean.csv", "all-metrics_mean.png",
@@ -90,7 +146,8 @@ def generate_summary(folder, output_path):
         "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
     ]
 
-    generate_summary_pdf(folder, output_path, file_suffix_order)
+    generate_summary_pdf(
+        folder, os.path.join(folder, "summary.pdf"), file_suffix_order, config_path)
 
 if __name__ == "__main__":
-    generate_summary("./plots")
+    generate_summary("data/Baseline/plot", "data/Baseline/hydra/config.yaml")
