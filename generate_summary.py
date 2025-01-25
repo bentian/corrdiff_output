@@ -7,7 +7,7 @@ FONT = "Times"
 
 def add_config_page(pdf, config_path):
     """
-    Add a configuration page to the PDF from a YAML file, formatted as a table.
+    Add a configuration page to the PDF from a YAML file, formatted as a table in landscape orientation.
     """
     import yaml
 
@@ -15,31 +15,15 @@ def add_config_page(pdf, config_path):
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
 
-    # Flatten the YAML structure into key-value pairs for a table
-    def flatten_dict(d, parent_key='', sep='.'):
-        """
-        Recursively flattens a nested dictionary.
-        """
-        items = []
-        for k, v in d.items():
-            new_key = f"{parent_key}{sep}{k}" if parent_key else k
-            if isinstance(v, dict):
-                items.extend(flatten_dict(v, new_key, sep=sep).items())
-            else:
-                items.append((new_key, v))
-        return dict(items)
-
-    flat_config = flatten_dict(config)
-
-    # Add a new page for the config table
-    pdf.add_page(orientation="L")
+    # Add a new landscape page for the config table
+    pdf.add_page(orientation="L")  # Landscape orientation
     pdf.set_font(FONT, size=14, style="B")
     pdf.cell(0, 10, txt="Configuration", ln=True, align="C")
     pdf.ln(10)  # Line break
 
     # Table column setup
     pdf.set_font(FONT, size=10)
-    col_widths = [90, 190]  # Adjust column widths as needed (key and value columns)
+    col_widths = [80, 200]  # Adjust column widths for landscape layout
     row_height = 8
 
     # Add table headers
@@ -50,17 +34,31 @@ def add_config_page(pdf, config_path):
 
     # Add table rows (key-value pairs)
     pdf.set_font(FONT, size=10)
-    for key, value in flat_config.items():
-        pdf.cell(col_widths[0], row_height, str(key), border=1, align="L")
-        pdf.cell(col_widths[1], row_height, str(value), border=1, align="L")
-        pdf.ln(row_height)
+    if isinstance(config, list):  # If the YAML is a list of key-value pairs
+        for item in config:
+            # Split key-value pair
+            if '=' in item:
+                key, value = item.split('=', 1)
+            else:
+                key, value = item, ''
+
+            # Convert lists to comma-separated strings for display
+            if value.startswith('[') and value.endswith(']'):  # Handle list-like strings
+                value = value.strip('[]').replace(',', ', ')
+
+            # Add table cells (no multi-line wrapping)
+            pdf.cell(col_widths[0], row_height, str(key), border=1, align="L")
+            pdf.cell(col_widths[1], row_height, str(value), border=1, align="L")
+            pdf.ln(row_height)
+    else:
+        raise ValueError("The YAML configuration is not in the expected list format.")
 
 
 def add_table(pdf, file, filename, idx):
     df = pd.read_csv(file)
 
     pdf.add_page()
-    pdf.set_font(FONT, size=12, style="B")
+    pdf.set_font(FONT, size=14, style="B")
     pdf.cell(200, 10, txt=f"Table {idx}. {filename[:-4]}", ln=True, align="C")
     pdf.ln(10)  # Line break
 
@@ -82,7 +80,7 @@ def add_table(pdf, file, filename, idx):
 
 def add_figure(pdf, file, filename, idx):
     pdf.add_page()
-    pdf.set_font(FONT, size=12, style="B")
+    pdf.set_font(FONT, size=14, style="B")
     pdf.cell(200, 10, txt=f"Figure {idx}. {filename[:-4]}", ln=True, align="C")
     pdf.image(file, x=10, y=30, w=220)
 
@@ -151,4 +149,4 @@ def generate_summary(folder, output_pdf, config_path):
 if __name__ == "__main__":
     generate_summary("data/Baseline/plot",
                      "data/Baseline/summary.pdf",
-                     "data/Baseline/hydra/config.yaml")
+                     "data/Baseline/hydra/overrides.yaml")

@@ -96,7 +96,7 @@ def main():
     compare_models(metrics_all, metrics_reg, os.path.join(out_dir, "minus_reg"))
 
     # Generate summary PDF
-    hydra_config = os.path.join(args.in_dir, "hydra", "config.yaml")
+    hydra_config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
     generate_summary(out_dir, os.path.join(args.in_dir, "summary.pdf"), hydra_config)
 
 
