@@ -72,7 +72,8 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order):
     pdf.output(output_pdf)
     print(f"PDF generated => {output_pdf}")
 
-def generate_summary(folder, prefix=''):
+
+def generate_summary(folder, output_path):
     file_suffix_order = [
         # regression + diffusion model
         "all-metrics_mean.csv", "all-metrics_mean.png",
@@ -89,7 +90,7 @@ def generate_summary(folder, prefix=''):
         "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
     ]
 
-    generate_summary_pdf(folder, f"{prefix}_summary.pdf", file_suffix_order)
+    generate_summary_pdf(folder, output_path, file_suffix_order)
 
 if __name__ == "__main__":
     generate_summary("./plots")

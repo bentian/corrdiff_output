@@ -31,6 +31,7 @@ def apply_landmask(truth, pred):
 
     return truth, pred
 
+
 def open_samples(f):
     """
     Open prediction and truth samples from a dataset file.
@@ -57,6 +58,7 @@ def open_samples(f):
     truth, pred = apply_landmask(truth, pred)
     return truth, pred, root
 
+
 def compute_metrics(truth, pred):
     dim = ["x", "y"]
 
@@ -76,6 +78,7 @@ def compute_metrics(truth, pred):
         .assign_coords(metric=["rmse", "mae", "crps", "std_dev"])
         .load()
     )
+
 
 def get_flat(truth, pred):
     """
@@ -111,6 +114,7 @@ def get_flat(truth, pred):
 
     return combined_truth, combined_pred
 
+
 def process_sample(index, filepath, n_ensemble, metrics_only):
     truth, pred, _ = open_samples(filepath)
     truth = truth.isel(time=index).load()
@@ -124,6 +128,7 @@ def process_sample(index, filepath, n_ensemble, metrics_only):
         result["error"] = abs(pred.mean("ensemble").expand_dims("ensemble") - truth)
 
     return result
+
 
 def score_samples(filepath, n_ensemble=1, metrics_only=False):
     truth, _, _ = open_samples(filepath)
