@@ -4,6 +4,8 @@ import pandas as pd
 from fpdf import FPDF
 from glob import glob
 
+from generate_summary import SUFFIX_ORDER
+
 def add_comparison_page(pdf, file1, file2, filename):
     """
     Add a comparison page to the PDF for the given files (CSV or PNG).
@@ -82,13 +84,18 @@ def generate_comparison_pdf(folder1, folder2, output_pdf):
     common_files = set(os.path.basename(f) for f in files1).intersection(
         os.path.basename(f) for f in files2
     )
-
     if not common_files:
         print("No common files found for comparison.")
         return
 
+    # Filter commaon files by suffix order
+    filtered_files = [
+        file for suffix in SUFFIX_ORDER
+        for file in common_files if os.path.basename(file).endswith(suffix)
+    ]
+
     # Add each common file to the PDF
-    for filename in sorted(common_files):
+    for filename in filtered_files:
         file1 = os.path.join(folder1, filename)
         file2 = os.path.join(folder2, filename)
         add_comparison_page(pdf, file1, file2, filename)

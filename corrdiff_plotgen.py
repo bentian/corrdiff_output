@@ -79,7 +79,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
-    parser.add_argument("--summarize", type=int, default=False, help="Whether to summarize the plots.")
+    parser.add_argument("--summarize", type=bool, default=False, help="Whether to summarize the plots.")
     args = parser.parse_args()
 
     # Ensure output directory exists

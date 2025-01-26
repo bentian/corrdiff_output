@@ -4,6 +4,21 @@ import pandas as pd
 from fpdf import FPDF
 from glob import glob
 
+SUFFIX_ORDER = [
+    # regression + diffusion model
+    "all-metrics_mean.csv", "all-metrics_mean.png",
+    "all-monthly_mae.csv", "all-monthly_mae.png",
+    "all-monthly_rmse.csv", "all-monthly_rmse.png",
+    "pdf_prcp.png", "pdf_t2m.png",
+    "pdf_u10m.png", "pdf_v10m.png",
+    "monthly_error_prcp.png", "monthly_error_t2m.png",
+    "monthly_error_u10m.png", "monthly_error_v10m.png",
+
+    # regression + diffusion model minus regression model only
+    "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
+    "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
+    "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
+]
 FONT = "Times"
 
 def add_config_page(pdf, config_path):
@@ -47,10 +62,11 @@ def add_config_page(pdf, config_path):
             if value.startswith('[') and value.endswith(']'):  # Handle list-like strings
                 value = value.strip('[]').replace(',', ', ')
 
-            # Add table cells (no multi-line wrapping)
-            pdf.cell(col_widths[0], row_height, str(key), border=1, align="L")
-            pdf.cell(col_widths[1], row_height, str(value), border=1, align="L")
-            pdf.ln(row_height)
+            # Split the key or value into multiple lines if it's too long
+            pdf.multi_cell(col_widths[0], row_height, str(key), border=1, align="L")
+            x, y = pdf.get_x(), pdf.get_y()  # Track the cursor position
+            pdf.set_xy(x + col_widths[0], y - row_height)  # Move back for the next cell
+            pdf.multi_cell(col_widths[1], row_height, str(value), border=1, align="L")
     else:
         raise ValueError("The YAML configuration is not in the expected list format.")
 
@@ -86,7 +102,7 @@ def add_figure(pdf, file, filename, idx):
     pdf.image(file, x=15, y=30, w=180)
 
 
-def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path=None):
+def generate_summary_pdf(files_path, output_pdf, config_path=None):
     """
     Generate a summary PDF from PNG images and CSV files in the specified suffix order.
 
@@ -106,7 +122,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path=
     # Get all files and filter by suffix order
     all_files = glob(os.path.join(files_path, "*"))
     filtered_files = [
-        file for suffix in file_suffix_order
+        file for suffix in SUFFIX_ORDER
         for file in all_files if os.path.basename(file).endswith(suffix)
     ]
 
@@ -130,23 +146,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path=
 
 
 def generate_summary(folder, output_pdf, config_path=None):
-    file_suffix_order = [
-        # regression + diffusion model
-        "all-metrics_mean.csv", "all-metrics_mean.png",
-        "all-monthly_mae.csv", "all-monthly_mae.png",
-        "all-monthly_rmse.csv", "all-monthly_rmse.png",
-        "pdf_prcp.png", "pdf_t2m.png",
-        "pdf_u10m.png", "pdf_v10m.png",
-        "monthly_error_prcp.png", "monthly_error_t2m.png",
-        "monthly_error_u10m.png", "monthly_error_v10m.png",
-
-        # regression + diffusion model minus regression model only
-        "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
-        "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
-        "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
-    ]
-
-    generate_summary_pdf(folder, output_pdf, file_suffix_order, config_path)
+    generate_summary_pdf(folder, output_pdf, config_path)
 
 
 if __name__ == "__main__":
