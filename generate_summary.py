@@ -17,14 +17,14 @@ def add_config_page(pdf, config_path):
         config = yaml.safe_load(file)
 
     # Add a new landscape page for the config table
-    pdf.add_page(orientation="L")  # Landscape orientation
+    pdf.add_page()
     pdf.set_font(FONT, size=14, style="B")
     pdf.cell(0, 10, txt="Configuration", ln=True, align="C")
     pdf.ln(10)  # Line break
 
     # Table column setup
     pdf.set_font(FONT, size=10)
-    col_widths = [80, 200]  # Adjust column widths for landscape layout
+    col_widths = [50, 140]  # Adjust column widths for landscape layout
     row_height = 8
 
     # Add table headers
@@ -60,11 +60,11 @@ def add_table(pdf, file, filename, idx):
 
     pdf.add_page()
     pdf.set_font(FONT, size=14, style="B")
-    pdf.cell(200, 10, txt=f"Table {idx}. {filename[:-4]}", ln=True, align="C")
+    pdf.cell(0, 10, txt=f"Table {idx}. {filename[:-4]}", ln=True, align="C")
     pdf.ln(10)  # Line break
 
     # Add the table headers
-    col_width = pdf.w / (len(df.columns) + 1)
+    col_width = (pdf.w - 20) / len(df.columns)
     row_height = 8
     for col in df.columns:
         pdf.set_font(FONT, size=10, style="B")
@@ -82,8 +82,8 @@ def add_table(pdf, file, filename, idx):
 def add_figure(pdf, file, filename, idx):
     pdf.add_page()
     pdf.set_font(FONT, size=14, style="B")
-    pdf.cell(200, 10, txt=f"Figure {idx}. {filename[:-4]}", ln=True, align="C")
-    pdf.image(file, x=10, y=30, w=220)
+    pdf.cell(0, 10, txt=f"Figure {idx}. {filename[:-4]}", ln=True, align="C")
+    pdf.image(file, x=15, y=30, w=180)
 
 
 def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path=None):
@@ -96,7 +96,7 @@ def generate_summary_pdf(files_path, output_pdf, file_suffix_order, config_path=
         file_suffix_order (list of str): List of file suffixes specifying the desired order.
     """
     # Initialize FPDF
-    pdf = FPDF(orientation='L')
+    pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Add configuration page
@@ -152,7 +152,7 @@ def generate_summary(folder, output_pdf, config_path=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config")
-    parser.add_argument("--config-path", type=int, help="Path to YAML file of config")
+    parser.add_argument("--config", type=str, help="Path to YAML file of config")
     args = parser.parse_args()
 
-    generate_summary(args.in_dir, "summary.pdf")
+    generate_summary(args.in_dir, "summary.pdf", args.config)
