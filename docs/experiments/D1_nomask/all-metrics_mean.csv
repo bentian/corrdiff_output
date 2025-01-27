@@ -1,0 +1,5 @@
+metric,precipitation,temperature_2m,eastward_wind_10m,northward_wind_10m
+rmse,8.70,0.40,0.75,0.90
+mae,4.22,0.30,0.57,0.67
+crps,4.22,0.30,0.57,0.67
+std_dev,0.00,0.00,0.00,0.00

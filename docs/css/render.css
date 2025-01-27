@@ -1,0 +1,48 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.render-row-container {
+    margin-bottom: 30px;
+}
+
+.render-row-title {
+    text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-decoration: underline; /* Add underline to the title */
+    font-size: 1.2em; /* Adjust font size for better visibility */
+}
+
+.render-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.render-plot {
+    width: 45%;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+.render-table table {
+    border-collapse: collapse;
+    width: 100%;
+    text-align: center;
+}
+
+.render-table th, .render-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+}
+
+.render-table th {
+    background-color: #f4f4f4;
+}

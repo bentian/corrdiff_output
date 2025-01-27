@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CorrDiff Experiments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>CorrDiff Experiment Results</h1>
+
+        <div class="form-container">
+            <!-- Summary Form -->
+            <form id="summary-form" class="form-box">
+                <h2>Summarize One Experiment</h2>
+                <div class="form-group">
+                    <label for="summary-exp">Select Experiment:</label>
+                    <select id="summary-exp" class="dropdown"></select>
+                </div>
+                <button type="submit" class="btn">Summarize</button>
+            </form>
+
+            <!-- Comparison Form -->
+            <form id="comparison-form" class="form-box">
+                <h2>Compare Two Experiments</h2>
+                <div class="form-group">
+                    <label for="exp1">Select Experiment 1:</label>
+                    <select id="exp1" class="dropdown"></select>
+                </div>
+                <div class="form-group">
+                    <label for="exp2">Select Experiment 2:</label>
+                    <select id="exp2" class="dropdown"></select>
+                </div>
+                <button type="submit" class="btn">Compare</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
