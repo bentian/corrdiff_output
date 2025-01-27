@@ -9,7 +9,7 @@ body {
 
 /* Container */
 .container {
-    max-width: 1200px;
+    width: 95%;
     margin: 0 auto;
     padding: 20px;
     background-color: #fff;
@@ -40,6 +40,7 @@ h1 {
     border: 1px solid #ddd;
     border-radius: 12px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: center;
 }
 
 .render-row-title {
@@ -52,15 +53,15 @@ h1 {
 
 .render-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: center; /* Center content horizontally */
     align-items: center;
     gap: 20px;
+    flex-wrap: wrap; /* Allow wrapping for responsive design */
 }
 
 /* Image Styles */
 .render-plot {
     width: 48%;
-    max-height: 300px;
     object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
