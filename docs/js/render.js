@@ -13,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
             title: "[all] Probability Density Function",
             files: [
                 "all-pdf_prcp.png",
-                "all-monthly_error_prcp.png",
             ],
         },
         {
