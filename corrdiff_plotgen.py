@@ -7,16 +7,26 @@ import yaml
 import plot_helpers as ph
 from score_samples_v2 import score_samples
 
-def yaml_to_json(yaml_file_path, json_filename):
+def yaml_to_csv(yaml_file_path, csv_filename):
     # Load the YAML content into a Python dictionary
     with open(yaml_file_path, 'r') as file:
         data = yaml.safe_load(file)
 
     # Normalize the nested dictionary into a flat table
-    df = pd.json_normalize(data, sep='_').transpose()
+    df = pd.json_normalize(data, sep='.')
 
-    # Export the DataFrame to a JSON file
-    df.to_json(json_filename, indent=4)
+    # Replace commas with underscores for specific columns
+    keys_to_replace = [
+        'dataset.in_channels', 'dataset.out_channels',
+        'generation.times', 'generation.times_range'
+    ]
+    for key in keys_to_replace:
+        if key in df.columns:
+            # Apply replacement only if the column exists
+            df[key] = df[key].astype(str).str.replace(', ', '_')
+
+    # Export the DataFrame to a CSV file
+    df.transpose().to_csv(csv_filename, index=True)
 
     return df
 
@@ -111,7 +121,7 @@ def main():
 
     # Store hydra config table
     config = os.path.join(args.in_dir, "hydra", "config.yaml")
-    yaml_to_json(config, os.path.join(args.out_dir, "config.json"))
+    yaml_to_csv(config, os.path.join(args.out_dir, "generate_config.csv"))
 
 if __name__ == "__main__":
     main()
