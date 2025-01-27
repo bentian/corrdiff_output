@@ -4,8 +4,8 @@ dataset.out_channels,[0_1_2_3]
 dataset.data_path,/nwpr/cfs/com184/datasets/baseDC_18-23.zarr
 dataset.img_shape_x,208
 dataset.img_shape_y,208
-generation.times,
-generation.times_range,"[""2023-01-01T00:00:00""_""2023-12-31T00:00:00""_24]"
+generation.times,null
+generation.times_range,[2023-01-01T00:00:00_2023-12-31T00:00:00_24]
 generation.io.res_ckpt_filename,outputs_Baseline/reg_1n_w8_amp/checkpoints_diffusion/EDMPrecondSR.0.2000128.mdlus
 generation.io.reg_ckpt_filename,outputs_Baseline/reg_1n_w8_amp/checkpoints_regression/UNet.0.2000128.mdlus
 generation.inference_mode,regression
