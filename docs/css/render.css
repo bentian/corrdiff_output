@@ -10,83 +10,88 @@ body {
 /* Container */
 .container {
     width: 95%;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 20px;
     background-color: #fff;
     border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
     text-align: center;
 }
 
 /* Heading */
 h1 {
-    font-size: 2em;
-    margin-bottom: 20px;
-    color: #2c3e50;
+    font-size: 2.5em;
+    margin-bottom: 30px;
+    color: #34495e;
 }
 
-/* Render Container */
-#render-container {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+/* Collapsible Section */
+.collapsible {
+    background-color: #3498db;
+    color: white;
+    cursor: pointer;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1.4em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: left;
+    transition: background-color 0.3s ease;
 }
 
-/* Render Output Rows */
-.render-row-container {
+.collapsible:hover {
+    background-color: #2980b9;
+}
+
+.collapsible:after {
+    content: '\25bc'; /* Down arrow */
+    float: right;
+}
+
+.collapsible.active:after {
+    content: '\25b2'; /* Up arrow */
+}
+
+.content {
+    padding: 15px;
+    display: none;
+    overflow: hidden;
     background-color: #f9fafb;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    text-align: center;
+    border-radius: 8px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Rows */
+.render-row-container {
+    margin-bottom: 20px;
 }
 
 .render-row-title {
-    font-size: 1.4em;
+    font-size: 1.2em;
     font-weight: bold;
-    margin-bottom: 15px;
-    color: #34495e;
-    text-decoration: underline;
+    color: #2c3e50;
+    margin-bottom: 10px;
 }
 
 .render-row {
     display: flex;
-    justify-content: space-around; /* Center content horizontally */
+    justify-content: space-around;
     align-items: center;
     gap: 20px;
-    flex-wrap: wrap; /* Allow wrapping for responsive design */
+    flex-wrap: wrap;
 }
 
-/* Image Styles */
 .render-plot {
     width: 48%;
-    object-fit: contain;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Table Styles */
 .render-table {
-    width: 45%;
+    width: 48%;
     overflow-x: auto;
-}
-
-.render-table table {
-    border-collapse: collapse;
-    width: 100%;
-    text-align: center;
-}
-
-.render-table th, .render-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-}
-
-.render-table th {
-    background-color: #f4f4f4;
-    font-weight: bold;
+    margin: 0 auto;
 }
 
 /* Responsive Design */

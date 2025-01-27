@@ -1,20 +1,37 @@
-// Define the ordered file list
-const FILE_ORDER_LIST = [
-    // regression + diffusion model
-    "all-metrics_mean.csv", "all-metrics_mean.png",
-    "all-monthly_mae.csv", "all-monthly_mae.png",
-    "all-monthly_rmse.csv", "all-monthly_rmse.png",
-    "all-pdf_prcp.png", // "pdf_t2m.png", "pdf_u10m.png", "pdf_v10m.png",
-    "all-monthly_error_prcp.png", // "monthly_error_t2m.png",
-    // "monthly_error_u10m.png", "monthly_error_v10m.png",
-
-    // regression + diffusion model minus regression model only
-    "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
-    "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
-    "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
-];
-
 document.addEventListener("DOMContentLoaded", () => {
+    // Define the file groups with titles
+    const FILE_GROUPS = [
+        {
+            title: "[all] Metrics mean",
+            files: [
+                "all-metrics_mean.csv", "all-metrics_mean.png",
+                "all-monthly_mae.csv", "all-monthly_mae.png",
+                "all-monthly_rmse.csv", "all-monthly_rmse.png",
+            ],
+        },
+        {
+            title: "[all] Probability Density Function",
+            files: [
+                "all-pdf_prcp.png",
+                "all-monthly_error_prcp.png",
+            ],
+        },
+        {
+            title: "[all] Monthly Errors",
+            files: [
+                "all-monthly_error_prcp.png",
+            ],
+        },
+        {
+            title: "[all - reg] Metrics mean",
+            files: [
+                "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
+                "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
+                "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
+            ],
+        },
+    ];
+
     // Parse query parameters
     const params = new URLSearchParams(window.location.search);
     const exp1 = params.get("exp1");
@@ -25,128 +42,89 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    // Set heading based on the number of experiments
+    // Set heading
     const heading = exp2
         ? `Comparison: ${exp1} vs. ${exp2}`
         : `Experiment: ${exp1 || exp2}`;
     document.getElementById("render-heading").textContent = heading;
 
-    // Render content
-    if (exp2) {
-        renderComparison(exp1, exp2, FILE_ORDER_LIST);
-    } else {
-        renderSingleExperiment(exp1 || exp2, FILE_ORDER_LIST);
-    }
+    // Render collapsible sections
+    FILE_GROUPS.forEach((group) => {
+        renderCollapsibleSection(group.title, group.files, exp1, exp2);
+    });
+
+    // Add collapsible event listeners
+    addCollapsibleEventListeners();
 });
 
-function renderSingleExperiment(exp1, FILE_ORDER_LIST) {
+// Renders a collapsible section for a file group
+function renderCollapsibleSection(title, files, exp1, exp2) {
     const renderOutput = document.getElementById("render-output");
 
-    FILE_ORDER_LIST.forEach((file) => {
+    // Create collapsible header
+    const collapsible = document.createElement("div");
+    collapsible.className = "collapsible";
+    collapsible.textContent = title;
+
+    // Create collapsible content container
+    const content = document.createElement("div");
+    content.className = "content";
+
+    // Render rows for each file
+    files.forEach((file) => {
         const fileExtension = file.split(".").pop();
 
         const rowContainer = document.createElement("div");
         rowContainer.className = "render-row-container";
 
-        // Add row title
+        // Add file name title
         const rowTitle = document.createElement("h3");
         rowTitle.className = "render-row-title";
         rowTitle.textContent = file;
         rowContainer.appendChild(rowTitle);
 
-        // Create a new summary row
         const row = document.createElement("div");
         row.className = "render-row";
 
         if (fileExtension === "png") {
-            // Render images side-by-side
+            // Render images
             const img1 = document.createElement("img");
             img1.src = `experiments/${exp1}/${file}`;
             img1.alt = `${exp1} - ${file}`;
             img1.className = "render-plot";
-
             row.appendChild(img1);
-        } else if (fileExtension === "csv") {
-            // Fetch and render CSV files as HTML tables
-            Promise.all([
-                fetchCSV(`experiments/${exp1}/${file}`),
-            ]).then(([table1HTML]) => {
-                const table1 = document.createElement("div");
-                table1.className = "render-table";
-                table1.innerHTML = table1HTML;
 
-                row.appendChild(table1);
+            if (exp2) {
+                const img2 = document.createElement("img");
+                img2.src = `experiments/${exp2}/${file}`;
+                img2.alt = `${exp2} - ${file}`;
+                img2.className = "render-plot";
+                row.appendChild(img2);
+            }
+        } else if (fileExtension === "csv") {
+            // Render tables
+            const tablePromises = [fetchCSV(`experiments/${exp1}/${file}`)];
+            if (exp2) tablePromises.push(fetchCSV(`experiments/${exp2}/${file}`));
+
+            Promise.all(tablePromises).then((tablesHTML) => {
+                tablesHTML.forEach((tableHTML) => {
+                    const tableDiv = document.createElement("div");
+                    tableDiv.className = "render-table";
+                    tableDiv.innerHTML = tableHTML;
+                    row.appendChild(tableDiv);
+                });
             });
-        } else {
-            console.warn(`Unsupported file type: ${file}`);
         }
 
         rowContainer.appendChild(row);
-        renderOutput.appendChild(rowContainer);
+        content.appendChild(rowContainer);
     });
+
+    renderOutput.appendChild(collapsible);
+    renderOutput.appendChild(content);
 }
 
-
-function renderComparison(exp1, exp2, FILE_ORDER_LIST) {
-    const renderOutput = document.getElementById("render-output");
-
-    FILE_ORDER_LIST.forEach((file) => {
-        const fileExtension = file.split(".").pop();
-
-        const rowContainer = document.createElement("div");
-        rowContainer.className = "render-row-container";
-
-        // Add row title
-        const rowTitle = document.createElement("h3");
-        rowTitle.className = "render-row-title";
-        rowTitle.textContent = file;
-        rowContainer.appendChild(rowTitle);
-
-        // Create a new comparison row
-        const row = document.createElement("div");
-        row.className = "render-row";
-
-        if (fileExtension === "png") {
-            // Render images side-by-side
-            const img1 = document.createElement("img");
-            img1.src = `experiments/${exp1}/${file}`;
-            img1.alt = `${exp1} - ${file}`;
-            img1.className = "render-plot";
-
-            const img2 = document.createElement("img");
-            img2.src = `experiments/${exp2}/${file}`;
-            img2.alt = `${exp2} - ${file}`;
-            img2.className = "render-plot";
-
-            row.appendChild(img1);
-            row.appendChild(img2);
-        } else if (fileExtension === "csv") {
-            // Fetch and render CSV files as HTML tables
-            Promise.all([
-                fetchCSV(`experiments/${exp1}/${file}`),
-                fetchCSV(`experiments/${exp2}/${file}`),
-            ]).then(([table1HTML, table2HTML]) => {
-                const table1 = document.createElement("div");
-                table1.className = "render-table";
-                table1.innerHTML = table1HTML;
-
-                const table2 = document.createElement("div");
-                table2.className = "render-table";
-                table2.innerHTML = table2HTML;
-
-                row.appendChild(table1);
-                row.appendChild(table2);
-            });
-        } else {
-            console.warn(`Unsupported file type: ${file}`);
-        }
-
-        rowContainer.appendChild(row);
-        renderOutput.appendChild(rowContainer);
-    });
-}
-
-// Utility function to fetch and parse CSV files into HTML tables
+// Fetch and parse CSV files into HTML tables
 function fetchCSV(url) {
     return fetch(url)
         .then((response) => {
@@ -170,9 +148,17 @@ function fetchCSV(url) {
 
             return table.outerHTML;
         })
-        .catch((error) => {
-            console.error("Error rendering CSV:", error);
-            return `<p>Error loading CSV: ${url}</p>`;
-        });
+        .catch((error) => `<p>Error loading CSV: ${url}</p>`);
 }
-    
+
+// Add collapsible toggle functionality
+function addCollapsibleEventListeners() {
+    const collapsibles = document.querySelectorAll(".collapsible");
+    collapsibles.forEach((collapsible) => {
+        collapsible.addEventListener("click", () => {
+            collapsible.classList.toggle("active");
+            const content = collapsible.nextElementSibling;
+            content.style.display = content.style.display === "block" ? "none" : "block";
+        });
+    });
+}
