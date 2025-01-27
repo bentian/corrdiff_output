@@ -2,11 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Define the file groups with titles
     const FILE_GROUPS = [
         {
-            title: "Hydra Configuration",
-            files: ["hydra.csv"],
-        },        
-        {
-            title: "[all] Metrics Mean",
+            title: "[all] Metrics mean",
             files: [
                 "all-metrics_mean.csv", "all-metrics_mean.png",
                 "all-monthly_mae.csv", "all-monthly_mae.png",
@@ -26,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ],
         },
         {
-            title: "[all - reg] Metrics Mean",
+            title: "[all - reg] Metrics mean",
             files: [
                 "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
                 "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
