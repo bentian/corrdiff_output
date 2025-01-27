@@ -2,8 +2,6 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 
-from score_samples_v2 import VAR_MAPPING
-
 def plot_metrics(ds, output_path, number_format):
     metrics = ds["metric"].values
     variables = list(ds.data_vars.keys())
@@ -76,7 +74,7 @@ def plot_pdf(truth, pred, output_path_prefix):
         output_path_prefix (str): Path prefix for saving output plots.
     """
     for var in truth.data_vars:
-        if var != 'precipitation':
+        if var != 'prcp':
             continue # Plot for only 'precipitation' now.
 
         if var in pred:  # Ensure the variable exists in the prediction dataset
@@ -98,11 +96,11 @@ def plot_pdf(truth, pred, output_path_prefix):
             plt.legend()
             plt.grid()
 
-            if var == 'precipitation':
+            if var == 'prcp':
                 plt.xlim([-5, 15])  # Adjust x-limits based on expected variable range
 
             # Save the figure with variable-specific filename
-            plt.savefig(f"{output_path_prefix}-pdf_{VAR_MAPPING[var]}.png")
+            plt.savefig(f"{output_path_prefix}-pdf_{var}.png")
             plt.close()
 
 
@@ -121,7 +119,7 @@ def plot_monthly_error(ds, output_path_prefix):
     colormaps = ["Blues", "Oranges", "Greens", "Reds"]
 
     for index, var in enumerate(variables):
-        if var != 'precipitation':
+        if var != 'prcp':
             continue # Plot for only 'precipitation' now.
 
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
@@ -142,4 +140,4 @@ def plot_monthly_error(ds, output_path_prefix):
         plt.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Save the figure
-        plt.savefig(f"{output_path_prefix}-monthly_error_{VAR_MAPPING[var]}.png")
+        plt.savefig(f"{output_path_prefix}-monthly_error_{var}.png")

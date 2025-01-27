@@ -146,14 +146,19 @@ def score_samples(filepath, n_ensemble=1, metrics_only=False):
             results.append(result)
 
     # Combine metrics
-    combined_metrics = xr.concat([res["metrics"] for res in results], dim="time")
+    combined_metrics = \
+        xr.concat([res["metrics"] for res in results], dim="time").rename(VAR_MAPPING)
     combined_metrics.attrs["n_ensemble"] = n_ensemble
     if metrics_only:
         return combined_metrics
 
     # Combine spatial error and flattened data
-    combined_error = xr.concat([res["error"] for res in results], dim="time")
-    combined_truth_flat = xr.concat([res["truth_flat"] for res in results], dim="points")
-    combined_pred_flat = xr.concat([res["pred_flat"] for res in results], dim="points")
+    combined_data = {
+        "error": xr.concat([res["error"] for res in results], dim="time"),
+        "truth_flat": xr.concat([res["truth_flat"] for res in results], dim="points"),
+        "pred_flat": xr.concat([res["pred_flat"] for res in results], dim="points"),
+    }
 
-    return combined_metrics, combined_error, combined_truth_flat, combined_pred_flat
+    combined_data = {key: value.rename(VAR_MAPPING) for key, value in combined_data.items()}
+    return combined_metrics, combined_data["error"], \
+        combined_data["truth_flat"], combined_data["pred_flat"]

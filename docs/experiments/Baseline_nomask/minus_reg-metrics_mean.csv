@@ -1,4 +1,4 @@
-metric,precipitation,temperature_2m,eastward_wind_10m,northward_wind_10m
+metric,prcp,t2m,u10m,v10m
 rmse,0.032,0.008,-0.006,0.015
 mae,0.063,0.006,-0.005,0.013
 crps,0.063,0.006,-0.005,0.013

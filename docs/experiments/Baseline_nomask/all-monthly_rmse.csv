@@ -1,4 +1,4 @@
-month,precipitation,temperature_2m,eastward_wind_10m,northward_wind_10m
+month,prcp,t2m,u10m,v10m
 1,4.80,0.38,0.64,0.74
 2,4.53,0.38,0.67,0.75
 3,4.16,0.43,0.65,0.82
