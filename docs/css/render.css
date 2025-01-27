@@ -53,7 +53,7 @@ h1 {
 
 .render-row {
     display: flex;
-    justify-content: center; /* Center content horizontally */
+    justify-content: space-around; /* Center content horizontally */
     align-items: center;
     gap: 20px;
     flex-wrap: wrap; /* Allow wrapping for responsive design */
