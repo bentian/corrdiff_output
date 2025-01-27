@@ -120,11 +120,16 @@ def main():
     # Process regression + diffusion model
     nc_all = os.path.join(args.in_dir, "netcdf", "output_0_all.nc")
     metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, args.n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(args.out_dir, "all"))
+    process_model(metrics_all, spatial_error, truth_flat, pred_flat,
+                  os.path.join(args.out_dir, "all"))
 
-    # Process regression-only model and compare
+    # Process regression-only model
     nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
-    metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
+    metrics_reg, spatial_error, truth_flat, pred_flat = score_samples(nc_reg, args.n_ensemble)
+    process_model(metrics_reg, spatial_error, truth_flat, pred_flat,
+                  os.path.join(args.out_dir, "reg"))
+
+    # Compare models
     compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
 
     # Read training loss

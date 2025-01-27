@@ -2,27 +2,25 @@ document.addEventListener("DOMContentLoaded", () => {
     // Define the file groups with titles
     const FILE_GROUPS = [
         {
-            title: "[all] Metrics Mean",
+            title: "[all] Metrics",
             files: [
                 "all-metrics_mean.csv", "all-metrics_mean.png",
                 "all-monthly_mae.csv", "all-monthly_mae.png",
                 "all-monthly_rmse.csv", "all-monthly_rmse.png",
+                "all-pdf_prcp.png", "all-monthly_error_prcp.png",
             ],
         },
         {
-            title: "[all] Probability Density Function",
+            title: "[reg] Metrics",
             files: [
-                "all-pdf_prcp.png",
+                "reg-metrics_mean.csv", "reg-metrics_mean.png",
+                "reg-monthly_mae.csv", "reg-monthly_mae.png",
+                "reg-monthly_rmse.csv", "reg-monthly_rmse.png",
+                "reg-pdf_prcp.png", "reg-monthly_error_prcp.png",
             ],
         },
         {
-            title: "[all] Monthly Errors",
-            files: [
-                "all-monthly_error_prcp.png",
-            ],
-        },
-        {
-            title: "[all - reg] Metrics Mean",
+            title: "[all - reg] Metrics",
             files: [
                 "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
                 "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
