@@ -76,23 +76,23 @@ def main():
     Main function to process models and generate plots and summary PDFs.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config")
+    parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config.")
+    parser.add_argument("out_dir", type=str, help="Folder to save the plots and tables.")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
     args = parser.parse_args()
 
     # Ensure output directory exists
-    out_dir = os.path.join(args.in_dir, "plot")
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    Path(args.out_dir).mkdir(parents=True, exist_ok=True)
 
     # Process regression + diffusion model
     nc_all = os.path.join(args.in_dir, "netcdf", "output_0_all.nc")
     metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, args.n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(out_dir, "all"))
+    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(args.out_dir, "all"))
 
     # Process regression-only model and compare
     nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
     metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
-    compare_models(metrics_all, metrics_reg, os.path.join(out_dir, "minus_reg"))
+    compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
 
 if __name__ == "__main__":
     main()
