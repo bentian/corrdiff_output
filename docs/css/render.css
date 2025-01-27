@@ -1,35 +1,75 @@
+/* General Styles */
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
+    background-color: #f9fafb;
+    color: #333;
+    margin: 0;
+    padding: 20px;
 }
 
-h1 {
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
-    margin-bottom: 20px;
 }
 
+/* Heading */
+h1 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+/* Render Container */
+#render-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Render Output Rows */
 .render-row-container {
-    margin-bottom: 30px;
+    background-color: #f9fafb;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .render-row-title {
-    text-align: center;
-    margin-bottom: 10px;
+    font-size: 1.4em;
     font-weight: bold;
-    text-decoration: underline; /* Add underline to the title */
-    font-size: 1.2em; /* Adjust font size for better visibility */
+    margin-bottom: 15px;
+    color: #34495e;
+    text-decoration: underline;
 }
 
 .render-row {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
+    gap: 20px;
 }
 
+/* Image Styles */
 .render-plot {
-    width: 45%;
-    border: 1px solid #ccc;
-    padding: 10px;
+    width: 48%;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Styles */
+.render-table {
+    width: 48%;
+    overflow-x: auto;
 }
 
 .render-table table {
@@ -39,10 +79,22 @@ h1 {
 }
 
 .render-table th, .render-table td {
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     padding: 8px;
 }
 
 .render-table th {
     background-color: #f4f4f4;
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .render-row {
+        flex-direction: column;
+    }
+
+    .render-plot, .render-table {
+        width: 100%;
+    }
 }
