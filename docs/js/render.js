@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const FILE_GROUPS = [
         {
             title: "Hydra Configuration",
-            files: ["config.csv"],
+            files: ["config.json"],
         },        
         {
             title: "[all] Metrics Mean",
@@ -117,6 +117,16 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
                     row.appendChild(tableDiv);
                 });
             });
+        }  else if (fileExtension === "json") {
+            // Render JSON data
+            const jsonPromises = [fetchJSON(`experiments/${exp1}/${file}`)];
+            if (exp2) jsonPromises.push(fetchJSON(`experiments/${exp2}/${file}`));
+
+            Promise.all(jsonPromises).then((jsonHTML) => {
+                jsonHTML.forEach((jsonDiv) => {
+                    row.appendChild(jsonDiv);
+                });
+            });
         }
 
         rowContainer.appendChild(row);
@@ -164,4 +174,24 @@ function addCollapsibleEventListeners() {
             content.style.display = content.style.display === "block" ? "none" : "block";
         });
     });
+}
+
+// Fetch and display JSON files
+function fetchJSON(url) {
+    return fetch(url)
+        .then((response) => {
+            if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+            return response.json();
+        })
+        .then((jsonData) => {
+            const pre = document.createElement("pre");
+            pre.className = "render-json";
+            pre.textContent = JSON.stringify(jsonData, null, 2);
+            return pre;
+        })
+        .catch((error) => {
+            const errorDiv = document.createElement("div");
+            errorDiv.innerHTML = `<p>Error loading JSON: ${url}</p>`;
+            return errorDiv;
+        });
 }

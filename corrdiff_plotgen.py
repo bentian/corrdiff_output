@@ -1,14 +1,13 @@
 import os
 import argparse
 from pathlib import Path
-import csv
 import pandas as pd
 import yaml
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
 
-def yaml_to_table(yaml_file_path, csv_filename):
+def yaml_to_json(yaml_file_path, json_filename):
     # Load the YAML content into a Python dictionary
     with open(yaml_file_path, 'r') as file:
         data = yaml.safe_load(file)
@@ -16,8 +15,8 @@ def yaml_to_table(yaml_file_path, csv_filename):
     # Normalize the nested dictionary into a flat table
     df = pd.json_normalize(data, sep='_').transpose()
 
-    # Export the DataFrame to a CSV file
-    df.to_csv(csv_filename, index=True, header=False, quoting=csv.QUOTE_NONNUMERIC)
+    # Export the DataFrame to a JSON file
+    df.to_json(json_filename, indent=4)
 
     return df
 
@@ -112,7 +111,7 @@ def main():
 
     # Store hydra config table
     config = os.path.join(args.in_dir, "hydra", "config.yaml")
-    yaml_to_table(config, os.path.join(args.out_dir, "config.csv"))
+    yaml_to_json(config, os.path.join(args.out_dir, "config.json"))
 
 if __name__ == "__main__":
     main()
