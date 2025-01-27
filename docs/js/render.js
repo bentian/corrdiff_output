@@ -2,8 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Define the file groups with titles
     const FILE_GROUPS = [
         {
-            title: "Hydra Configuration",
-            files: ["config.json"],
+            title: "Generate Config",
+            files: ["generate_config.csv"],
         },        
         {
             title: "[all] Metrics Mean",
