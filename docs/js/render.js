@@ -29,6 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
             ],
         },
+        {
+            title: "Training Loss",
+            files: [
+                "training_loss_regression.png", "training_loss_diffusion.png"
+            ],
+        },
     ];
 
     // Parse query parameters
