@@ -22,7 +22,7 @@ def yaml_to_csv(yaml_file_path, csv_filename):
         if value.startswith("[") and value.endswith("]"):  # Handle lists
             parsed_data[key.strip()] = value.replace(",", "_")
         elif value.lower() == "null":  # Handle null values
-            parsed_data[key.strip()] = None
+            parsed_data[key.strip()] = "null"
         else:  # Treat everything else as a string
             parsed_data[key.strip()] = value.replace(",", "_")
 
