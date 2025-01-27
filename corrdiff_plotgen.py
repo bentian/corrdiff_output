@@ -4,7 +4,6 @@ from pathlib import Path
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
-from generate_summary import generate_summary
 
 def save_to_csv(ds, output_path, number_format=".2f"):
     ds.to_dataframe().to_csv(output_path, float_format=f"%{number_format}")
@@ -79,7 +78,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
-    parser.add_argument("--summarize", type=bool, default=False, help="Whether to summarize the plots.")
     args = parser.parse_args()
 
     # Ensure output directory exists
@@ -95,12 +93,6 @@ def main():
     nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
     metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
     compare_models(metrics_all, metrics_reg, os.path.join(out_dir, "minus_reg"))
-
-    # Generate summary PDF
-    if args.summarize:
-        config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
-        generate_summary(out_dir, os.path.join(args.in_dir, "summary.pdf"), config)
-
 
 if __name__ == "__main__":
     main()
