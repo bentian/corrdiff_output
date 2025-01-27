@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const FILE_GROUPS = [
         {
             title: "Hydra Configuration",
-            files: ["config.csv"],
+            files: ["hydra.csv"],
         },        
         {
             title: "[all] Metrics Mean",

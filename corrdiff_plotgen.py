@@ -1,7 +1,6 @@
 import os
 import argparse
 from pathlib import Path
-import csv
 import pandas as pd
 import yaml
 
@@ -17,7 +16,7 @@ def yaml_to_table(yaml_file_path, csv_filename):
     df = pd.json_normalize(data, sep='_').transpose()
 
     # Export the DataFrame to a CSV file
-    df.to_csv(csv_filename, index=True, header=False, quoting=csv.QUOTE_NONNUMERIC)
+    df.to_csv(csv_filename, index=True)
 
     return df
 
@@ -101,18 +100,18 @@ def main():
     Path(args.out_dir).mkdir(parents=True, exist_ok=True)
 
     # Process regression + diffusion model
-    nc_all = os.path.join(args.in_dir, "netcdf", "output_0_all.nc")
-    metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, args.n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(args.out_dir, "all"))
+    # nc_all = os.path.join(args.in_dir, "netcdf", "output_0_all.nc")
+    # metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, args.n_ensemble)
+    # process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(args.out_dir, "all"))
 
-    # Process regression-only model and compare
-    nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
-    metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
-    compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
+    # # Process regression-only model and compare
+    # nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
+    # metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
+    # compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
 
     # Store hydra config table
     config = os.path.join(args.in_dir, "hydra", "config.yaml")
-    yaml_to_table(config, os.path.join(args.out_dir, "config.csv"))
+    yaml_to_table(config, os.path.join(args.out_dir, "hydra.csv"))
 
 if __name__ == "__main__":
     main()
