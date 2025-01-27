@@ -12,18 +12,22 @@ def yaml_to_csv(yaml_file_path, csv_filename):
     with open(yaml_file_path, 'r') as file:
         data = yaml.safe_load(file)
 
-    # Normalize the nested dictionary into a flat table
-    df = pd.json_normalize(data, sep='.')
+    # Convert the list into a dictionary
+    parsed_data = {}
+    for item in data:
+        key, value = item.split("=", 1)  # Split on the first '='
+        value = value.strip()
 
-    # Replace commas with underscores for specific columns
-    keys_to_replace = [
-        'dataset.in_channels', 'dataset.out_channels',
-        'generation.times', 'generation.times_range'
-    ]
-    for key in keys_to_replace:
-        if key in df.columns:
-            # Apply replacement only if the column exists
-            df[key] = df[key].astype(str).str.replace(', ', '_')
+        # Handle different value types explicitly
+        if value.startswith("[") and value.endswith("]"):  # Handle lists
+            parsed_data[key.strip()] = value.replace(",", "_")
+        elif value.lower() == "null":  # Handle null values
+            parsed_data[key.strip()] = None
+        else:  # Treat everything else as a string
+            parsed_data[key.strip()] = value.replace(",", "_")
+
+    # Normalize the dictionary into a flat table
+    df = pd.DataFrame([parsed_data])
 
     # Export the DataFrame to a CSV file
     df.transpose().to_csv(csv_filename, index=True)
@@ -120,7 +124,7 @@ def main():
     compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
 
     # Store hydra config table
-    config = os.path.join(args.in_dir, "hydra", "config.yaml")
+    config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
     yaml_to_csv(config, os.path.join(args.out_dir, "generate_config.csv"))
 
 if __name__ == "__main__":
