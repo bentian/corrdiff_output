@@ -90,8 +90,56 @@ h1 {
 
 .render-table {
     width: 48%;
+    max-width: 600px;
     overflow-x: auto;
     margin: 0 auto;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.render-table:hover {
+    transform: scale(1.02); /* Slight zoom on hover for emphasis */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.render-table table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    text-align: center;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.render-table th,
+.render-table td {
+    border: 1px solid #e0e6ed;
+    padding: 12px 10px; /* Increase padding for readability */
+    color: #34495e;
+    vertical-align: middle;
+}
+
+.render-table th {
+    background-color: #f1f5f9; /* Light gray background for header */
+    font-weight: bold;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.render-table td {
+    background-color: #ffffff; /* White background for data cells */
+}
+
+.render-table tr:nth-child(even) td {
+    background-color: #f9fafb; /* Subtle stripe for alternating rows */
+}
+
+.render-table tr:hover td {
+    background-color: #eef6fc; /* Highlight row on hover */
+    color: #2980b9; /* Accent color for hover text */
 }
 
 /* Responsive Design */
