@@ -88,6 +88,11 @@ h1 {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+.render-plot:hover {
+    transform: scale(1.02); /* Slight zoom on hover for emphasis */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
 .render-table {
     width: 48%;
     max-width: 600px;
