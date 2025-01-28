@@ -84,15 +84,21 @@ def save_tables_and_plots(ds_mean, ds_group_by_month, output_path, number_format
 
 
 # Model processing functions
-def process_model(metrics, spatial_error, truth_flat, pred_flat, output_path):
+def process_model(in_dir, out_dir, label, n_ensemble, masked):
     """
     Process a model, generate plots, and save metrics.
     """
+    nc_file = os.path.join(in_dir, "netcdf", f"output_0_{label}.nc")
+    metrics, spatial_error, truth_flat, pred_flat = score_samples(nc_file, n_ensemble, masked)
+    output_path = ensure_directory_exists(out_dir, label)
+
     ph.plot_monthly_error(spatial_error, output_path)
     ph.plot_pdf(truth_flat, pred_flat, output_path)
     metric_mean = metrics.mean(dim="time")
     metrics_grouped = metrics.groupby("time.month").mean(dim="time")
     save_tables_and_plots(metric_mean, metrics_grouped, output_path)
+
+    return metrics
 
 
 def compare_models(metrics_all, metrics_reg, output_path):
@@ -108,21 +114,15 @@ def compare_models(metrics_all, metrics_reg, output_path):
 
 
 # Main workflow
-def process_models(in_dir, out_dir, n_ensemble):
+def process_models(in_dir, out_dir, n_ensemble, masked):
     """
     Process models and generate results.
     """
     # Process regression + diffusion model
-    nc_all = os.path.join(in_dir, "netcdf", "output_0_all.nc")
-    metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat,
-                  ensure_directory_exists(out_dir, "all"))
+    metrics_all = process_model(in_dir, out_dir, "all", n_ensemble, masked)
 
     # Process regression-only model
-    nc_reg = os.path.join(in_dir, "netcdf", "output_0_reg.nc")
-    metrics_reg, spatial_error, truth_flat, pred_flat = score_samples(nc_reg, n_ensemble)
-    process_model(metrics_reg, spatial_error, truth_flat, pred_flat,
-                  ensure_directory_exists(out_dir, "reg"))
+    metrics_reg = process_model(in_dir, out_dir, "reg", n_ensemble, masked)
 
     # Compare models
     compare_models(metrics_all, metrics_reg, ensure_directory_exists(out_dir, "minus_reg"))
@@ -136,10 +136,16 @@ def main():
     parser.add_argument("in_dir", type=str, help="Folder to read the NetCDF files and config.")
     parser.add_argument("out_dir", type=str, help="Folder to save the plots and tables.")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
+    parser.add_argument("--masked", type=str, default='yes', help="Whether to apply landmask")
     args = parser.parse_args()
 
+    # Some Python argument parsers, such as argparse, automatically treat boolean flags as True
+    # if they are present, even if the value is explicitly set to False.
+    masked = True if args.masked.lower() == 'yes' else False
+    print(f'masked={masked}')
+
     ensure_directory_exists(args.out_dir)
-    process_models(args.in_dir, args.out_dir, args.n_ensemble)
+    process_models(args.in_dir, args.out_dir, args.n_ensemble, masked)
 
     # Process Hydra config
     config = os.path.join(args.in_dir, "hydra", "overrides.yaml")

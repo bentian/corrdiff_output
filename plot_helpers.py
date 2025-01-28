@@ -41,7 +41,7 @@ def plot_metrics(ds, output_path, number_format):
 def plot_monthly_metrics(ds, metric, output_path, number_format):
     _, ax = plt.subplots(figsize=(10, 6))
 
-    df_grouped = ds.to_dataframe().round(2)
+    df_grouped = ds.to_dataframe()
     for variable in df_grouped.columns:
         ax.plot(df_grouped.index, df_grouped[variable], marker="o", label=variable)
         for x, y in zip(df_grouped.index, df_grouped[variable]):

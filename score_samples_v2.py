@@ -9,7 +9,6 @@ try:
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
-APPLY_LANDMASK = False # Whether to apply the landmask to the data
 LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc" # Path to the landmask NetCDF file
 VAR_MAPPING ={
     "precipitation": "prcp",
@@ -32,7 +31,7 @@ def apply_landmask(truth, pred):
     return truth, pred
 
 
-def open_samples(f):
+def open_samples(f, masked):
     """
     Open prediction and truth samples from a dataset file.
 
@@ -52,7 +51,7 @@ def open_samples(f):
     truth = truth.set_coords(["lon", "lat"])
     pred = pred.set_coords(["lon", "lat"])
 
-    if not APPLY_LANDMASK:
+    if not masked:
         return truth, pred, root
 
     truth, pred = apply_landmask(truth, pred)
@@ -115,8 +114,8 @@ def get_flat(truth, pred):
     return combined_truth, combined_pred
 
 
-def process_sample(index, filepath, n_ensemble):
-    truth, pred, _ = open_samples(filepath)
+def process_sample(index, filepath, n_ensemble, masked):
+    truth, pred, _ = open_samples(filepath, masked)
     truth = truth.isel(time=index).load()
     if n_ensemble > 0:
         pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
@@ -133,15 +132,15 @@ def process_sample(index, filepath, n_ensemble):
     return result
 
 
-def score_samples(filepath, n_ensemble=1):
-    truth, _, _ = open_samples(filepath)
+def score_samples(filepath, n_ensemble=1, masked=False):
+    truth, _, _ = open_samples(filepath, masked)
 
     with multiprocessing.Pool(32) as pool:
         results = []
         for result in tqdm.tqdm(
             pool.imap(
                 partial(process_sample,
-                        filepath=filepath, n_ensemble=n_ensemble),
+                        filepath=filepath, n_ensemble=n_ensemble, masked=masked),
                 range(truth.sizes["time"]),
             ),
             total=truth.sizes["time"],
