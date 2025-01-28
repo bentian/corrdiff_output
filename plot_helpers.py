@@ -75,7 +75,7 @@ def plot_pdf(truth, pred, output_path):
     """
     for var in truth.data_vars:
         if var != 'prcp':
-            continue # Plot for only 'precipitation' now.
+            continue # Plot for only 'prcp' now.
 
         if var in pred:  # Ensure the variable exists in the prediction dataset
             truth_flat = truth[var].values.flatten()
@@ -85,7 +85,7 @@ def plot_pdf(truth, pred, output_path):
             truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
             pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
             print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
-            title_prefix = 'Zoomed ' if var == 'precipitation' else ''
+            title_prefix = 'Zoomed ' if var == 'prcp' else ''
 
             plt.figure(figsize=(10, 6))
             plt.hist(truth_flat, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
@@ -120,7 +120,7 @@ def plot_monthly_error(ds, output_path):
 
     for index, var in enumerate(variables):
         if var != 'prcp':
-            continue # Plot for only 'precipitation' now.
+            continue # Plot for only 'prcp' now.
 
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
         axes = axes.flatten()
