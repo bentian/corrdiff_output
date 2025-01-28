@@ -38,14 +38,14 @@ def plot_metrics(ds, output_path, number_format):
     plt.savefig(output_path)
 
 
-def plot_monthly_metrics(ds, metric, output_path):
+def plot_monthly_metrics(ds, metric, output_path, number_format):
     _, ax = plt.subplots(figsize=(10, 6))
 
     df_grouped = ds.to_dataframe().round(2)
     for variable in df_grouped.columns:
         ax.plot(df_grouped.index, df_grouped[variable], marker="o", label=variable)
         for x, y in zip(df_grouped.index, df_grouped[variable]):
-            ax.annotate(f"{y:.2f}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=8)
+            ax.annotate(f"{y:{number_format}}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=8)
 
     ax.set_title(f"Monthly Mean for {metric.upper()}", fontsize=14)
     ax.set_xlabel("Month", fontsize=12)

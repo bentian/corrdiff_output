@@ -51,25 +51,25 @@ def yaml_to_tsv(yaml_file_path, tsv_filename):
     with open(yaml_file_path, 'r') as file:
         data = yaml.safe_load(file)
     parsed_data = {key.strip(): value.strip() for item in data for key, value in [item.split("=", 1)]}
-    df = pd.DataFrame([parsed_data])
-    df.transpose().to_csv(tsv_filename, sep='\t', index=True)
+    df = pd.DataFrame([parsed_data]).transpose()
+    df.to_csv(tsv_filename, sep='\t', index=True)
 
 
-def save_to_tsv(ds, output_path, number_format=".2f"):
+def save_to_tsv(ds, output_path, number_format):
     """
     Save a dataset to a TSV file.
     """
     ds.to_dataframe().to_csv(output_path, sep='\t', float_format=f"%{number_format}")
 
 
-def save_metric_table_and_plot(ds, metric, output_path):
+def save_metric_table_and_plot(ds, metric, output_path, number_format):
     """
     Save metric tables and generate plots.
     """
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
     filename = os.path.join(output_path, f"monthly_{metric}")
-    save_to_tsv(ds_filtered, f"{filename}.tsv")
-    ph.plot_monthly_metrics(ds_filtered, metric, f"{filename}.png")
+    save_to_tsv(ds_filtered, f"{filename}.tsv", number_format)
+    ph.plot_monthly_metrics(ds_filtered, metric, f"{filename}.png", number_format)
 
 
 def save_tables_and_plots(ds_mean, ds_group_by_month, output_path, number_format=".2f"):
@@ -80,7 +80,7 @@ def save_tables_and_plots(ds_mean, ds_group_by_month, output_path, number_format
     save_to_tsv(ds_mean, f"{filename}.tsv", number_format)
     ph.plot_metrics(ds_mean, f"{filename}.png", number_format)
     for metric in ["mae", "rmse"]:
-        save_metric_table_and_plot(ds_group_by_month, metric, output_path)
+        save_metric_table_and_plot(ds_group_by_month, metric, output_path, number_format)
 
 
 # Model processing functions
