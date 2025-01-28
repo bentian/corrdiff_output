@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const FILE_GROUPS = [
         {
             title: "Generate Config",
-            files: ["generate_config.tsv"],
+            files: ["generate_overrides.tsv"],
         },        
         {
             title: "[all] Metrics Mean",
