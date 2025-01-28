@@ -1,11 +1,46 @@
 import os
 import argparse
+from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import yaml
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
+
+def read_tensorboard_log(log_dir, scalar_name="training_loss"):
+    """
+    Read TensorBoard logs from a directory and extract scalar values.
+
+    Args:
+        log_dir (str): Directory containing TensorBoard event files.
+        scalar_name (str): The scalar tag to extract (default: 'loss').
+
+    Returns:
+        list: Wall times (x-axis values) in datetime format.
+        list: Scalar values (y-axis values).
+    """
+    # Load the event file
+    event_acc = EventAccumulator(log_dir)
+    event_acc.Reload()
+
+    # Get all scalar tags
+    tags = event_acc.Tags().get('scalars', [])
+    if scalar_name not in tags:
+        raise ValueError(f"Scalar '{scalar_name}' not found in logs. Available scalars: {tags}")
+
+    # Extract scalar values and wall times
+    scalar_events = event_acc.Scalars(scalar_name)
+    wall_times = [datetime.fromtimestamp(event.wall_time) for event in scalar_events]
+    values = [event.value for event in scalar_events]
+
+    return wall_times, values
+
+def read_training_loss_n_plot(in_dir, out_dir, label):
+    wall_times, values = read_tensorboard_log(os.path.join(in_dir, f"tensorboard_{label}"))
+    ph.plot_training_loss(wall_times, values, os.path.join(out_dir, f"training_loss_{label}.png"))
+
 
 def yaml_to_tsv(yaml_file_path, tsv_filename):
     # Load the YAML content into a Python dictionary
@@ -24,11 +59,9 @@ def yaml_to_tsv(yaml_file_path, tsv_filename):
     # Export the DataFrame to a CSV file
     df.transpose().to_csv(tsv_filename, sep='\t', index=True)
 
-    return df
 
 def save_to_tsv(ds, output_path, number_format=".2f"):
     ds.to_dataframe().to_csv(output_path, sep='\t', float_format=f"%{number_format}")
-
 
 def save_metric_table_n_plot(ds, metric, output_path_prefix):
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
@@ -36,7 +69,6 @@ def save_metric_table_n_plot(ds, metric, output_path_prefix):
 
     save_to_tsv(ds_filtered, f"{filename}.tsv")
     ph.plot_monthly_metrics(ds_filtered, metric, f"{filename}.png")
-
 
 def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, number_format=".2f"):
     filename = f"{output_path_prefix}-metrics_mean"
@@ -71,7 +103,6 @@ def process_model(metrics, spatial_error, truth_flat, pred_flat, output_path_pre
     # Save tables and plots
     save_tables_n_plot(metric_mean, metrics_grouped, output_path_prefix)
 
-
 def compare_models(metrics_all, metrics_reg, output_path_prefix):
     """
     Compare regression + diffusion model with regression only model and save results.
@@ -92,6 +123,7 @@ def compare_models(metrics_all, metrics_reg, output_path_prefix):
     save_tables_n_plot(metrics_mean_diff, metrics_grouped_diff,
                        output_path_prefix, number_format=".3f")
 
+
 def main():
     """
     Main function to process models and generate plots and summary PDFs.
@@ -108,16 +140,26 @@ def main():
     # Process regression + diffusion model
     nc_all = os.path.join(args.in_dir, "netcdf", "output_0_all.nc")
     metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, args.n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(args.out_dir, "all"))
+    process_model(metrics_all, spatial_error, truth_flat, pred_flat,
+                  os.path.join(args.out_dir, "all"))
 
-    # Process regression-only model and compare
+    # Process regression-only model
     nc_reg = os.path.join(args.in_dir, "netcdf", "output_0_reg.nc")
-    metrics_reg = score_samples(nc_reg, args.n_ensemble, metrics_only=True)
+    metrics_reg, spatial_error, truth_flat, pred_flat = score_samples(nc_reg, args.n_ensemble)
+    process_model(metrics_reg, spatial_error, truth_flat, pred_flat,
+                  os.path.join(args.out_dir, "reg"))
+
+    # Compare models
     compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
+
 
     # Store hydra config table
     config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
     yaml_to_tsv(config, os.path.join(args.out_dir, "generate_overrides.tsv"))
+
+    # Read training loss
+    read_training_loss_n_plot(args.in_dir, args.out_dir, "regression")
+    read_training_loss_n_plot(args.in_dir, args.out_dir, "diffusion")
 
 if __name__ == "__main__":
     main()

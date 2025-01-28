@@ -141,3 +141,29 @@ def plot_monthly_error(ds, output_path_prefix):
 
         # Save the figure
         plt.savefig(f"{output_path_prefix}-monthly_error_{var}.png")
+
+
+def plot_training_loss(wall_times, values, output_file):
+    """
+    Create a training loss plot with time on the x-axis and save it to a PNG file.
+
+    Args:
+        wall_times (list): Wall times (x-axis values).
+        values (list): Loss values (y-axis values).
+        output_file (str): Path to save the plot.
+    """
+    window_size = 20
+    smoothed_values = np.convolve(values, np.ones(window_size)/window_size, mode='valid')
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(wall_times, values, alpha=0.5, label="Raw Loss", color="gray", linewidth=1)
+    plt.plot(wall_times[:len(smoothed_values)], smoothed_values, label="Smoothed Loss", linestyle="--", linewidth=2)
+
+    plt.xlabel("Time")
+    plt.yscale("log")
+    plt.ylabel("Loss (log scale)")
+    plt.title("Training Loss Over Time")
+    plt.legend()
+    plt.grid(True)
+    plt.gcf().autofmt_xdate()  # Format the x-axis for better readability of time
+    plt.savefig(output_file)
