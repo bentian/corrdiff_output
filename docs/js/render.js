@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     // Define the file groups with titles
     const FILE_GROUPS = [
-        {
+      {
             title: "[all] Metrics",
             files: [
                 "all-metrics_mean.csv", "all-metrics_mean.png",
@@ -26,6 +26,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
                 "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
             ],
+        },
+        {
+            title: "Generation Config",
+            files: ["generate_overrides.tsv"],
         },
         {
             title: "Training Loss",
@@ -104,10 +108,10 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
                 img2.className = "render-plot";
                 row.appendChild(img2);
             }
-        } else if (fileExtension === "csv") {
+        } else if (fileExtension === "tsv") {
             // Render tables
-            const tablePromises = [fetchCSV(`experiments/${exp1}/${file}`)];
-            if (exp2) tablePromises.push(fetchCSV(`experiments/${exp2}/${file}`));
+            const tablePromises = [fetchTSV(`experiments/${exp1}/${file}`)];
+            if (exp2) tablePromises.push(fetchTSV(`experiments/${exp2}/${file}`));
 
             Promise.all(tablePromises).then((tablesHTML) => {
                 tablesHTML.forEach((tableHTML) => {
@@ -115,6 +119,16 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
                     tableDiv.className = "render-table";
                     tableDiv.innerHTML = tableHTML;
                     row.appendChild(tableDiv);
+                });
+            });
+        }  else if (fileExtension === "json") {
+            // Render JSON data
+            const jsonPromises = [fetchJSON(`experiments/${exp1}/${file}`)];
+            if (exp2) jsonPromises.push(fetchJSON(`experiments/${exp2}/${file}`));
+
+            Promise.all(jsonPromises).then((jsonHTML) => {
+                jsonHTML.forEach((jsonDiv) => {
+                    row.appendChild(jsonDiv);
                 });
             });
         }
@@ -127,21 +141,20 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
     renderOutput.appendChild(content);
 }
 
-// Fetch and parse CSV files into HTML tables
-function fetchCSV(url) {
+// Fetch and parse TSV files into HTML tables
+function fetchTSV(url) {
     return fetch(url)
         .then((response) => {
             if (!response.ok) throw new Error(`Failed to fetch ${url}`);
             return response.text();
         })
-        .then((csvText) => {
-            const rows = csvText.split("\n").filter((row) => row.trim() !== "");
+        .then((tsvText) => {
+            const rows = tsvText.split("\n").filter((row) => row.trim() !== "");
             const table = document.createElement("table");
-            table.border = "1";
 
             rows.forEach((row, index) => {
                 const tr = document.createElement("tr");
-                row.split(",").forEach((cell) => {
+                row.split('\t').forEach((cell) => {
                     const td = document.createElement(index === 0 ? "th" : "td");
                     td.textContent = cell.trim();
                     tr.appendChild(td);
@@ -151,7 +164,7 @@ function fetchCSV(url) {
 
             return table.outerHTML;
         })
-        .catch((error) => `<p>Error loading CSV: ${url}</p>`);
+        .catch((error) => `<p>Error loading TSV: ${url}</p>`);
 }
 
 // Add collapsible toggle functionality

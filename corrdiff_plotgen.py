@@ -2,6 +2,8 @@ import os
 import argparse
 from datetime import datetime
 from pathlib import Path
+import pandas as pd
+import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 import plot_helpers as ph
@@ -40,19 +42,37 @@ def read_training_loss_n_plot(in_dir, out_dir, label):
     ph.plot_training_loss(wall_times, values, os.path.join(out_dir, f"training_loss_{label}.png"))
 
 
-def save_to_csv(ds, output_path, number_format=".2f"):
-    ds.to_dataframe().to_csv(output_path, float_format=f"%{number_format}")
+def yaml_to_tsv(yaml_file_path, tsv_filename):
+    # Load the YAML content into a Python dictionary
+    with open(yaml_file_path, 'r') as file:
+        data = yaml.safe_load(file)
+
+    # Convert the list into a dictionary
+    parsed_data = {}
+    for item in data:
+        key, value = item.split("=", 1)  # Split on the first '='
+        parsed_data[key.strip()] = value.strip()
+
+    # Normalize the dictionary into a flat table
+    df = pd.DataFrame([parsed_data])
+
+    # Export the DataFrame to a CSV file
+    df.transpose().to_csv(tsv_filename, sep='\t', index=True)
+
+
+def save_to_tsv(ds, output_path, number_format=".2f"):
+    ds.to_dataframe().to_csv(output_path, sep='\t', float_format=f"%{number_format}")
 
 def save_metric_table_n_plot(ds, metric, output_path_prefix):
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
     filename = f"{output_path_prefix}-monthly_{metric}"
 
-    save_to_csv(ds_filtered, f"{filename}.csv")
+    save_to_tsv(ds_filtered, f"{filename}.tsv")
     ph.plot_monthly_metrics(ds_filtered, metric, f"{filename}.png")
 
 def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, number_format=".2f"):
     filename = f"{output_path_prefix}-metrics_mean"
-    save_to_csv(ds_mean, f"{filename}.csv", number_format)
+    save_to_tsv(ds_mean, f"{filename}.tsv", number_format)
     ph.plot_metrics(ds_mean, f"{filename}.png", number_format)
 
     for metric in ["mae", "rmse"]:
@@ -131,6 +151,11 @@ def main():
 
     # Compare models
     compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
+
+
+    # Store hydra config table
+    config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
+    yaml_to_tsv(config, os.path.join(args.out_dir, "generate_overrides.tsv"))
 
     # Read training loss
     read_training_loss_n_plot(args.in_dir, args.out_dir, "regression")
