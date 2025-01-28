@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ],
         },
         {
-            title: "Generation Config",
+            title: "Config Overrides",
             files: ["generate_overrides.tsv"],
         },
         {

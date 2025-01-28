@@ -152,7 +152,6 @@ def main():
     # Compare models
     compare_models(metrics_all, metrics_reg, os.path.join(args.out_dir, "minus_reg"))
 
-
     # Store hydra config table
     config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
     yaml_to_tsv(config, os.path.join(args.out_dir, "generate_overrides.tsv"))
