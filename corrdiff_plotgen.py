@@ -10,11 +10,13 @@ import plot_helpers as ph
 from score_samples_v2 import score_samples
 
 # General utility functions
-def ensure_directory_exists(directory):
+def ensure_directory_exists(dir, subdir=None):
     """
     Ensure the given directory exists.
     """
+    directory = os.path.join(dir, subdir) if subdir else dir
     Path(directory).mkdir(parents=True, exist_ok=True)
+    return directory
 
 
 def read_tensorboard_log(log_dir, scalar_name="training_loss"):
@@ -60,40 +62,40 @@ def save_to_tsv(ds, output_path, number_format=".2f"):
     ds.to_dataframe().to_csv(output_path, sep='\t', float_format=f"%{number_format}")
 
 
-def save_metric_table_and_plot(ds, metric, output_path_prefix):
+def save_metric_table_and_plot(ds, metric, output_path):
     """
     Save metric tables and generate plots.
     """
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
-    filename = f"{output_path_prefix}-monthly_{metric}"
+    filename = os.path.join(output_path, f"monthly_{metric}")
     save_to_tsv(ds_filtered, f"{filename}.tsv")
     ph.plot_monthly_metrics(ds_filtered, metric, f"{filename}.png")
 
 
-def save_tables_and_plots(ds_mean, ds_group_by_month, output_path_prefix, number_format=".2f"):
+def save_tables_and_plots(ds_mean, ds_group_by_month, output_path, number_format=".2f"):
     """
     Save summary tables and plots for metrics.
     """
-    filename = f"{output_path_prefix}-metrics_mean"
+    filename = os.path.join(output_path, "metrics_mean")
     save_to_tsv(ds_mean, f"{filename}.tsv", number_format)
     ph.plot_metrics(ds_mean, f"{filename}.png", number_format)
     for metric in ["mae", "rmse"]:
-        save_metric_table_and_plot(ds_group_by_month, metric, output_path_prefix)
+        save_metric_table_and_plot(ds_group_by_month, metric, output_path)
 
 
 # Model processing functions
-def process_model(metrics, spatial_error, truth_flat, pred_flat, output_path_prefix):
+def process_model(metrics, spatial_error, truth_flat, pred_flat, output_path):
     """
     Process a model, generate plots, and save metrics.
     """
-    ph.plot_monthly_error(spatial_error, output_path_prefix)
-    ph.plot_pdf(truth_flat, pred_flat, output_path_prefix)
+    ph.plot_monthly_error(spatial_error, output_path)
+    ph.plot_pdf(truth_flat, pred_flat, output_path)
     metric_mean = metrics.mean(dim="time")
     metrics_grouped = metrics.groupby("time.month").mean(dim="time")
-    save_tables_and_plots(metric_mean, metrics_grouped, output_path_prefix)
+    save_tables_and_plots(metric_mean, metrics_grouped, output_path)
 
 
-def compare_models(metrics_all, metrics_reg, output_path_prefix):
+def compare_models(metrics_all, metrics_reg, output_path):
     """
     Compare models and save results.
     """
@@ -102,7 +104,7 @@ def compare_models(metrics_all, metrics_reg, output_path_prefix):
         metrics_all.groupby("time.month").mean(dim="time")
         - metrics_reg.groupby("time.month").mean(dim="time")
     )
-    save_tables_and_plots(metrics_mean_diff, metrics_grouped_diff, output_path_prefix, number_format=".3f")
+    save_tables_and_plots(metrics_mean_diff, metrics_grouped_diff, output_path, number_format=".3f")
 
 
 # Main workflow
@@ -113,15 +115,17 @@ def process_models(in_dir, out_dir, n_ensemble):
     # Process regression + diffusion model
     nc_all = os.path.join(in_dir, "netcdf", "output_0_all.nc")
     metrics_all, spatial_error, truth_flat, pred_flat = score_samples(nc_all, n_ensemble)
-    process_model(metrics_all, spatial_error, truth_flat, pred_flat, os.path.join(out_dir, "all"))
+    process_model(metrics_all, spatial_error, truth_flat, pred_flat,
+                  ensure_directory_exists(out_dir, "all"))
 
     # Process regression-only model
     nc_reg = os.path.join(in_dir, "netcdf", "output_0_reg.nc")
     metrics_reg, spatial_error, truth_flat, pred_flat = score_samples(nc_reg, n_ensemble)
-    process_model(metrics_reg, spatial_error, truth_flat, pred_flat, os.path.join(out_dir, "reg"))
+    process_model(metrics_reg, spatial_error, truth_flat, pred_flat,
+                  ensure_directory_exists(out_dir, "reg"))
 
     # Compare models
-    compare_models(metrics_all, metrics_reg, os.path.join(out_dir, "minus_reg"))
+    compare_models(metrics_all, metrics_reg, ensure_directory_exists(out_dir, "minus_reg"))
 
 
 def main():
@@ -135,7 +139,6 @@ def main():
     args = parser.parse_args()
 
     ensure_directory_exists(args.out_dir)
-
     process_models(args.in_dir, args.out_dir, args.n_ensemble)
 
     # Process Hydra config

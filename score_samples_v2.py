@@ -115,22 +115,25 @@ def get_flat(truth, pred):
     return combined_truth, combined_pred
 
 
-def process_sample(index, filepath, n_ensemble, metrics_only):
+def process_sample(index, filepath, n_ensemble):
     truth, pred, _ = open_samples(filepath)
     truth = truth.isel(time=index).load()
     if n_ensemble > 0:
         pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
     pred = pred.load()
 
-    result = { "metrics": compute_metrics(truth, pred) }
-    if not metrics_only:
-        result["truth_flat"], result["pred_flat"] = get_flat(truth, pred)
-        result["error"] = abs(pred.mean("ensemble").expand_dims("ensemble") - truth)
+    truth_flat, pred_flat = get_flat(truth, pred)
+    result = {
+        "metrics": compute_metrics(truth, pred),
+        "error": abs(pred.mean("ensemble").expand_dims("ensemble") - truth),
+        "truth_flat": truth_flat,
+        "pred_flat": pred_flat
+    }
 
     return result
 
 
-def score_samples(filepath, n_ensemble=1, metrics_only=False):
+def score_samples(filepath, n_ensemble=1):
     truth, _, _ = open_samples(filepath)
 
     with multiprocessing.Pool(32) as pool:
@@ -138,7 +141,7 @@ def score_samples(filepath, n_ensemble=1, metrics_only=False):
         for result in tqdm.tqdm(
             pool.imap(
                 partial(process_sample,
-                        filepath=filepath, n_ensemble=n_ensemble, metrics_only=metrics_only),
+                        filepath=filepath, n_ensemble=n_ensemble),
                 range(truth.sizes["time"]),
             ),
             total=truth.sizes["time"],
@@ -149,8 +152,6 @@ def score_samples(filepath, n_ensemble=1, metrics_only=False):
     combined_metrics = \
         xr.concat([res["metrics"] for res in results], dim="time").rename(VAR_MAPPING)
     combined_metrics.attrs["n_ensemble"] = n_ensemble
-    if metrics_only:
-        return combined_metrics
 
     # Combine spatial error and flattened data
     combined_data = {

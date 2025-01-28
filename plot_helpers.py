@@ -1,4 +1,4 @@
-import xarray as xr
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -64,7 +64,7 @@ def get_bin_count_n_note(ds, bin_width=1):
     return bin_count, f"({len(ds):,} pts in [{min_val:.1f}, {max_val:.1f}])"
 
 
-def plot_pdf(truth, pred, output_path_prefix):
+def plot_pdf(truth, pred, output_path):
     """
     Plot PDFs for all variables in the truth dataset, comparing with prediction.
 
@@ -100,11 +100,11 @@ def plot_pdf(truth, pred, output_path_prefix):
                 plt.xlim([-5, 15])  # Adjust x-limits based on expected variable range
 
             # Save the figure with variable-specific filename
-            plt.savefig(f"{output_path_prefix}-pdf_{var}.png")
+            plt.savefig(os.path.join(output_path, f"pdf_{var}.png"))
             plt.close()
 
 
-def plot_monthly_error(ds, output_path_prefix):
+def plot_monthly_error(ds, output_path):
     """
     Group variables by month, compute the monthly mean, and plot the results.
 
@@ -140,7 +140,7 @@ def plot_monthly_error(ds, output_path_prefix):
         plt.tight_layout(rect=[0, 0, 1, 0.96])
 
         # Save the figure
-        plt.savefig(f"{output_path_prefix}-monthly_error_{var}.png")
+        plt.savefig(os.path.join(output_path, f"monthly_error_{var}.png"))
 
 
 def plot_training_loss(wall_times, values, output_file):
