@@ -142,7 +142,7 @@ def main():
     # Some Python argument parsers, such as argparse, automatically treat boolean flags as True
     # if they are present, even if the value is explicitly set to False.
     masked = True if args.masked.lower() == 'yes' else False
-    print(f'masked={masked}')
+    print(f'corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} masked={masked}')
 
     ensure_directory_exists(args.out_dir)
     process_models(args.in_dir, args.out_dir, args.n_ensemble, masked)
