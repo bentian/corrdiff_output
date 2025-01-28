@@ -7,7 +7,7 @@ import yaml
 import plot_helpers as ph
 from score_samples_v2 import score_samples
 
-def yaml_to_csv(yaml_file_path, csv_filename):
+def yaml_to_tsv(yaml_file_path, tsv_filename):
     # Load the YAML content into a Python dictionary
     with open(yaml_file_path, 'r') as file:
         data = yaml.safe_load(file)
@@ -16,39 +16,31 @@ def yaml_to_csv(yaml_file_path, csv_filename):
     parsed_data = {}
     for item in data:
         key, value = item.split("=", 1)  # Split on the first '='
-        value = value.strip()
-
-        # Handle different value types explicitly
-        if value.startswith("[") and value.endswith("]"):  # Handle lists
-            parsed_data[key.strip()] = value.replace(",", "_").replace('"', '')
-        elif value.lower() == "null":  # Handle null values
-            parsed_data[key.strip()] = "null"
-        else:  # Treat everything else as a string
-            parsed_data[key.strip()] = value.replace(",", "_")
+        parsed_data[key.strip()] = value.strip()
 
     # Normalize the dictionary into a flat table
     df = pd.DataFrame([parsed_data])
 
     # Export the DataFrame to a CSV file
-    df.transpose().to_csv(csv_filename, index=True)
+    df.transpose().to_csv(tsv_filename, sep='\t', index=True)
 
     return df
 
-def save_to_csv(ds, output_path, number_format=".2f"):
-    ds.to_dataframe().to_csv(output_path, float_format=f"%{number_format}")
+def save_to_tsv(ds, output_path, number_format=".2f"):
+    ds.to_dataframe().to_csv(output_path, sep='\t', float_format=f"%{number_format}")
 
 
 def save_metric_table_n_plot(ds, metric, output_path_prefix):
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
     filename = f"{output_path_prefix}-monthly_{metric}"
 
-    save_to_csv(ds_filtered, f"{filename}.csv")
+    save_to_tsv(ds_filtered, f"{filename}.tsv")
     ph.plot_monthly_metrics(ds_filtered, metric, f"{filename}.png")
 
 
 def save_tables_n_plot(ds_mean, ds_group_by_month, output_path_prefix, number_format=".2f"):
     filename = f"{output_path_prefix}-metrics_mean"
-    save_to_csv(ds_mean, f"{filename}.csv", number_format)
+    save_to_tsv(ds_mean, f"{filename}.tsv", number_format)
     ph.plot_metrics(ds_mean, f"{filename}.png", number_format)
 
     for metric in ["mae", "rmse"]:
@@ -125,7 +117,7 @@ def main():
 
     # Store hydra config table
     config = os.path.join(args.in_dir, "hydra", "overrides.yaml")
-    yaml_to_csv(config, os.path.join(args.out_dir, "generate_config.csv"))
+    yaml_to_tsv(config, os.path.join(args.out_dir, "generate_overrides.tsv"))
 
 if __name__ == "__main__":
     main()

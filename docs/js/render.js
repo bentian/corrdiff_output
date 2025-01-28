@@ -3,14 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const FILE_GROUPS = [
         {
             title: "Generate Config",
-            files: ["generate_config.csv"],
+            files: ["generate_config.tsv"],
         },        
         {
             title: "[all] Metrics Mean",
             files: [
-                "all-metrics_mean.csv", "all-metrics_mean.png",
-                "all-monthly_mae.csv", "all-monthly_mae.png",
-                "all-monthly_rmse.csv", "all-monthly_rmse.png",
+                "all-metrics_mean.tsv", "all-metrics_mean.png",
+                "all-monthly_mae.tsv", "all-monthly_mae.png",
+                "all-monthly_rmse.tsv", "all-monthly_rmse.png",
             ],
         },
         {
@@ -28,9 +28,9 @@ document.addEventListener("DOMContentLoaded", () => {
         {
             title: "[all - reg] Metrics Mean",
             files: [
-                "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
-                "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
-                "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
+                "minus_reg-metrics_mean.tsv", "minus_reg-metrics_mean.png",
+                "minus_reg-monthly_mae.tsv", "minus_reg-monthly_mae.png",
+                "minus_reg-monthly_rmse.tsv", "minus_reg-monthly_rmse.png",
             ],
         },
     ];
@@ -104,10 +104,10 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
                 img2.className = "render-plot";
                 row.appendChild(img2);
             }
-        } else if (fileExtension === "csv") {
+        } else if (fileExtension === "tsv") {
             // Render tables
-            const tablePromises = [fetchCSV(`experiments/${exp1}/${file}`)];
-            if (exp2) tablePromises.push(fetchCSV(`experiments/${exp2}/${file}`));
+            const tablePromises = [fetchTSV(`experiments/${exp1}/${file}`)];
+            if (exp2) tablePromises.push(fetchTSV(`experiments/${exp2}/${file}`));
 
             Promise.all(tablePromises).then((tablesHTML) => {
                 tablesHTML.forEach((tableHTML) => {
@@ -137,21 +137,20 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
     renderOutput.appendChild(content);
 }
 
-// Fetch and parse CSV files into HTML tables
-function fetchCSV(url) {
+// Fetch and parse TSV files into HTML tables
+function fetchTSV(url) {
     return fetch(url)
         .then((response) => {
             if (!response.ok) throw new Error(`Failed to fetch ${url}`);
             return response.text();
         })
-        .then((csvText) => {
-            const rows = csvText.split("\n").filter((row) => row.trim() !== "");
+        .then((tsvText) => {
+            const rows = tsvText.split("\n").filter((row) => row.trim() !== "");
             const table = document.createElement("table");
-            table.border = "1";
 
             rows.forEach((row, index) => {
                 const tr = document.createElement("tr");
-                row.split(",").forEach((cell) => {
+                row.split('\t').forEach((cell) => {
                     const td = document.createElement(index === 0 ? "th" : "td");
                     td.textContent = cell.trim();
                     tr.appendChild(td);
@@ -161,7 +160,7 @@ function fetchCSV(url) {
 
             return table.outerHTML;
         })
-        .catch((error) => `<p>Error loading CSV: ${url}</p>`);
+        .catch((error) => `<p>Error loading TSV: ${url}</p>`);
 }
 
 // Add collapsible toggle functionality
@@ -174,24 +173,4 @@ function addCollapsibleEventListeners() {
             content.style.display = content.style.display === "block" ? "none" : "block";
         });
     });
-}
-
-// Fetch and display JSON files
-function fetchJSON(url) {
-    return fetch(url)
-        .then((response) => {
-            if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-            return response.json();
-        })
-        .then((jsonData) => {
-            const pre = document.createElement("pre");
-            pre.className = "render-json";
-            pre.textContent = JSON.stringify(jsonData, null, 2);
-            return pre;
-        })
-        .catch((error) => {
-            const errorDiv = document.createElement("div");
-            errorDiv.innerHTML = `<p>Error loading JSON: ${url}</p>`;
-            return errorDiv;
-        });
 }
