@@ -4,27 +4,27 @@ document.addEventListener("DOMContentLoaded", () => {
       {
             title: "[all] Metrics",
             files: [
-                "all-metrics_mean.csv", "all-metrics_mean.png",
-                "all-monthly_mae.csv", "all-monthly_mae.png",
-                "all-monthly_rmse.csv", "all-monthly_rmse.png",
+                "all-metrics_mean.tsv", "all-metrics_mean.png",
+                "all-monthly_mae.tsv", "all-monthly_mae.png",
+                "all-monthly_rmse.tsv", "all-monthly_rmse.png",
                 "all-pdf_prcp.png", "all-monthly_error_prcp.png",
             ],
         },
         {
             title: "[reg] Metrics",
             files: [
-                "reg-metrics_mean.csv", "reg-metrics_mean.png",
-                "reg-monthly_mae.csv", "reg-monthly_mae.png",
-                "reg-monthly_rmse.csv", "reg-monthly_rmse.png",
+                "reg-metrics_mean.tsv", "reg-metrics_mean.png",
+                "reg-monthly_mae.tsv", "reg-monthly_mae.png",
+                "reg-monthly_rmse.tsv", "reg-monthly_rmse.png",
                 "reg-pdf_prcp.png", "reg-monthly_error_prcp.png",
             ],
         },
         {
             title: "[all - reg] Metrics",
             files: [
-                "minus_reg-metrics_mean.csv", "minus_reg-metrics_mean.png",
-                "minus_reg-monthly_mae.csv", "minus_reg-monthly_mae.png",
-                "minus_reg-monthly_rmse.csv", "minus_reg-monthly_rmse.png",
+                "minus_reg-metrics_mean.tsv", "minus_reg-metrics_mean.png",
+                "minus_reg-monthly_mae.tsv", "minus_reg-monthly_mae.png",
+                "minus_reg-monthly_rmse.tsv", "minus_reg-monthly_rmse.png",
             ],
         },
         {
