@@ -9,7 +9,6 @@ try:
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
-LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc" # Path to the landmask NetCDF file
 VAR_MAPPING ={
     "precipitation": "prcp",
     "temperature_2m": "t2m",
@@ -17,21 +16,7 @@ VAR_MAPPING ={
     "northward_wind_10m": "v10m",
 }
 
-def apply_landmask(truth, pred):
-    grid = xr.open_dataset(LANDMASK_NC, engine='netcdf4')
-    landmask = grid.LANDMASK.rename({"south_north": "y", "west_east": "x"})
-
-    # Apply the landmask to both datasets and fill NaN with 0
-    landmask_expanded = landmask.expand_dims(dim={"time": truth.sizes["time"]})
-    truth = truth.where(landmask_expanded == 1, 0)
-
-    landmask_expanded = landmask_expanded.expand_dims(dim={"ensemble": pred.sizes["ensemble"]})
-    pred = pred.where(landmask_expanded == 1, 0)
-
-    return truth, pred
-
-
-def open_samples(f, masked):
+def open_samples(f):
     """
     Open prediction and truth samples from a dataset file.
 
@@ -51,10 +36,6 @@ def open_samples(f, masked):
     truth = truth.set_coords(["lon", "lat"])
     pred = pred.set_coords(["lon", "lat"])
 
-    if not masked:
-        return truth, pred, root
-
-    truth, pred = apply_landmask(truth, pred)
     return truth, pred, root
 
 
@@ -114,8 +95,8 @@ def get_flat(truth, pred):
     return combined_truth, combined_pred
 
 
-def process_sample(index, filepath, n_ensemble, masked):
-    truth, pred, _ = open_samples(filepath, masked)
+def process_sample(index, filepath, n_ensemble):
+    truth, pred, _ = open_samples(filepath)
     truth = truth.isel(time=index).load()
     if n_ensemble > 0:
         pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
@@ -132,15 +113,15 @@ def process_sample(index, filepath, n_ensemble, masked):
     return result
 
 
-def score_samples(filepath, n_ensemble=1, masked=False):
-    truth, _, _ = open_samples(filepath, masked)
+def score_samples(filepath, n_ensemble=1):
+    truth, _, _ = open_samples(filepath)
 
     with multiprocessing.Pool(32) as pool:
         results = []
         for result in tqdm.tqdm(
             pool.imap(
                 partial(process_sample,
-                        filepath=filepath, n_ensemble=n_ensemble, masked=masked),
+                        filepath=filepath, n_ensemble=n_ensemble),
                 range(truth.sizes["time"]),
             ),
             total=truth.sizes["time"],
