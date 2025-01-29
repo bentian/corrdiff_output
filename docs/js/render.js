@@ -1,7 +1,7 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // Define the file groups with titles
     const FILE_GROUPS = [
-      {
+        {
             title: "[all] Metrics",
             files: [
                 "all/metrics_mean.tsv", "all/metrics_mean.png",
@@ -29,13 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         {
             title: "Config Overrides",
-            files: ["generate_overrides.tsv"],
+            files: ["generate_overrides.tsv"]
         },
         {
             title: "Training Loss",
-            files: [
-                "training_loss_regression.png", "training_loss_diffusion.png"
-            ],
+            files: ["training_loss_regression.png", "training_loss_diffusion.png"]
         },
     ];
 
@@ -43,7 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const exp1 = params.get("exp1");
     const exp2 = params.get("exp2");
-    const hash = window.location.hash.substring(1); // Get the hash without the '#' character
 
     if (!exp1 && !exp2) {
         document.getElementById("render-output").innerHTML = "<p>Error: No experiments selected.</p>";
@@ -51,15 +48,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Set heading
-    const heading = exp2
+    document.getElementById("render-heading").textContent = exp2
         ? `Comparison: ${exp1} vs. ${exp2}`
         : `Experiment: ${exp1 || exp2}`;
-    document.getElementById("render-heading").textContent = heading;
 
     // Render collapsible sections
-    FILE_GROUPS.forEach((group) => {
-        renderCollapsibleSection(group.title, group.files, exp1, exp2);
-    });
+    FILE_GROUPS.forEach(({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2));
 
     // Add collapsible event listeners
     addCollapsibleEventListeners();
@@ -67,131 +61,165 @@ document.addEventListener("DOMContentLoaded", () => {
     // Handle the initial hash (if present)
     handleHashChange();
 
-    // Add event listener for hash changes
+    // Listen for hash changes
     window.addEventListener("hashchange", handleHashChange);
 });
 
-// Handle scrolling and expanding based on hash
+/**
+ * Handles scrolling and expanding based on hash change.
+ */
 function handleHashChange() {
-    const hash = window.location.hash.substring(1); // Get the hash without the '#' character
-    if (hash) {
-        const targetRow = document.getElementById(hash);
-        if (targetRow) {
-            const targetContent = targetRow.closest(".content");
-            if (targetContent) {
-                targetContent.style.display = "block"; // Expand collapsible section
-                const collapsibleHeader = targetContent.previousElementSibling;
-                if (collapsibleHeader && collapsibleHeader.classList.contains("collapsible")) {
-                    collapsibleHeader.classList.add("active"); // Mark as expanded
-                }
-                targetRow.scrollIntoView({ behavior: "smooth", block: "center" }); // Scroll to the row
-            }
-        }
-    }
+    const hash = window.location.hash.substring(1);
+    if (!hash) return;
+
+    const targetRow = document.getElementById(hash);
+    if (!targetRow) return;
+
+    const targetContent = targetRow.closest(".content");
+    if (!targetContent) return;
+
+    targetContent.style.display = "block"; // Expand collapsible section
+
+    const collapsibleHeader = targetContent.previousElementSibling;
+    collapsibleHeader?.classList.contains("collapsible") && collapsibleHeader.classList.add("active");
+
+    targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-// Renders a collapsible section for a file group
+/**
+ * Renders a collapsible section for a file group.
+ * @param {string} title - The title of the section.
+ * @param {string[]} files - The list of files in the section.
+ * @param {string} exp1 - Experiment 1 name.
+ * @param {string} exp2 - Experiment 2 name (optional).
+ */
 function renderCollapsibleSection(title, files, exp1, exp2) {
     const renderOutput = document.getElementById("render-output");
 
-    // Create collapsible header
     const collapsible = document.createElement("div");
     collapsible.className = "collapsible";
     collapsible.textContent = title;
 
-    // Create collapsible content container
     const content = document.createElement("div");
     content.className = "content";
 
-    // Render rows for each file
-    files.forEach((file) => {
-        const fileExtension = file.split(".").pop();
-
-        // Generate a unique ID for each row based on the file name
-        const rowId = file.replace(/[^a-zA-Z0-9]/g, "_");
-
-        // Create the row container
-        const rowContainer = document.createElement("div");
-        rowContainer.className = "render-row-container";
-
-        // Add file name title
-        const rowTitle = document.createElement("h3");
-        rowTitle.className = "render-row-title";
-        rowTitle.textContent = file;
-        rowContainer.appendChild(rowTitle);
-
-        const row = document.createElement("div");
-        row.className = "render-row";
-        rowContainer.id = rowId; // Set the ID for the row
-
-        if (fileExtension === "png") {
-            // Render images
-            const img1 = document.createElement("img");
-            img1.src = `experiments/${exp1}/${file}`;
-            img1.alt = `${exp1} - ${file}`;
-            img1.className = "render-plot";
-            row.appendChild(img1);
-
-            if (exp2) {
-                const img2 = document.createElement("img");
-                img2.src = `experiments/${exp2}/${file}`;
-                img2.alt = `${exp2} - ${file}`;
-                img2.className = "render-plot";
-                row.appendChild(img2);
-            }
-        } else if (fileExtension === "tsv") {
-            // Render tables
-            const tablePromises = [fetchTSV(`experiments/${exp1}/${file}`)];
-            if (exp2) tablePromises.push(fetchTSV(`experiments/${exp2}/${file}`));
-
-            Promise.all(tablePromises).then((tablesHTML) => {
-                tablesHTML.forEach((tableHTML) => {
-                    const tableDiv = document.createElement("div");
-                    tableDiv.className = "render-table";
-                    tableDiv.innerHTML = tableHTML;
-                    row.appendChild(tableDiv);
-                });
-            });
-        }
-
-        rowContainer.appendChild(row);
-        content.appendChild(rowContainer);
-    });
+    files.forEach((file) => renderFileRow(file, content, exp1, exp2));
 
     renderOutput.appendChild(collapsible);
     renderOutput.appendChild(content);
 }
 
-// Fetch and parse TSV files into HTML tables
-function fetchTSV(url) {
-    return fetch(url)
-        .then((response) => {
-            if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-            return response.text();
-        })
-        .then((tsvText) => {
-            const rows = tsvText.split("\n").filter((row) => row.trim() !== "");
-            const table = document.createElement("table");
+/**
+ * Renders a file row inside a collapsible section.
+ * @param {string} file - The file name.
+ * @param {HTMLElement} content - The content container.
+ * @param {string} exp1 - Experiment 1 name.
+ * @param {string} exp2 - Experiment 2 name (optional).
+ */
+function renderFileRow(file, content, exp1, exp2) {
+    const fileExtension = file.split(".").pop();
+    const rowId = file.replace(/[^a-zA-Z0-9]/g, "_");
 
-            rows.forEach((row, index) => {
-                const tr = document.createElement("tr");
-                row.split('\t').forEach((cell) => {
-                    const td = document.createElement(index === 0 ? "th" : "td");
-                    td.textContent = cell.trim();
-                    tr.appendChild(td);
-                });
-                table.appendChild(tr);
-            });
+    const rowContainer = document.createElement("div");
+    rowContainer.className = "render-row-container";
+    rowContainer.id = rowId;
 
-            return table.outerHTML;
-        })
-        .catch((error) => `<p>Error loading TSV: ${url}</p>`);
+    const rowTitle = document.createElement("h3");
+    rowTitle.className = "render-row-title";
+    rowTitle.textContent = file;
+    rowContainer.appendChild(rowTitle);
+
+    const row = document.createElement("div");
+    row.className = "render-row";
+
+    if (fileExtension === "png") {
+        renderImageRow(row, file, exp1, exp2);
+    } else if (fileExtension === "tsv") {
+        renderTSVRow(row, file, exp1, exp2);
+    }
+
+    rowContainer.appendChild(row);
+    content.appendChild(rowContainer);
 }
 
-// Add collapsible toggle functionality
+/**
+ * Renders an image row.
+ * @param {HTMLElement} row - The row container.
+ * @param {string} file - The file name.
+ * @param {string} exp1 - Experiment 1 name.
+ * @param {string} exp2 - Experiment 2 name (optional).
+ */
+function renderImageRow(row, file, exp1, exp2) {
+    const img1 = document.createElement("img");
+    img1.src = `experiments/${exp1}/${file}`;
+    img1.alt = `${exp1} - ${file}`;
+    img1.className = "render-plot";
+    row.appendChild(img1);
+
+    if (exp2) {
+        const img2 = document.createElement("img");
+        img2.src = `experiments/${exp2}/${file}`;
+        img2.alt = `${exp2} - ${file}`;
+        img2.className = "render-plot";
+        row.appendChild(img2);
+    }
+}
+
+/**
+ * Renders a TSV row.
+ * @param {HTMLElement} row - The row container.
+ * @param {string} file - The file name.
+ * @param {string} exp1 - Experiment 1 name.
+ * @param {string} exp2 - Experiment 2 name (optional).
+ */
+async function renderTSVRow(row, file, exp1, exp2) {
+    const tablePromises = [fetchTSV(`experiments/${exp1}/${file}`)];
+    if (exp2) tablePromises.push(fetchTSV(`experiments/${exp2}/${file}`));
+
+    const tablesHTML = await Promise.all(tablePromises);
+    tablesHTML.forEach((tableHTML) => {
+        const tableDiv = document.createElement("div");
+        tableDiv.className = "render-table";
+        tableDiv.innerHTML = tableHTML;
+        row.appendChild(tableDiv);
+    });
+}
+
+/**
+ * Fetches and parses TSV files into HTML tables.
+ * @param {string} url - The TSV file URL.
+ * @returns {Promise<string>} - HTML table string.
+ */
+async function fetchTSV(url) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+
+        const tsvText = await response.text();
+        const rows = tsvText.split("\n").filter((row) => row.trim() !== "");
+        const table = document.createElement("table");
+
+        rows.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            row.split("\t").forEach((cell) => {
+                const td = document.createElement(index === 0 ? "th" : "td");
+                td.textContent = cell.trim();
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+
+        return table.outerHTML;
+    } catch (error) {
+        return `<p>Error loading TSV: ${url}</p>`;
+    }
+}
+
+/**
+ * Adds collapsible toggle functionality.
+ */
 function addCollapsibleEventListeners() {
-    const collapsibles = document.querySelectorAll(".collapsible");
-    collapsibles.forEach((collapsible) => {
+    document.querySelectorAll(".collapsible").forEach((collapsible) => {
         collapsible.addEventListener("click", () => {
             collapsible.classList.toggle("active");
             const content = collapsible.nextElementSibling;
