@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     const exp1 = params.get("exp1");
     const exp2 = params.get("exp2");
+    const hash = window.location.hash.substring(1); // Get the hash without the '#' character
 
     if (!exp1 && !exp2) {
         document.getElementById("render-output").innerHTML = "<p>Error: No experiments selected.</p>";
