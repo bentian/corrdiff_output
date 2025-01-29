@@ -1,5 +1,3 @@
-import sys
-from pathlib import Path
 import xarray as xr
 
 LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
