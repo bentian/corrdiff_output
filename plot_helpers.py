@@ -85,12 +85,12 @@ def plot_pdf(truth, pred, output_path):
             truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
             pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
             print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
-            title_prefix = 'Zoomed ' if var == 'prcp' else ''
+            title_suffix = ' (zoomed)' if var == 'prcp' else ''
 
             plt.figure(figsize=(10, 6))
             plt.hist(truth_flat, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
             plt.hist(pred_flat, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
-            plt.title(f"{title_prefix}PDF of {var}:\nTruth {truth_note} /\nPrediction {pred_note}")
+            plt.title(f"PDF of {var}{title_suffix}:\nTruth {truth_note} /\nPrediction {pred_note}")
             plt.xlabel(f"{var} (units)")
             plt.ylabel("Density")
             plt.legend()
