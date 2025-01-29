@@ -64,7 +64,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // Add collapsible event listeners
     addCollapsibleEventListeners();
 
-    // If a hash is present in the URL, expand the corresponding section and scroll to the row
+    // Handle the initial hash (if present)
+    handleHashChange();
+
+    // Add event listener for hash changes
+    window.addEventListener("hashchange", handleHashChange);
+});
+
+// Handle scrolling and expanding based on hash
+function handleHashChange() {
+    const hash = window.location.hash.substring(1); // Get the hash without the '#' character
     if (hash) {
         const targetRow = document.getElementById(hash);
         if (targetRow) {
@@ -79,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     }
-});
+}
 
 // Renders a collapsible section for a file group
 function renderCollapsibleSection(title, files, exp1, exp2) {
