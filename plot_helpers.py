@@ -1,8 +1,18 @@
 from pathlib import Path
+from typing import Tuple, List
 import numpy as np
 import matplotlib.pyplot as plt
+import xarray as xr
 
-def plot_metrics(ds, output_path: Path, number_format: str):
+def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
+    """
+    Generate a bar chart for the mean metrics and save the plot.
+
+    Parameters:
+        ds (xr.Dataset): Dataset containing metrics.
+        output_path (Path): File path to save the output plot.
+        number_format (str): Formatting string for displaying numeric values.
+    """
     metrics = ds["metric"].values
     variables = list(ds.data_vars.keys())
     data_array = np.array([ds[var] for var in variables])
@@ -32,14 +42,25 @@ def plot_metrics(ds, output_path: Path, number_format: str):
     plt.savefig(output_path)
 
 
-def plot_monthly_metrics(ds, metric, output_path: Path, number_format: str):
+def plot_monthly_metrics(ds: xr.Dataset, metric: str,
+                         output_path: Path, number_format: str) -> None:
+    """
+    Plot monthly mean values for a given metric.
+
+    Parameters:
+        ds (xr.Dataset): Dataset containing monthly mean values.
+        metric (str): Metric to plot.
+        output_path (Path): File path to save the output plot.
+        number_format (str): Formatting string for displaying numeric values.
+    """
     _, ax = plt.subplots(figsize=(10, 6))
     df_grouped = ds.to_dataframe()
 
     for variable in df_grouped.columns:
         ax.plot(df_grouped.index, df_grouped[variable], marker="o", label=variable)
         for x, y in zip(df_grouped.index, df_grouped[variable]):
-            ax.annotate(f"{y:{number_format}}", (x, y), textcoords="offset points", xytext=(0, 5), ha="center", fontsize=8)
+            ax.annotate(f"{y:{number_format}}", (x, y), textcoords="offset points",
+                        xytext=(0, 5), ha="center", fontsize=8)
 
     ax.set_title(f"Monthly Mean for {metric.upper()}", fontsize=14)
     ax.set_xlabel("Month", fontsize=12)
@@ -52,15 +73,30 @@ def plot_monthly_metrics(ds, metric, output_path: Path, number_format: str):
     plt.savefig(output_path)
 
 
-def get_bin_count_n_note(ds, bin_width=1):
+def get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
+    """
+    Compute bin count for histogram plotting and generate summary note.
+
+    Parameters:
+        ds (xr.DataArray): DataArray containing values to analyze.
+        bin_width (int, optional): Width of bins for histogram. Defaults to 1.
+
+    Returns:
+        Tuple[int, str]: The number of bins and a summary note string.
+    """
     min_val, max_val = ds.min().item(), ds.max().item()
     bin_count = int((max_val - min_val) / bin_width)
     return bin_count, f"({len(ds):,} pts in [{min_val:.1f}, {max_val:.1f}])"
 
 
-def plot_pdf(truth, pred, output_path: Path):
+def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
     """
     Plot PDFs for all variables in the truth dataset, comparing with prediction.
+
+    Parameters:
+        truth (xr.Dataset): Truth dataset.
+        pred (xr.Dataset): Prediction dataset.
+        output_path (Path): File path to save the output plot.
     """
     for var in truth.data_vars:
         if var != 'prcp':
@@ -73,9 +109,10 @@ def plot_pdf(truth, pred, output_path: Path):
 
             truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
             pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
-            print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / {pred_bin_count} (pred)")
-            title_suffix = ' (zoomed)' if var == 'prcp' else ''
+            print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / "
+                  f"{pred_bin_count} (pred)")
 
+            title_suffix = ' (zoomed)' if var == 'prcp' else ''
             plt.figure(figsize=(10, 6))
             plt.hist(truth_flat, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
             plt.hist(pred_flat, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
@@ -91,9 +128,13 @@ def plot_pdf(truth, pred, output_path: Path):
             plt.close()
 
 
-def plot_monthly_error(ds, output_path: Path):
+def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
     """
     Compute monthly mean error and plot results.
+
+    Parameters:
+        ds (xr.Dataset): Dataset containing error values.
+        output_path (Path): File path to save the output plot.
     """
     monthly_mean = ds.groupby("time.month").mean(dim="time")
     variables = list(ds.data_vars.keys())
@@ -118,16 +159,22 @@ def plot_monthly_error(ds, output_path: Path):
         plt.savefig(output_path / f"monthly_error_{var}.png")
 
 
-def plot_training_loss(wall_times, values, output_file: Path):
+def plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
     """
     Create a training loss plot with time on the x-axis and save it to a PNG file.
+
+    Parameters:
+        wall_times (List[float]): Wall times (x-axis values).
+        values (List[float]): Loss values (y-axis values).
+        output_file (Path): File path to save the output plot.
     """
     window_size = 20
     smoothed_values = np.convolve(values, np.ones(window_size)/window_size, mode='valid')
 
     plt.figure(figsize=(10, 6))
     plt.plot(wall_times, values, alpha=0.5, label="Raw Loss", color="gray", linewidth=1)
-    plt.plot(wall_times[:len(smoothed_values)], smoothed_values, label="Smoothed Loss", linestyle="--", linewidth=2)
+    plt.plot(wall_times[:len(smoothed_values)], smoothed_values,
+             label="Smoothed Loss", linestyle="--", linewidth=2)
 
     plt.xlabel("Time")
     plt.yscale("log")

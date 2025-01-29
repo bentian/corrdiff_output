@@ -3,20 +3,21 @@ import numpy as np
 import tqdm
 import xarray as xr
 from functools import partial
+from typing import Tuple, Dict
 
 try:
     import xskillscore
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
-VAR_MAPPING ={
+VAR_MAPPING: Dict[str, str] = {
     "precipitation": "prcp",
     "temperature_2m": "t2m",
     "eastward_wind_10m": "u10m",
     "northward_wind_10m": "v10m",
 }
 
-def open_samples(f):
+def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     """
     Open prediction and truth samples from a dataset file.
 
@@ -39,7 +40,17 @@ def open_samples(f):
     return truth, pred, root
 
 
-def compute_metrics(truth, pred):
+def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+    """
+    Compute RMSE, CRPS, and standard deviation between truth and prediction datasets.
+
+    Parameters:
+        truth (xr.Dataset): The truth dataset.
+        pred (xr.Dataset): The prediction dataset.
+
+    Returns:
+        xr.Dataset: A dataset containing computed metrics.
+    """
     dim = ["x", "y"]
 
     rmse = xskillscore.rmse(truth, pred.mean("ensemble"), dim=dim)
@@ -60,7 +71,7 @@ def compute_metrics(truth, pred):
     )
 
 
-def get_flat(truth, pred):
+def get_flat(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Extract flattened truth and prediction for all variables in the truth dataset.
 
@@ -95,7 +106,19 @@ def get_flat(truth, pred):
     return combined_truth, combined_pred
 
 
-def process_sample(index, filepath, n_ensemble):
+def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
+    """
+    Process a single time step from the dataset.
+
+    Parameters:
+        index (int): The time index to process.
+        filepath (str): Path to the dataset file.
+        n_ensemble (int): Number of ensemble members to consider.
+
+    Returns:
+        Dict[str, xr.Dataset]: A dictionary containing computed metrics, errors,
+        and flattened truth/prediction datasets.
+    """
     truth, pred, _ = open_samples(filepath)
     truth = truth.isel(time=index).load()
     if n_ensemble > 0:
@@ -113,7 +136,19 @@ def process_sample(index, filepath, n_ensemble):
     return result
 
 
-def score_samples(filepath, n_ensemble=1):
+def score_samples(filepath: str, n_ensemble: int = 1
+                  ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
+    """
+    Score the dataset by computing various metrics over all time steps.
+
+    Parameters:
+        filepath (str): Path to the dataset file.
+        n_ensemble (int, optional): Number of ensemble members. Defaults to 1.
+
+    Returns:
+        Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]: Computed metrics, spatial errors
+        flattened truth, and flattened prediction datasets.
+    """
     truth, _, _ = open_samples(filepath)
 
     with multiprocessing.Pool(32) as pool:
