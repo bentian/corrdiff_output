@@ -62,6 +62,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Add collapsible event listeners
     addCollapsibleEventListeners();
+
+    // If a hash is present in the URL, expand the corresponding section and scroll to the row
+    if (hash) {
+        const targetRow = document.getElementById(hash);
+        if (targetRow) {
+            const targetContent = targetRow.closest(".content");
+            if (targetContent) {
+                targetContent.style.display = "block"; // Expand collapsible section
+                const collapsibleHeader = targetContent.previousElementSibling;
+                if (collapsibleHeader && collapsibleHeader.classList.contains("collapsible")) {
+                    collapsibleHeader.classList.add("active"); // Mark as expanded
+                }
+                targetRow.scrollIntoView({ behavior: "smooth", block: "center" }); // Scroll to the row
+            }
+        }
+    }
 });
 
 // Renders a collapsible section for a file group
@@ -81,6 +97,10 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
     files.forEach((file) => {
         const fileExtension = file.split(".").pop();
 
+        // Generate a unique ID for each row based on the file name
+        const rowId = file.replace(/[^a-zA-Z0-9]/g, "_");
+
+        // Create the row container
         const rowContainer = document.createElement("div");
         rowContainer.className = "render-row-container";
 
@@ -92,6 +112,7 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
 
         const row = document.createElement("div");
         row.className = "render-row";
+        rowContainer.id = rowId; // Set the ID for the row
 
         if (fileExtension === "png") {
             // Render images
@@ -119,16 +140,6 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
                     tableDiv.className = "render-table";
                     tableDiv.innerHTML = tableHTML;
                     row.appendChild(tableDiv);
-                });
-            });
-        }  else if (fileExtension === "json") {
-            // Render JSON data
-            const jsonPromises = [fetchJSON(`experiments/${exp1}/${file}`)];
-            if (exp2) jsonPromises.push(fetchJSON(`experiments/${exp2}/${file}`));
-
-            Promise.all(jsonPromises).then((jsonHTML) => {
-                jsonHTML.forEach((jsonDiv) => {
-                    row.appendChild(jsonDiv);
                 });
             });
         }
