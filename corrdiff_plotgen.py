@@ -8,6 +8,7 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
+from mask_samples import save_masked_samples
 
 # General utility functions
 def ensure_directory_exists(dir, subdir=None):
@@ -88,8 +89,9 @@ def process_model(in_dir, out_dir, label, n_ensemble, masked):
     """
     Process a model, generate plots, and save metrics.
     """
-    nc_file = os.path.join(in_dir, "netcdf", f"output_0_{label}.nc")
-    metrics, spatial_error, truth_flat, pred_flat = score_samples(nc_file, n_ensemble, masked)
+    suffix = '_masked' if masked else ''
+    nc_file = os.path.join(in_dir, "netcdf", f"output_0_{label}{suffix}.nc")
+    metrics, spatial_error, truth_flat, pred_flat = score_samples(nc_file, n_ensemble)
     output_path = ensure_directory_exists(out_dir, label)
 
     ph.plot_monthly_error(spatial_error, output_path)
@@ -143,6 +145,14 @@ def main():
     # if they are present, even if the value is explicitly set to False.
     masked = True if args.masked.lower() == 'yes' else False
     print(f'corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} masked={masked}')
+
+    # Ensure masked NetCDF files exist
+    if masked:
+        for filename in ['output_0_all', 'output_0_reg']:
+            masked_file = os.path.join(args.in_dir, "netcdf", f"{filename}_masked.nc")
+            if not os.path.exists(masked_file):
+                save_masked_samples(
+                    os.path.join(args.in_dir, "netcdf", f"{filename}.nc"), masked_file)
 
     ensure_directory_exists(args.out_dir)
     process_models(args.in_dir, args.out_dir, args.n_ensemble, masked)
