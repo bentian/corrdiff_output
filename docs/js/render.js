@@ -129,7 +129,12 @@ function renderFileRow(file, content, exp1, exp2) {
 
     const rowTitle = document.createElement("h3");
     rowTitle.className = "render-row-title";
-    rowTitle.textContent = file;
+    const link = document.createElement("a");
+    link.href = `#${rowId}`;
+    link.className = "render-title-link";
+    link.textContent = file; // Directly set text content
+
+    rowTitle.appendChild(link);
     rowContainer.appendChild(rowTitle);
 
     const row = document.createElement("div");

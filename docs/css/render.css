@@ -68,10 +68,33 @@ h1 {
 }
 
 .render-row-title {
-    font-size: 1.2em;
+    position: relative;
     font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 10px;
+    color: #007bff; /* Blue color to indicate a link */
+    transition: color 0.3s ease-in-out;
+    text-decoration: none;
+}
+
+.render-row-title a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.render-row-title:hover {
+    color: #0056b3; /* Darker blue on hover */
+}
+
+/* Add a small hash symbol before the title */
+.render-title-link::before {
+    content: "#";
+    font-size: 16px;
+    color: #007bff;
+    margin-right: 5px;
+    transition: color 0.3s ease-in-out;
+}
+
+.render-title-link:hover::before {
+    color: #0056b3;
 }
 
 .render-row {
