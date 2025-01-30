@@ -58,6 +58,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Add collapsible event listeners
     addCollapsibleEventListeners();
 
+    // Initialize lightbox event listeners
+    initializeLightbox();
+
     // Handle the initial hash (if present)
     handleHashChange();
 
@@ -225,5 +228,33 @@ function addCollapsibleEventListeners() {
             const content = collapsible.nextElementSibling;
             content.style.display = content.style.display === "block" ? "none" : "block";
         });
+    });
+}
+
+
+/**
+ * Initializes lightbox functionality for enlarging images.
+ */
+function initializeLightbox() {
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightbox-img");
+    const closeLightbox = document.getElementById("close-lightbox");
+
+    document.body.addEventListener("click", (event) => {
+        if (event.target.classList.contains("render-plot")) {
+            lightbox.style.display = "flex";
+            lightboxImg.src = event.target.src;
+        }
+    });
+
+    // Close lightbox when clicking outside the image
+    closeLightbox.addEventListener("click", () => {
+        lightbox.style.display = "none";
+    });
+
+    lightbox.addEventListener("click", (event) => {
+        if (event.target === lightbox) {
+            lightbox.style.display = "none";
+        }
     });
 }
