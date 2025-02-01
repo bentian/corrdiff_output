@@ -1,5 +1,5 @@
 # 📌 Overview
-Toolset to generate CorrDiff experiment results by evaluating, processing, and visualizing weather model data. It includes:
+This project provides a set of tools to generate CorrDiff experiment results by evaluating, processing, and visualizing weather model data. It includes:
 
 - Masking datasets using landmasks
 - Computing metrics for regression and diffusion models
