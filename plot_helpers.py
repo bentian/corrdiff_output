@@ -34,7 +34,7 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     ax.set_xlabel("Metrics", fontsize=12)
     ax.set_ylabel("Values", fontsize=12)
     ax.set_xticks(x + width * (len(variables) - 1) / 2)
-    ax.set_xticklabels([metric.upper() for metric in metrics])
+    ax.set_xticklabels([metric for metric in metrics])
     ax.legend(title="Variables")
     ax.grid(alpha=0.3, linestyle="--")
 
@@ -62,9 +62,9 @@ def plot_monthly_metrics(ds: xr.Dataset, metric: str,
             ax.annotate(f"{y:{number_format}}", (x, y), textcoords="offset points",
                         xytext=(0, 5), ha="center", fontsize=8)
 
-    ax.set_title(f"Monthly Mean for {metric.upper()}", fontsize=14)
+    ax.set_title(f"Monthly Mean for {metric}", fontsize=14)
     ax.set_xlabel("Month", fontsize=12)
-    ax.set_ylabel(f"{metric.upper()} Value", fontsize=12)
+    ax.set_ylabel(f"{metric} Value", fontsize=12)
     ax.set_xticks(np.arange(1, 13))
     ax.legend(title="Variables")
     ax.grid(alpha=0.3, linestyle="--")

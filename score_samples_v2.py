@@ -6,7 +6,7 @@ from functools import partial
 from typing import Tuple, Dict
 
 try:
-    import xskillscore
+    import xskillscore as xs
 except ImportError:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
 
@@ -53,11 +53,11 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     dim = ["x", "y"]
 
-    rmse = xskillscore.rmse(truth, pred.mean("ensemble"), dim=dim)
-    crps = xskillscore.crps_ensemble(truth, pred, member_dim="ensemble", dim=dim)
+    rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim)
+    crps = xs.crps_ensemble(truth, pred, member_dim="ensemble", dim=dim)
 
     std_dev = pred.std("ensemble").mean(dim)
-    crps_mean = xskillscore.crps_ensemble(
+    crps_mean = xs.crps_ensemble(
         truth,
         pred.mean("ensemble").expand_dims("ensemble"),
         member_dim="ensemble",
@@ -66,7 +66,7 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 
     return (
         xr.concat([rmse, crps_mean, crps, std_dev], dim="metric")
-        .assign_coords(metric=["rmse", "mae", "crps", "std_dev"])
+        .assign_coords(metric=["RMSE", "MAE", "CRPS", "STD_DEV"])
         .load()
     )
 

@@ -79,7 +79,8 @@ def yaml_to_tsv(yaml_file_path: Path, tsv_filename: Path) -> None:
     with yaml_file_path.open("r") as file:
         data = yaml.safe_load(file)
 
-    parsed_data = {key.strip(): value.strip() for item in data for key, value in [item.split("=", 1)]}
+    parsed_data = {key.strip(): value.strip()
+                   for item in data for key, value in [item.split("=", 1)]}
     df = pd.DataFrame([parsed_data]).transpose()
     df.to_csv(tsv_filename, sep="\t", index=True)
 
@@ -103,12 +104,12 @@ def save_metric_table_and_plot(ds: pd.DataFrame, metric: str,
 
     Parameters:
         ds (pd.DataFrame): Dataset containing metric values.
-        metric (str): The metric to process (e.g., "mae", "rmse").
+        metric (str): The metric to process (e.g., "MAE", "RMSE").
         output_path (Path): Path where the TSV and plot files should be saved.
         number_format (str): Format string for floating-point numbers.
     """
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
-    filename = output_path / f"monthly_{metric}"
+    filename = output_path / f"monthly_{metric.lower()}"
     save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), number_format)
     ph.plot_monthly_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
@@ -128,7 +129,7 @@ def save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame
     save_to_tsv(ds_mean, filename.with_suffix(".tsv"), number_format)
     ph.plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
-    for metric in ["mae", "rmse"]:
+    for metric in ["MAE", "RMSE"]:
         save_metric_table_and_plot(ds_group_by_month, metric, output_path, number_format)
 
 
