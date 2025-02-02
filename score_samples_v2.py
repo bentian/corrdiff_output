@@ -28,16 +28,10 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
         tuple: A tuple containing truth, prediction, and root datasets.
     """
     root = xr.open_dataset(f)
-    pred = xr.open_dataset(f, group="prediction")
-    truth = xr.open_dataset(f, group="truth")
+    pred = xr.open_dataset(f, group="prediction").merge(root)
+    truth = xr.open_dataset(f, group="truth").merge(root)
 
-    pred = pred.merge(root)
-    truth = truth.merge(root)
-
-    truth = truth.set_coords(["lon", "lat"])
-    pred = pred.set_coords(["lon", "lat"])
-
-    return truth, pred, root
+    return truth.set_coords(["lon", "lat"]), pred.set_coords(["lon", "lat"]), root
 
 
 def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
@@ -152,16 +146,15 @@ def score_samples(filepath: str, n_ensemble: int = 1
     truth, _, _ = open_samples(filepath)
 
     with multiprocessing.Pool(32) as pool:
-        results = []
-        for result in tqdm.tqdm(
-            pool.imap(
-                partial(process_sample,
-                        filepath=filepath, n_ensemble=n_ensemble),
-                range(truth.sizes["time"]),
-            ),
-            total=truth.sizes["time"],
-        ):
-            results.append(result)
+        results = list(
+            tqdm.tqdm(
+                pool.imap(
+                    partial(process_sample, filepath=filepath, n_ensemble=n_ensemble),
+                    range(truth.sizes["time"]),
+                ),
+                total=truth.sizes["time"],
+            )
+        )
 
     # Combine metrics
     combined_metrics = \
@@ -170,11 +163,9 @@ def score_samples(filepath: str, n_ensemble: int = 1
 
     # Combine spatial error and flattened data
     combined_data = {
-        "error": xr.concat([res["error"] for res in results], dim="time"),
-        "truth_flat": xr.concat([res["truth_flat"] for res in results], dim="points"),
-        "pred_flat": xr.concat([res["pred_flat"] for res in results], dim="points"),
+        key: xr.concat([res[key] for res in results], dim=dim).rename(VAR_MAPPING)
+        for key, dim in zip(["error", "truth_flat", "pred_flat"], ["time", "points", "points"])
     }
 
-    combined_data = {key: value.rename(VAR_MAPPING) for key, value in combined_data.items()}
     return combined_metrics, combined_data["error"], \
         combined_data["truth_flat"], combined_data["pred_flat"]

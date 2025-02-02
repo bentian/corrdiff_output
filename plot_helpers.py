@@ -169,7 +169,7 @@ def plot_training_loss(wall_times: List[float], values: List[float], output_file
         output_file (Path): File path to save the output plot.
     """
     window_size = 20
-    smoothed_values = np.convolve(values, np.ones(window_size)/window_size, mode='valid')
+    smoothed_values = np.convolve(values, np.ones(window_size) / window_size, mode='valid')
 
     plt.figure(figsize=(10, 6))
     plt.plot(wall_times, values, alpha=0.5, label="Raw Loss", color="gray", linewidth=1)
