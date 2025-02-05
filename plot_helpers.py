@@ -99,9 +99,6 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
         output_path (Path): File path to save the output plot.
     """
     for var in truth.data_vars:
-        if var != 'prcp':
-            continue  # Only plot 'prcp' for now
-
         if var in pred:
             truth_flat = truth[var].values.flatten()
             pred_flat = pred[var].mean("ensemble").values.flatten() \
@@ -141,9 +138,6 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
     colormaps = ["Blues", "Oranges", "Greens", "Reds"]
 
     for index, var in enumerate(variables):
-        if var != 'prcp':
-            continue  # Only plot 'prcp' for now
-
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
         axes = axes.flatten()
 

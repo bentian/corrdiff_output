@@ -20,11 +20,11 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
 
     # Expand landmask dimensions to match truth and pred
     landmask_expanded = landmask.expand_dims(dim={"time": truth.sizes["time"]})
-    truth_masked = truth.where(landmask_expanded == 1, 0)
+    truth_masked = truth.where(landmask_expanded == 1)
 
     if "ensemble" in pred.dims:
         landmask_expanded = landmask_expanded.expand_dims(dim={"ensemble": pred.sizes["ensemble"]})
-    pred_masked = pred.where(landmask_expanded == 1, 0)
+    pred_masked = pred.where(landmask_expanded == 1)
 
     return truth_masked, pred_masked
 

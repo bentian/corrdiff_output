@@ -47,25 +47,17 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     dim = ["x", "y"]
 
-    rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim)
-    crps = xs.crps_ensemble(truth, pred, member_dim="ensemble", dim=dim)
-
-    std_dev = pred.std("ensemble").mean(dim)
-    crps_mean = xs.crps_ensemble(
-        truth,
-        pred.mean("ensemble").expand_dims("ensemble"),
-        member_dim="ensemble",
-        dim=dim,
-    )
+    rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
+    mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
 
     return (
-        xr.concat([rmse, crps_mean, crps, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "MAE", "CRPS", "STD_DEV"])
+        xr.concat([rmse, mae], dim="metric")
+        .assign_coords(metric=["RMSE", "MAE"])
         .load()
     )
 
 
-def get_flat(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Extract flattened truth and prediction for all variables in the truth dataset.
 
@@ -85,8 +77,10 @@ def get_flat(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Datase
             pred_flat = pred[var].mean("ensemble").values.flatten() \
                         if "ensemble" in pred.dims else pred[var].values.flatten()
 
-            truth_data[var] = ("points", truth_flat)
-            pred_data[var] = ("points", pred_flat)
+            # Filter out NaNs and align truth and pred
+            valid_mask = np.isfinite(truth_flat) & np.isfinite(pred_flat)
+            truth_data[var] = ("points", truth_flat[valid_mask])
+            pred_data[var] = ("points", pred_flat[valid_mask])
 
     combined_truth = xr.Dataset(
         truth_data,
@@ -98,6 +92,30 @@ def get_flat(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Datase
     )
 
     return combined_truth, combined_pred
+
+
+def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+    """
+    Computes the absolute difference between truth and prediction datasets while filtering NaN values.
+
+    Parameters:
+        truth (xr.Dataset): The truth dataset.
+        pred (xr.Dataset): The prediction dataset.
+
+    Returns:
+        xr.Dataset: The absolute difference dataset with NaNs removed.
+    """
+    # Compute mean across ensemble
+    pred_mean = pred.mean("ensemble").expand_dims("ensemble") if "ensemble" in pred.dims else pred
+
+    # Compute absolute difference
+    abs_diff = abs(pred_mean - truth)
+
+    # Filter out NaNs by setting them to NaN where either input is NaN
+    valid_mask = np.isfinite(truth) & np.isfinite(pred_mean)
+    abs_diff = abs_diff.where(valid_mask)
+
+    return abs_diff
 
 
 def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
@@ -119,10 +137,10 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
         pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
     pred = pred.load()
 
-    truth_flat, pred_flat = get_flat(truth, pred)
+    truth_flat, pred_flat = flatten_and_filter_nan(truth, pred)
     result = {
         "metrics": compute_metrics(truth, pred),
-        "error": abs(pred.mean("ensemble").expand_dims("ensemble") - truth),
+        "error": compute_abs_difference(truth, pred),
         "truth_flat": truth_flat,
         "pred_flat": pred_flat
     }
