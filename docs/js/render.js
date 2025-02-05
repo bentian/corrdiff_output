@@ -7,7 +7,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 "all/metrics_mean.tsv", "all/metrics_mean.png",
                 "all/monthly_mae.tsv", "all/monthly_mae.png",
                 "all/monthly_rmse.tsv", "all/monthly_rmse.png",
-                "all/pdf_prcp.png", "all/monthly_error_prcp.png",
+                "all/pdf_prcp.png", "all/pdf_t2m.png",
+                "all/pdf_u10m.png", "all/pdf_v10m.png",
+                "all/monthly_error_prcp.png", "all/monthly_error_t2m.png",
+                "all/monthly_error_u10m.png", "all/monthly_error_v10m.png",
             ],
         },
         {
@@ -16,7 +19,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 "reg/metrics_mean.tsv", "reg/metrics_mean.png",
                 "reg/monthly_mae.tsv", "reg/monthly_mae.png",
                 "reg/monthly_rmse.tsv", "reg/monthly_rmse.png",
-                "reg/pdf_prcp.png", "reg/monthly_error_prcp.png",
+                "reg/pdf_prcp.png", "reg/pdf_t2m.png",
+                "reg/pdf_u10m.png", "reg/pdf_v10m.png",
+                "reg/monthly_error_prcp.png", "reg/monthly_error_t2m.png",
+                "reg/monthly_error_u10m.png", "reg/monthly_error_v10m.png",
             ],
         },
         {
