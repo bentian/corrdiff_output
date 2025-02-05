@@ -107,8 +107,8 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     crps = compute_crps(truth, pred)
 
     return (
-        xr.concat([rmse, crps, mae, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "CRPS", "MAE", "STD_DEV"])
+        xr.concat([rmse, mae, crps, std_dev], dim="metric")
+        .assign_coords(metric=["RMSE", "MAE", "CRPS", "STD_DEV"])
         .load()
     )
 
