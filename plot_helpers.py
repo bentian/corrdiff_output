@@ -88,7 +88,6 @@ def get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str
     bin_count = int((max_val - min_val) / bin_width)
     return bin_count, f"({len(ds):,} pts in [{min_val:.1f}, {max_val:.1f}])"
 
-
 def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
     """
     Plot PDFs for all variables in the truth dataset, comparing with prediction.
@@ -100,26 +99,43 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
     """
     for var in truth.data_vars:
         if var in pred:
+            log_scale = var == 'prcp'  # Apply log scale for 'prcp' only
+
             truth_flat = truth[var].values.flatten()
             pred_flat = pred[var].mean("ensemble").values.flatten() \
                         if "ensemble" in pred.dims else pred[var].values.flatten()
 
+            # Handle zero values to avoid log(0) errors
+            if log_scale:
+                truth_flat = np.where(truth_flat > 0, truth_flat, 1e-10)
+                pred_flat = np.where(pred_flat > 0, pred_flat, 1e-10)
+
+            # Get bin counts
             truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
             pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
+
             print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / "
                   f"{pred_bin_count} (pred)")
 
-            title_suffix = ' (zoomed)' if var == 'prcp' else ''
             plt.figure(figsize=(10, 6))
-            plt.hist(truth_flat, bins=truth_bin_count, alpha=0.5, label="Truth", density=True)
-            plt.hist(pred_flat, bins=pred_bin_count, alpha=0.5, label="Prediction", density=True)
-            plt.title(f"PDF of {var}{title_suffix}:\nTruth {truth_note} /\nPrediction {pred_note}")
-            plt.xlabel(f"{var} (units)")
-            plt.ylabel("Density")
-            plt.legend()
-            plt.grid()
 
-            plt.xlim([-5, 15]) if var == 'prcp' else None  # Adjust x-limits for precipitation
+            # Use log-scale bins if needed
+            bins_truth = np.logspace(np.log10(min(truth_flat)), np.log10(max(truth_flat)), truth_bin_count) if log_scale else truth_bin_count
+            bins_pred = np.logspace(np.log10(min(pred_flat)), np.log10(max(pred_flat)), pred_bin_count) if log_scale else pred_bin_count
+
+            plt.hist(truth_flat, bins=bins_truth, alpha=0.5, label="Truth", density=True)
+            plt.hist(pred_flat, bins=bins_pred, alpha=0.5, label="Prediction", density=True)
+
+            # Apply log scales where needed
+            if log_scale:
+                plt.xscale("log")
+                plt.yscale("log")
+
+            plt.title(f"PDF of {var}:\nTruth {truth_note} /\nPrediction {pred_note}")
+            plt.xlabel(f"{var} (log scale)" if log_scale else f"{var} (units)")
+            plt.ylabel("Density (log scale)" if log_scale else "Density")
+            plt.legend()
+            plt.grid(which="both" if log_scale else "major", linestyle="--", linewidth=0.5)
 
             plt.savefig(output_path / f"pdf_{var}.png")
             plt.close()
