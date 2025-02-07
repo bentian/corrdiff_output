@@ -23,7 +23,10 @@ If you haven't installed `xskillscore`, you may need:
 
    `python corrdiff_plotgen.py <input_directory> <output_directory> --n-ensemble 1 --masked yes`
 
-   - `<input_directory>`: Directory containing NetCDF (`netcdf/`) and TensorBoard logs (`tensorboard_regression/` and `tensorboard_diffusion/`).
+   - `<input_directory>`: Directory containing
+     - NetCDF (`netcdf/`)
+     - TensorBoard logs (`tensorboard_regression/` and `tensorboard_diffusion/`)
+     - Hydra configs (`hydra_train/` and `hydra_generate/`)
    - `<output_directory>`: Directory where outputs will be saved.
    - `--n-ensemble`: Number of ensemble members (default: 1).
    - `--masked`: Apply landmask (yes or no. default: yes).
