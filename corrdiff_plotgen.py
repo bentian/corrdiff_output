@@ -224,12 +224,16 @@ def main():
             if not masked_file.exists():
                 save_masked_samples(args.in_dir / "netcdf" / f"{filename}.nc", masked_file)
 
+    # Process models
     ensure_directory_exists(args.out_dir)
     process_models(args.in_dir, args.out_dir, args.n_ensemble, masked)
 
     # Process Hydra config
-    config = args.in_dir / "hydra" / "overrides.yaml"
-    yaml_to_tsv(config, args.out_dir / "generate_overrides.tsv")
+    for key, output_file in \
+        [("hydra_generate", "generate_overrides.tsv"), ("hydra_train", "train_overrides.tsv")]:
+        config_path = args.in_dir / key / "overrides.yaml"
+        if config_path.exists():
+            yaml_to_tsv(config_path, args.out_dir / output_file)
 
     # Process training loss
     for label in ["regression", "diffusion"]:
