@@ -34,20 +34,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             ],
         },
         {
-            title: "Config Overrides",
-            files: ["train_overrides.tsv", "generate_overrides.tsv"]
-        },
-        {
             title: "Training Loss",
             files: ["training_loss_regression.png", "training_loss_diffusion.png"]
         },
+        {
+            title: "Config Overrides",
+            files: ["train_overrides.tsv", "generate_overrides.tsv"]
+        },
+
     ];
 
     // Parse query parameters
     const params = new URLSearchParams(window.location.search);
-    const exp1 = params.get("exp1");
-    const exp2 = params.get("exp2");
-
+    const exp1 = getUpdatedExp(params.get("exp1"));
+    const exp2 = getUpdatedExp(params.get("exp2"));
     if (!exp1 && !exp2) {
         document.getElementById("render-output").innerHTML = "<p>Error: No experiments selected.</p>";
         return;
@@ -73,6 +73,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Listen for hash changes
     window.addEventListener("hashchange", handleHashChange);
 });
+
+/**
+ * Map experiment names for compatibility.
+ */
+function getUpdatedExp(exp) {
+    const expMapping = {
+        "Baseline_nomask": "BL_2M_1823",
+        "Baseline_masked": "BL_msk_2M_1823",
+        "D1_masked": "BL_msk_2M_1823",
+        "D1_nomask": "BL_2M_1823"
+    };
+
+    return expMapping[exp] || exp; // Return updated value or original if not found
+}
 
 /**
  * Handles scrolling and expanding based on hash change.

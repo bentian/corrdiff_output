@@ -1,6 +1,8 @@
 [
-  "Baseline_nomask",
-  "Baseline_masked",
-  "D1_nomask",
-  "D1_masked"
+  "BL_2M_1823",
+  "BL_msk_2M_1823",
+  "BL_msk_4M_1823",
+  "D1_2M_1823",
+  "D1_msk_2M_1823",
+  "D1_msk_4M_1823"
 ]
