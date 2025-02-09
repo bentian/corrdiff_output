@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         },
         {
             title: "Config Overrides",
-            files: ["generate_overrides.tsv"]
+            files: ["train_overrides.tsv", "generate_overrides.tsv"]
         },
         {
             title: "Training Loss",

@@ -1,0 +1,10 @@
+	0
+dataset.in_channels	[0,1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,19,20,21,23]
+dataset.out_channels	[0,1,2,3]
+dataset.data_path	/nwpr/cfs/com184/corrdiffcwa/../datasets/baseDCW_ter_18-23.zarr
+dataset.img_shape_x	208
+dataset.img_shape_y	208
+generation.times	null
+generation.times_range	"[""2023-01-01T00:00:00"",""2023-12-31T00:00:00"",24]"
+generation.io.res_ckpt_filename	/nwpr/cfs/com184/corrdiffcwa/outputs_D1/reg_1n_w8_amp/checkpoints_diffusion/EDMPrecondSR.0.4000000.mdlus
+generation.io.reg_ckpt_filename	/nwpr/cfs/com184/corrdiffcwa/outputs_D1/reg_1n_w8_amp/checkpoints_regression/UNet.0.4000000.mdlus
