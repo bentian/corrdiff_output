@@ -79,10 +79,10 @@ document.addEventListener("DOMContentLoaded", async () => {
  */
 function getUpdatedExp(exp) {
     const expMapping = {
-        "Baseline_nomask": "BL_2M_1823",
-        "Baseline_masked": "BL_msk_2M_1823",
-        "D1_masked": "BL_msk_2M_1823",
-        "D1_nomask": "BL_2M_1823"
+        "Baseline_nomask": "BL_nomask_2M_1823",
+        "Baseline_masked": "BL_2M_1823",
+        "D1_nomask": "D1_nomask_2M_1823",
+        "D1_masked": "D1_2M_1823",
     };
 
     return expMapping[exp] || exp; // Return updated value or original if not found

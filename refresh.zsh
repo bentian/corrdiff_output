@@ -11,9 +11,9 @@ output_list=()
 # Iterate over each key-value pair in the dictionary
 for key value in ${(kv)my_dict}; do
   out_dir="docs/experiments"
-  nomask="${key}_2M_1823"
-  masked="${key}_msk_2M_1823"
-  masked_4M="${key}_msk_4M_1823"
+  nomask="${key}_nomask_2M_1823"
+  masked="${key}_2M_1823"
+  masked_4M="${key}_4M_1823"
 
   python3 corrdiff_plotgen.py "$value/2M" "$out_dir/$nomask" --masked="no"
   python3 corrdiff_plotgen.py "$value/2M" "$out_dir/$masked"
