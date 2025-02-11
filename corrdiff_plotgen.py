@@ -79,9 +79,22 @@ def yaml_to_tsv(yaml_file_path: Path, tsv_filename: Path) -> None:
     with yaml_file_path.open("r") as file:
         data = yaml.safe_load(file)
 
-    parsed_data = {key.strip(): value.strip()
-                   for item in data for key, value in [item.split("=", 1)]}
-    df = pd.DataFrame([parsed_data]).transpose()
+    # Flatten the YAML structure into key-value pairs for a table
+    def flatten_dict(d, parent_key='', sep='.'):
+        """
+        Recursively flattens a nested dictionary.
+        """
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)
+
+    flat_data = flatten_dict(data)
+    df = pd.DataFrame([flat_data]).transpose()
     df.to_csv(tsv_filename, sep="\t", index=True)
 
 
@@ -230,8 +243,8 @@ def main():
 
     # Process Hydra config
     for key, output_file in \
-        [("hydra_generate", "generate_overrides.tsv"), ("hydra_train", "train_overrides.tsv")]:
-        config_path = args.in_dir / key / "overrides.yaml"
+        [("hydra_generate", "generate_config.tsv"), ("hydra_train", "train_config.tsv")]:
+        config_path = args.in_dir / key / "config.yaml"
         if config_path.exists():
             yaml_to_tsv(config_path, args.out_dir / output_file)
 

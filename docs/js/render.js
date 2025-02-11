@@ -38,8 +38,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             files: ["training_loss_regression.png", "training_loss_diffusion.png"]
         },
         {
-            title: "Config Overrides",
-            files: ["train_overrides.tsv", "generate_overrides.tsv"]
+            title: "Config",
+            files: ["train_config.tsv", "generate_config.tsv"]
         },
 
     ];
