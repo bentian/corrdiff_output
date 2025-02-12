@@ -28,14 +28,16 @@ def ensure_directory_exists(directory: Path, subdir: Optional[str] = None) -> Pa
     return path
 
 
-def read_tensorboard_log(log_dir: Path, scalar_name: str = "training_loss"
-                         ) -> Tuple[List[datetime], List[float]]:
+def read_tensorboard_log(log_dir: Path, scalar_name: str = "training_loss",
+                         max_duration: float = None) -> Tuple[List[datetime], List[float]]:
     """
     Read TensorBoard logs and extract scalar values.
 
     Parameters:
         log_dir (Path): Path to the TensorBoard log directory.
         scalar_name (str): The name of the scalar to extract. Defaults to "training_loss".
+        max_duration (float): The maximum training duration (in steps) to include.
+                              If None, includes all data.
 
     Returns:
         Tuple[List[datetime], List[float]]: Lists of timestamps and corresponding scalar values.
@@ -50,10 +52,18 @@ def read_tensorboard_log(log_dir: Path, scalar_name: str = "training_loss"
     scalar_events = event_acc.Scalars(scalar_name)
     wall_times = [datetime.fromtimestamp(event.wall_time) for event in scalar_events]
     values = [event.value for event in scalar_events]
+    steps = [event.step for event in scalar_events]
+
+    # Apply filtering based on max_duration
+    if max_duration is not None:
+        wall_times, values = zip(*[(t, v) for t, v, s in zip(wall_times, values, steps)
+                                   if s <= max_duration])
+
     return wall_times, values
 
 
-def read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str) -> None:
+def read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str,
+                                max_duration: float = None) -> None:
     """
     Read training loss from TensorBoard logs and generate a plot.
 
@@ -61,9 +71,11 @@ def read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str) -> None
         in_dir (Path): Input directory containing TensorBoard logs.
         out_dir (Path): Output directory to save the loss plot.
         label (str): Label for the model (e.g., "regression", "diffusion").
+        max_duration (float): The maximum training duration (in steps) to include.
+                              If None, includes all data.
     """
     log_dir = in_dir / f"tensorboard_{label}"
-    wall_times, values = read_tensorboard_log(log_dir)
+    wall_times, values = read_tensorboard_log(log_dir, max_duration=max_duration)
     ph.plot_training_loss(wall_times, values, out_dir / f"training_loss_{label}.png")
 
 
@@ -224,7 +236,8 @@ def main():
     parser.add_argument("in_dir", type=Path, help="Folder to read the NetCDF files and config.")
     parser.add_argument("out_dir", type=Path, help="Folder to save the plots and tables.")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
-    parser.add_argument("--masked", type=str, default="yes", help="Whether to apply landmask")
+    parser.add_argument("--masked", type=str, default="yes", help="Whether to apply landmask.")
+    parser.add_argument("--max-duration", type=float, help="Max duration to plot training loss.")
     args = parser.parse_args()
 
     masked = args.masked.lower() == "yes"
@@ -250,7 +263,7 @@ def main():
 
     # Process training loss
     for label in ["regression", "diffusion"]:
-        read_training_loss_and_plot(args.in_dir, args.out_dir, label)
+        read_training_loss_and_plot(args.in_dir, args.out_dir, label, args.max_duration)
 
 
 if __name__ == "__main__":
