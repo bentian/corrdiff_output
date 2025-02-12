@@ -15,8 +15,8 @@ for key value in ${(kv)my_dict}; do
   masked="${key}_2M"
   masked_4M="${key}_4M"
 
-  python3 corrdiff_plotgen.py "$value/2M" "$out_dir/$nomask" --masked="no"
-  python3 corrdiff_plotgen.py "$value/2M" "$out_dir/$masked"
+  python3 corrdiff_plotgen.py "$value/2M" "$out_dir/$nomask" --masked="no" --max-duration=2000000
+  python3 corrdiff_plotgen.py "$value/2M" "$out_dir/$masked" --max-duration=2000000
   python3 corrdiff_plotgen.py "$value/4M" "$out_dir/$masked_4M"
 
   output_list+=("$nomask")
