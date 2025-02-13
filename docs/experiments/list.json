@@ -1,8 +1,6 @@
 [
-  "BL_nomask_2M",
-  "BL_2M",
   "BL_4M",
-  "D1_nomask_2M",
-  "D1_2M",
-  "D1_4M"
+  "BL_2M_ds4",
+  "D1_4M",
+  "D1_2M_ds4"
 ]
