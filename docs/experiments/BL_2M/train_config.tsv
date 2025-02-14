@@ -13,7 +13,7 @@ dataset.global_means_path
 dataset.global_stds_path	
 model.name	diffusion
 model.hr_mean_conditioning	False
-training.hp.training_duration	4000000
+training.hp.training_duration	2000000
 training.hp.total_batch_size	256
 training.hp.batch_size_per_gpu	4
 training.hp.lr	0.0002
@@ -23,7 +23,7 @@ training.hp.lr_rampup	0
 training.perf.fp_optimizations	amp-bf16
 training.perf.dataloader_workers	1
 training.perf.songunet_checkpoint_level	0
-training.io.regression_checkpoint_path	/nwpr/cfs/com184/corrdiffcwa/outputs_Baseline/reg_1n_w8_amp/checkpoints_regression/UNet.0.4000000.mdlus
+training.io.regression_checkpoint_path	/nwpr/cfs/com184/corrdiffcwa/outputs_Baseline/reg_1n_w8_amp/checkpoints_regression/UNet.0.2000128.mdlus
 training.io.print_progress_freq	1000
 training.io.save_checkpoint_freq	5000
 training.io.validation_freq	5000
