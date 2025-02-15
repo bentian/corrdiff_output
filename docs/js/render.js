@@ -46,8 +46,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Parse query parameters
     const params = new URLSearchParams(window.location.search);
-    const exp1 = getUpdatedExp(params.get("exp1"));
-    const exp2 = getUpdatedExp(params.get("exp2"));
+    const exp1 = params.get("exp1");
+    const exp2 = params.get("exp2");
     if (!exp1 && !exp2) {
         document.getElementById("render-output").innerHTML = "<p>Error: No experiments selected.</p>";
         return;
@@ -73,20 +73,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Listen for hash changes
     window.addEventListener("hashchange", handleHashChange);
 });
-
-/**
- * Map experiment names for compatibility.
- */
-function getUpdatedExp(exp) {
-    const expMapping = {
-        "Baseline_nomask": "BL_nomask_2M",
-        "Baseline_masked": "BL_2M",
-        "D1_nomask": "D1_nomask_2M",
-        "D1_masked": "D1_2M",
-    };
-
-    return expMapping[exp] || exp; // Return updated value or original if not found
-}
 
 /**
  * Handles scrolling and expanding based on hash change.
