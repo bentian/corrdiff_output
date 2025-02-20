@@ -3,27 +3,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     const FILE_GROUPS = [
         {
             title: "[all] Metrics",
-            files: [
-                "all/metrics_mean.tsv", "all/metrics_mean.png",
-                "all/monthly_mae.tsv", "all/monthly_mae.png",
-                "all/monthly_rmse.tsv", "all/monthly_rmse.png",
-                "all/pdf_prcp.png", "all/pdf_t2m.png",
-                "all/pdf_u10m.png", "all/pdf_v10m.png",
-                "all/monthly_error_prcp.png", "all/monthly_error_t2m.png",
-                "all/monthly_error_u10m.png", "all/monthly_error_v10m.png",
-            ],
+            files: {
+                "overview": [
+                    "all/metrics_mean.tsv", "all/metrics_mean.png",
+                    "all/monthly_mae.tsv", "all/monthly_mae.png",
+                    "all/monthly_rmse.tsv", "all/monthly_rmse.png"
+                ],
+                "prcp": [
+                    "all/pdf_prcp.png", "all/monthly_error_prcp.png"
+                ],
+                "t2m": [
+                    "all/pdf_t2m.png", "all/monthly_error_t2m.png"
+                ],
+                "u10m": [
+                    "all/pdf_u10m.png", "all/monthly_error_u10m.png"
+                ],
+                "v10m": [
+                    "all/pdf_v10m.png", "all/monthly_error_v10m.png"
+                ]
+            },
         },
         {
             title: "[reg] Metrics",
-            files: [
-                "reg/metrics_mean.tsv", "reg/metrics_mean.png",
-                "reg/monthly_mae.tsv", "reg/monthly_mae.png",
-                "reg/monthly_rmse.tsv", "reg/monthly_rmse.png",
-                "reg/pdf_prcp.png", "reg/pdf_t2m.png",
-                "reg/pdf_u10m.png", "reg/pdf_v10m.png",
-                "reg/monthly_error_prcp.png", "reg/monthly_error_t2m.png",
-                "reg/monthly_error_u10m.png", "reg/monthly_error_v10m.png",
-            ],
+            files: {
+                "overview": [
+                    "reg/metrics_mean.tsv", "reg/metrics_mean.png",
+                    "reg/monthly_mae.tsv", "reg/monthly_mae.png",
+                    "reg/monthly_rmse.tsv", "reg/monthly_rmse.png"
+                ],
+                "prcp": [
+                    "reg/pdf_prcp.png", "reg/monthly_error_prcp.png"
+                ],
+                "t2m": [
+                    "reg/pdf_t2m.png", "reg/monthly_error_t2m.png"
+                ],
+                "u10m": [
+                    "reg/pdf_u10m.png", "reg/monthly_error_u10m.png"
+                ],
+                "v10m": [
+                    "reg/pdf_v10m.png", "reg/monthly_error_v10m.png"
+                ]
+            },
         },
         {
             title: "[all - reg] Metrics",
@@ -49,7 +69,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const exp1 = params.get("exp1");
     const exp2 = params.get("exp2");
     if (!exp1 && !exp2) {
-        document.getElementById("render-output").innerHTML = "<p>Error: No experiments selected.</p>";
+        document.getElementById("render-output").innerHTML =
+            "<p>Error: No experiments selected.</p>";
         return;
     }
 
@@ -84,13 +105,22 @@ function handleHashChange() {
     const targetRow = document.getElementById(hash);
     if (!targetRow) return;
 
+    // Find the collapsible content container
     const targetContent = targetRow.closest(".content");
     if (!targetContent) return;
-
     targetContent.style.display = "block"; // Expand collapsible section
 
     const collapsibleHeader = targetContent.previousElementSibling;
-    collapsibleHeader?.classList.contains("collapsible") && collapsibleHeader.classList.add("active");
+    collapsibleHeader?.classList.contains("collapsible") &&
+        collapsibleHeader.classList.add("active");
+
+    // Activate corresponding tabContent
+    const targetTabContent = targetRow.closest(".tab-content");
+    if (targetTabContent) {
+        deactivateTabs(targetContent);
+        targetTabContent.classList.add("active");
+        targetTabContent.tab.classList.add("active");
+    }
 
     targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
 }
@@ -112,10 +142,53 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
     const content = document.createElement("div");
     content.className = "content";
 
-    files.forEach((file) => renderFileRow(file, content, exp1, exp2));
+    if (Array.isArray(files)) {
+        files.forEach((file) => renderFileRow(file, content, exp1, exp2));
+    } else {
+        renderTabs(content, files, exp1, exp2);
+    }
 
     renderOutput.appendChild(collapsible);
     renderOutput.appendChild(content);
+}
+
+/**
+ * Renders tabs and their associated content within a given container.
+ *
+ * @param {HTMLElement} content - The container element where tabs and content will be appended.
+ * @param {Object} files - An object where keys are tab names and values are arrays of files.
+ * @param {string} exp1 - Experiment 1 name.
+ * @param {string} exp2 - Experiment 2 name (optional).
+ */
+function renderTabs(content, files, exp1, exp2) {
+    const tabs = document.createElement("div");
+    tabs.className = "tabs";
+    content.appendChild(tabs);
+
+    Object.entries(files).forEach(([key, value], index) => {
+        const tab = document.createElement("div");
+        tab.className = "tab";
+        tab.textContent = key;
+        tabs.appendChild(tab);
+
+        const tabContent = document.createElement("div");
+        tabContent.className = "tab-content";
+        tabContent.tab = tab;
+        value.forEach((file) => renderFileRow(file, tabContent, exp1, exp2));
+        content.appendChild(tabContent);
+
+        // Make "overview" tab active by default
+        if (index === 0) {
+            tab.classList.add("active");
+            tabContent.classList.add("active");
+        }
+
+        tab.addEventListener("click", () => {
+            deactivateTabs(content);
+            tab.classList.add("active");
+            tabContent.classList.add("active");
+        });
+    });
 }
 
 /**
@@ -237,11 +310,29 @@ function addCollapsibleEventListeners() {
         collapsible.addEventListener("click", () => {
             collapsible.classList.toggle("active");
             const content = collapsible.nextElementSibling;
-            content.style.display = content.style.display === "block" ? "none" : "block";
+
+            // Expand or collapse the content
+            const isVisible = content.style.display === "block";
+            content.style.display = isVisible ? "none" : "block";
+            if (isVisible) return;
+
+            // Activate the first tab and its content if available
+            const [firstTab] = content.querySelectorAll(".tab");
+            const [firstTabContent] = content.querySelectorAll(".tab-content");
+            deactivateTabs(content);
+            if (firstTab) firstTab.classList.add("active");
+            if (firstTabContent) firstTabContent.classList.add("active");
         });
     });
 }
 
+/**
+ * Deactivates all tabs and content within a given container.
+ * @param {HTMLElement} content - The content container.
+ */
+function deactivateTabs(content){
+    content.querySelectorAll(".tab, .tab-content").forEach(el => el.classList.remove("active"));
+}
 
 /**
  * Initializes lightbox functionality for enlarging images.
