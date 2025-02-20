@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     "all/u10m/pdf_rmse.png", "all/u10m/pdf_mae.png",
                 ],
                 "v10m": [
-                    "all//v10m/pdf.png", "all/v10m/monthly_error.png",
+                    "all/v10m/pdf.png", "all/v10m/monthly_error.png",
                     "all/v10m/pdf_rmse.png", "all/v10m/pdf_mae.png",
                 ]
             },
