@@ -125,9 +125,7 @@ function handleHashChange() {
     // Activate corresponding tabContent
     const targetTabContent = targetRow.closest(".tab-content");
     if (targetTabContent) {
-        deactivateTabs(targetContent);
-        targetTabContent.classList.add("active");
-        targetTabContent.tab.classList.add("active");
+        activateSingleTab(targetContent, targetTabContent.tab, targetTabContent);
     }
 
     targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -191,11 +189,7 @@ function renderTabs(content, files, exp1, exp2) {
             tabContent.classList.add("active");
         }
 
-        tab.addEventListener("click", () => {
-            deactivateTabs(content);
-            tab.classList.add("active");
-            tabContent.classList.add("active");
-        });
+        tab.onclick = () => activateSingleTab(content, tab, tabContent);
     });
 }
 
@@ -327,19 +321,21 @@ function addCollapsibleEventListeners() {
             // Activate the first tab and its content if available
             const [firstTab] = content.querySelectorAll(".tab");
             const [firstTabContent] = content.querySelectorAll(".tab-content");
-            deactivateTabs(content);
-            if (firstTab) firstTab.classList.add("active");
-            if (firstTabContent) firstTabContent.classList.add("active");
+            activateSingleTab(content, firstTab, firstTabContent);
         });
     });
 }
 
 /**
- * Deactivates all tabs and content within a given container.
+ * Activates single tab with its content and deactivates the others within a given container.
  * @param {HTMLElement} content - The content container.
+ * @param {HTMLElement} tab - The tab element.
+ * @param {HTMLElement} tabContent - The tab content container.
  */
-function deactivateTabs(content){
+function activateSingleTab(content, tab, tabContent){
     content.querySelectorAll(".tab, .tab-content").forEach(el => el.classList.remove("active"));
+    if (tab) tab.classList.add("active");
+    if (tabContent) tabContent.classList.add("active");
 }
 
 /**

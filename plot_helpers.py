@@ -171,7 +171,9 @@ def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
 
         plt.xlabel(f'{metric} values')
         plt.ylabel('Density')
+        plt.grid(alpha=0.3, linestyle="--")
         plt.tight_layout()
+
         plt.savefig(output_path / f"{var}" / f"pdf_{metric.lower()}.png")
         plt.close()
 
