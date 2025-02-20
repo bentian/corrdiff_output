@@ -183,6 +183,8 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         ensure_directory_exists(output_path, var) # Create subdir for each variable
     ph.plot_monthly_error(spatial_error, output_path)
     ph.plot_pdf(truth_flat, pred_flat, output_path)
+    for metric in ["MAE", "RMSE"]:
+        ph.plot_metrics_pdf(metrics, metric, output_path)
 
     metric_mean = metrics.mean(dim="time")
     metrics_grouped = metrics.groupby("time.month").mean(dim="time")

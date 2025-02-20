@@ -40,7 +40,7 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
 
     plt.tight_layout()
     plt.savefig(output_path)
-
+    plt.close()
 
 def plot_monthly_metrics(ds: xr.Dataset, metric: str,
                          output_path: Path, number_format: str) -> None:
@@ -71,6 +71,7 @@ def plot_monthly_metrics(ds: xr.Dataset, metric: str,
 
     plt.tight_layout()
     plt.savefig(output_path)
+    plt.close()
 
 
 def get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
@@ -140,6 +141,40 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
             plt.savefig(output_path / f"{var}" / f"pdf.png")
             plt.close()
 
+def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
+    """
+    Plot the Probability Density Function (PDF) of a specified metric
+    for each variable in the dataset.
+
+    Parameters:
+    ds (xr.Dataset): The input dataset containing various metrics for different variables.
+    metric (str): The specific metric to plot (e.g., 'RMSE', 'MAE').
+    output_path (Path): The directory where the plot image will be saved.
+
+    Returns:
+    None
+    """
+    # Select the specified metric
+    metric_data = ds.sel(metric=metric)
+
+    # Define colors for plotting
+    colors = plt.cm.tab10.colors  # Use tab10 colormap for up to 10 distinct colors
+
+    # Plot and save PDF for each variable
+    for i, (var, data) in enumerate(metric_data.data_vars.items()):
+        plt.figure(figsize=(6, 4))
+        plt.hist(data.values, bins=36, density=True, alpha=0.5,
+                 color=colors[i % len(colors)], edgecolor='black')
+
+        _, note = get_bin_count_n_note(data.values)
+        plt.title(f'PDF of {metric} for {var}\n{note}')
+
+        plt.xlabel(f'{metric} values')
+        plt.ylabel('Density')
+        plt.tight_layout()
+        plt.savefig(output_path / f"{var}" / f"pdf_{metric.lower()}.png")
+        plt.close()
+
 
 def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
     """
@@ -167,6 +202,7 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
         fig.suptitle(f"Monthly Mean Error of {var}", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
         plt.savefig(output_path / f"{var}" / f"monthly_error.png")
+        plt.close()
 
 
 def plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
@@ -194,3 +230,4 @@ def plot_training_loss(wall_times: List[float], values: List[float], output_file
     plt.grid(True)
     plt.gcf().autofmt_xdate()  # Format x-axis for better readability
     plt.savefig(output_file)
+    plt.close()
