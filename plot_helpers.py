@@ -137,7 +137,7 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
             plt.legend()
             plt.grid(which="both" if log_scale else "major", linestyle="--", linewidth=0.5)
 
-            plt.savefig(output_path / f"pdf_{var}.png")
+            plt.savefig(output_path / f"{var}" / f"pdf.png")
             plt.close()
 
 
@@ -166,7 +166,7 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
 
         fig.suptitle(f"Monthly Mean Error of {var}", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
-        plt.savefig(output_path / f"monthly_error_{var}.png")
+        plt.savefig(output_path / f"{var}" / f"monthly_error.png")
 
 
 def plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:

@@ -5,21 +5,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             title: "[all] Metrics",
             files: {
                 "overview": [
-                    "all/metrics_mean.tsv", "all/metrics_mean.png",
-                    "all/monthly_mae.tsv", "all/monthly_mae.png",
-                    "all/monthly_rmse.tsv", "all/monthly_rmse.png"
+                    "all/overview/metrics_mean.tsv", "all/overview/metrics_mean.png",
+                    "all/overview/monthly_mae.tsv", "all/overview/monthly_mae.png",
+                    "all/overview/monthly_rmse.tsv", "all/overview/monthly_rmse.png"
                 ],
                 "prcp": [
-                    "all/pdf_prcp.png", "all/monthly_error_prcp.png"
+                    "all/prcp/pdf.png", "all/prcp/monthly_error.png"
                 ],
                 "t2m": [
-                    "all/pdf_t2m.png", "all/monthly_error_t2m.png"
+                    "all/t2m/pdf.png", "all/t2m/monthly_error.png"
                 ],
                 "u10m": [
-                    "all/pdf_u10m.png", "all/monthly_error_u10m.png"
+                    "all/u10m/pdf.png", "all/u10m/monthly_error.png"
                 ],
                 "v10m": [
-                    "all/pdf_v10m.png", "all/monthly_error_v10m.png"
+                    "all//v10m/pdf.png", "all/v10m/monthly_error.png"
                 ]
             },
         },
@@ -27,21 +27,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             title: "[reg] Metrics",
             files: {
                 "overview": [
-                    "reg/metrics_mean.tsv", "reg/metrics_mean.png",
-                    "reg/monthly_mae.tsv", "reg/monthly_mae.png",
-                    "reg/monthly_rmse.tsv", "reg/monthly_rmse.png"
+                    "reg/overview/metrics_mean.tsv", "reg/overview/metrics_mean.png",
+                    "reg/overview/monthly_mae.tsv", "reg/overview/monthly_mae.png",
+                    "reg/overview/monthly_rmse.tsv", "reg/overview/monthly_rmse.png"
                 ],
                 "prcp": [
-                    "reg/pdf_prcp.png", "reg/monthly_error_prcp.png"
+                    "reg/prcp/pdf.png", "reg/prcp/monthly_error.png"
                 ],
                 "t2m": [
-                    "reg/pdf_t2m.png", "reg/monthly_error_t2m.png"
+                    "reg/t2m/pdf.png", "reg/t2m/monthly_error.png"
                 ],
                 "u10m": [
-                    "reg/pdf_u10m.png", "reg/monthly_error_u10m.png"
+                    "reg/u10m/pdf.png", "reg/u10m/monthly_error.png"
                 ],
                 "v10m": [
-                    "reg/pdf_v10m.png", "reg/monthly_error_v10m.png"
+                    "reg//v10m/pdf.png", "reg/v10m/monthly_error.png"
                 ]
             },
         },

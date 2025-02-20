@@ -179,11 +179,15 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     metrics, spatial_error, truth_flat, pred_flat = score_samples(nc_file, n_ensemble)
     output_path = ensure_directory_exists(out_dir, label)
 
+    for var in spatial_error.data_vars.keys():
+        ensure_directory_exists(output_path, var) # Create subdir for each variable
     ph.plot_monthly_error(spatial_error, output_path)
     ph.plot_pdf(truth_flat, pred_flat, output_path)
+
     metric_mean = metrics.mean(dim="time")
     metrics_grouped = metrics.groupby("time.month").mean(dim="time")
-    save_tables_and_plots(metric_mean, metrics_grouped, output_path)
+    save_tables_and_plots(
+        metric_mean, metrics_grouped, ensure_directory_exists(output_path, "overview"))
 
     return metrics
 
