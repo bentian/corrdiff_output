@@ -5,6 +5,9 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
+# Color maps for each variable
+COLOR_MAPS: List[str] = ["Blues", "Oranges", "Greens", "Reds"]
+
 def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     """
     Generate a bar chart for the mean metrics and save the plot.
@@ -206,7 +209,7 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
         3. Error (Absolute or Squared, depending on metric type)
     - Titles include the corresponding metric value for each time step.
     """
-    for var, var_data in metric_array[metric].items():
+    for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
         metric_value_data = var_data["metric_value"]
         times, metric_values = metric_value_data.time.values, metric_value_data.values
         samples = var_data["sample"]
@@ -243,7 +246,8 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
 
             # Plot error
             error_type = "Absolute" if metric == "MAE" else "Square"
-            im3 = axes[i, 2].imshow(error, cmap="Reds", aspect="auto", origin="lower")
+            im3 = axes[i, 2].imshow(
+                error, cmap=COLOR_MAPS[var_index], aspect="auto", origin="lower")
             axes[i, 2].set_title(
                 f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})")
             axes[i, 2].axis("off")
@@ -264,7 +268,6 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
     """
     monthly_mean = ds.groupby("time.month").mean(dim="time")
     variables = list(ds.data_vars.keys())
-    colormaps = ["Blues", "Oranges", "Greens", "Reds"]
 
     for index, var in enumerate(variables):
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
@@ -272,7 +275,7 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
 
         for month in range(1, 13):
             data = monthly_mean[var].sel(month=month).mean(dim="ensemble")
-            im = axes[month - 1].imshow(data, cmap=colormaps[index], origin="lower")
+            im = axes[month - 1].imshow(data, cmap=COLOR_MAPS[index], origin="lower")
             axes[month - 1].set_title(f"Month {month}", fontsize=10)
             axes[month - 1].set_axis_off()
             fig.colorbar(im, ax=axes[month - 1], shrink=0.8)
