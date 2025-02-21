@@ -1,86 +1,12 @@
+import {
+    generateFileGroups,
+    handleHashChange,
+    activateSingleTab,
+    addCollapsibleEventListeners,
+    initializeLightbox
+} from "./util.js";
+
 document.addEventListener("DOMContentLoaded", async () => {
-    // Define the file groups with titles
-    const FILE_GROUPS = [
-        {
-            title: "[all] Metrics",
-            files: {
-                "overview": [
-                    "all/overview/metrics_mean.tsv", "all/overview/metrics_mean.png",
-                    "all/overview/monthly_rmse.tsv", "all/overview/monthly_rmse.png",
-                    "all/overview/monthly_mae.tsv", "all/overview/monthly_mae.png",
-                ],
-                "prcp": [
-                    "all/prcp/pdf.png", "all/prcp/monthly_error.png",
-                    "all/prcp/pdf_rmse.png", "all/prcp/top_samples_rmse.png",
-                    "all/prcp/pdf_mae.png", "all/prcp/top_samples_mae.png",
-                ],
-                "t2m": [
-                    "all/t2m/pdf.png", "all/t2m/monthly_error.png",
-                    "all/t2m/pdf_rmse.png", "all/t2m/top_samples_rmse.png",
-                    "all/t2m/pdf_mae.png", "all/t2m/top_samples_mae.png",
-                ],
-                "u10m": [
-                    "all/u10m/pdf.png", "all/u10m/monthly_error.png",
-                    "all/u10m/pdf_rmse.png", "all/u10m/top_samples_rmse.png",
-                    "all/u10m/pdf_mae.png", "all/u10m/top_samples_mae.png",
-                ],
-                "v10m": [
-                    "all/v10m/pdf.png", "all/v10m/monthly_error.png",
-                    "all/v10m/pdf_rmse.png", "all/v10m/top_samples_rmse.png",
-                    "all/v10m/pdf_mae.png", "all/v10m/top_samples_mae.png",
-                ]
-            },
-        },
-        {
-            title: "[reg] Metrics",
-            files: {
-                "overview": [
-                    "reg/overview/metrics_mean.tsv", "reg/overview/metrics_mean.png",
-                    "reg/overview/monthly_rmse.tsv", "reg/overview/monthly_rmse.png",
-                    "reg/overview/monthly_mae.tsv", "reg/overview/monthly_mae.png",
-                ],
-                "prcp": [
-                    "reg/prcp/pdf.png", "reg/prcp/monthly_error.png",
-                    "reg/prcp/pdf_rmse.png", "reg/prcp/top_samples_rmse.png",
-                    "reg/prcp/pdf_mae.png", "reg/prcp/top_samples_mae.png",
-                ],
-                "t2m": [
-                    "reg/t2m/pdf.png", "reg/t2m/monthly_error.png",
-                    "reg/t2m/pdf_rmse.png", "reg/t2m/top_samples_rmse.png",
-                    "reg/t2m/pdf_mae.png", "reg/t2m/top_samples_mae.png",
-                ],
-                "u10m": [
-                    "reg/u10m/pdf.png", "reg/u10m/monthly_error.png",
-                    "reg/u10m/pdf_rmse.png", "reg/u10m/top_samples_rmse.png",
-                    "reg/u10m/pdf_mae.png", "reg/u10m/top_samples_mae.png",
-                ],
-                "v10m": [
-                    "reg/v10m/pdf.png", "reg/v10m/monthly_error.png",
-                    "reg/v10m/pdf_rmse.png", "reg/v10m/top_samples_rmse.png",
-                    "reg/v10m/pdf_mae.png", "reg/v10m/top_samples_mae.png",
-                ]
-            },
-        },
-        {
-            title: "[all - reg] Metrics",
-            files: [
-                "minus_reg/metrics_mean.tsv", "minus_reg/metrics_mean.png",
-                "minus_reg/monthly_rmse.tsv", "minus_reg/monthly_rmse.png",
-                "minus_reg/monthly_mae.tsv", "minus_reg/monthly_mae.png",
-            ],
-        },
-        {
-            title: "Training Loss",
-            files: ["training_loss_regression.png", "training_loss_diffusion.png"]
-        },
-        {
-            title: "Config",
-            files: ["train_config.tsv", "generate_config.tsv"]
-        },
-
-    ];
-
-    // Parse query parameters
     const params = new URLSearchParams(window.location.search);
     const exp1 = params.get("exp1");
     const exp2 = params.get("exp2");
@@ -90,54 +16,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Set heading
     document.getElementById("render-heading").textContent = exp2
         ? `Comparison: ${exp1} vs. ${exp2}`
         : `Experiment: ${exp1 || exp2}`;
 
     // Render collapsible sections
-    FILE_GROUPS.forEach(({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2));
+    generateFileGroups().forEach(({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2));
 
-    // Add collapsible event listeners
     addCollapsibleEventListeners();
-
-    // Initialize lightbox event listeners
     initializeLightbox();
 
-    // Handle the initial hash (if present)
     handleHashChange();
-
-    // Listen for hash changes
     window.addEventListener("hashchange", handleHashChange);
 });
-
-/**
- * Handles scrolling and expanding based on hash change.
- */
-function handleHashChange() {
-    const hash = window.location.hash.substring(1);
-    if (!hash) return;
-
-    const targetRow = document.getElementById(hash);
-    if (!targetRow) return;
-
-    // Find the collapsible content container
-    const targetContent = targetRow.closest(".content");
-    if (!targetContent) return;
-    targetContent.style.display = "block"; // Expand collapsible section
-
-    const collapsibleHeader = targetContent.previousElementSibling;
-    collapsibleHeader?.classList.contains("collapsible") &&
-        collapsibleHeader.classList.add("active");
-
-    // Activate corresponding tabContent
-    const targetTabContent = targetRow.closest(".tab-content");
-    if (targetTabContent) {
-        activateSingleTab(targetContent, targetTabContent.tab, targetTabContent);
-    }
-
-    targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
-}
 
 /**
  * Renders a collapsible section for a file group.
@@ -310,65 +201,4 @@ async function fetchTSV(url) {
     } catch (error) {
         return `<p>Error loading TSV: ${url}</p>`;
     }
-}
-
-/**
- * Adds collapsible toggle functionality.
- */
-function addCollapsibleEventListeners() {
-    document.querySelectorAll(".collapsible").forEach((collapsible) => {
-        collapsible.addEventListener("click", () => {
-            collapsible.classList.toggle("active");
-            const content = collapsible.nextElementSibling;
-
-            // Expand or collapse the content
-            const isVisible = content.style.display === "block";
-            content.style.display = isVisible ? "none" : "block";
-            if (isVisible) return;
-
-            // Activate the first tab and its content if available
-            const [firstTab] = content.querySelectorAll(".tab");
-            const [firstTabContent] = content.querySelectorAll(".tab-content");
-            activateSingleTab(content, firstTab, firstTabContent);
-        });
-    });
-}
-
-/**
- * Activates single tab with its content and deactivates the others within a given container.
- * @param {HTMLElement} content - The content container.
- * @param {HTMLElement} tab - The tab element.
- * @param {HTMLElement} tabContent - The tab content container.
- */
-function activateSingleTab(content, tab, tabContent){
-    content.querySelectorAll(".tab, .tab-content").forEach(el => el.classList.remove("active"));
-    if (tab) tab.classList.add("active");
-    if (tabContent) tabContent.classList.add("active");
-}
-
-/**
- * Initializes lightbox functionality for enlarging images.
- */
-function initializeLightbox() {
-    const lightbox = document.getElementById("lightbox");
-    const lightboxImg = document.getElementById("lightbox-img");
-    const closeLightbox = document.getElementById("close-lightbox");
-
-    document.body.addEventListener("click", (event) => {
-        if (event.target.classList.contains("render-plot")) {
-            lightbox.style.display = "flex";
-            lightboxImg.src = event.target.src;
-        }
-    });
-
-    // Close lightbox when clicking outside the image
-    closeLightbox.addEventListener("click", () => {
-        lightbox.style.display = "none";
-    });
-
-    lightbox.addEventListener("click", (event) => {
-        if (event.target === lightbox) {
-            lightbox.style.display = "none";
-        }
-    });
 }
