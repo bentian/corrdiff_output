@@ -2,8 +2,9 @@ import multiprocessing
 import numpy as np
 import tqdm
 import xarray as xr
+import pandas as pd
 from functools import partial
-from typing import Tuple, Dict
+from typing import List, Tuple, Dict
 
 try:
     import xskillscore as xs
@@ -173,7 +174,6 @@ def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 
     return abs_diff
 
-
 def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
     """
     Process a single time step from the dataset.
@@ -204,6 +204,54 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
     return result
 
 
+def extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: xr.Dataset,
+                        metric: str, N: int = 5) -> dict:
+    """
+    Extracts truth and pred data for selected times based on a given metric,
+    computes absolute/squared error, and includes metric values.
+
+    Parameters:
+    - truth (xarray.Dataset): The ground truth dataset.
+    - pred (xarray.Dataset): The predicted dataset with an ensemble dimension.
+    - combined_metrics (xarray.Dataset): Dataset containing top date selections.
+    - metric (str): The metric to use for selecting top dates (e.g., "RMSE").
+    - N (int): Number of top dates to select (default: 5).
+
+    Returns:
+    - dict: A dictionary where each variable contains:
+      * "sample": xarray.DataArray with dimensions (time, y, x, type) containing:
+          - truth: Ground truth values
+          - pred: Mean of ensemble predictions
+          - error: Absolute or squared error based on metric type
+      * "metric_value": xarray.DataArray containing corresponding metric values for each selected time.
+    """
+    data_vars = {}
+
+    for var in truth.data_vars:
+        if var not in combined_metrics:
+            continue
+
+        # Select top N dates based on metric values
+        top_dates = combined_metrics.sel(metric=metric)[var].to_series().nlargest(N)
+        selected_times = np.array(top_dates.index, dtype="datetime64[ns]")
+
+        # Extract data
+        truth_selected = truth[var].sel(time=selected_times).load()
+        pred_selected = pred[var].sel(time=selected_times).mean("ensemble").load()
+
+        abs_error = compute_abs_difference(truth_selected, pred_selected)
+        error = abs_error if metric == "MAE" else abs_error ** 2
+
+        # Store results in a dictionary
+        data_vars[var] = {
+            "sample": xr.concat([truth_selected, pred_selected, error], dim="type")
+                      .assign_coords(type=["truth", "pred", "error"]),
+            "metric_value": xr.DataArray(top_dates.values, dims=["time"],
+                                         coords={"time": selected_times})
+        }
+
+    return data_vars
+
 def score_samples(filepath: str, n_ensemble: int = 1
                   ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
     """
@@ -217,7 +265,7 @@ def score_samples(filepath: str, n_ensemble: int = 1
         Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]: Computed metrics, spatial errors
         flattened truth, and flattened prediction datasets.
     """
-    truth, _, _ = open_samples(filepath)
+    truth, pred, _ = open_samples(filepath)
 
     with multiprocessing.Pool(32) as pool:
         results = list(
@@ -241,5 +289,12 @@ def score_samples(filepath: str, n_ensemble: int = 1
         for key, dim in zip(["error", "truth_flat", "pred_flat"], ["time", "points", "points"])
     }
 
+    # Extract top N dates with the highest metric values for RMSE and MAE
+    top_samples = {
+        metric: extract_top_samples(
+            truth.rename(VAR_MAPPING), pred.rename(VAR_MAPPING), combined_metrics, metric
+        ) for metric in ["MAE", "RMSE"]
+    }
+
     return combined_metrics, combined_data["error"], \
-        combined_data["truth_flat"], combined_data["pred_flat"]
+        combined_data["truth_flat"], combined_data["pred_flat"], top_samples

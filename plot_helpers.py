@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Tuple, List
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 import xarray as xr
+import matplotlib.pyplot as plt
 
 def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     """
@@ -175,6 +176,81 @@ def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
         plt.tight_layout()
 
         plt.savefig(output_path / f"{var}" / f"pdf_{metric.lower()}.png")
+        plt.close()
+
+
+def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None:
+    """
+    Plots truth, prediction, and error for each time step in each variable, maintaining the order
+    from the dataset and displaying the corresponding metric value in the plot title.
+
+    Parameters:
+    - metric_array (dict): A dictionary containing extracted samples and metric values for
+                           each variable. Expected structure:
+                           {
+                               "variable_name": {
+                                   "sample": xarray.DataArray with dimensions (time, y, x, type),
+                                   "metric_value": xarray.DataArray with dimensions (time)
+                               },
+                               ...
+                           }
+    - metric (str): The metric used for extracting top samples (e.g., "RMSE" or "MAE").
+    - output_path (Path): Directory where the plots will be saved.
+
+    Output:
+    - Saves images for each variable in the format:
+        {output_path}/{variable}/top_samples_{metric}.png
+    - Each row in the plot represents a different time step, with three columns:
+        1. Truth
+        2. Prediction
+        3. Error (Absolute or Squared, depending on metric type)
+    - Titles include the corresponding metric value for each time step.
+    """
+    for var, var_data in metric_array[metric].items():
+        metric_value_data = var_data["metric_value"]
+        times, metric_values = metric_value_data.time.values, metric_value_data.values
+        samples = var_data["sample"]
+
+        _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
+        for i, time in enumerate(times):
+            date_str = pd.Timestamp(time).date()
+
+            # Extract slices
+            truth = samples.sel(type="truth", time=time).values
+            pred = samples.sel(type="pred", time=time).values
+            error = samples.sel(type="error", time=time).values
+
+            # Determine shared color limits for truth and pred
+            vmin, vmax = np.nanmin([truth, pred]), np.nanmax([truth, pred])
+
+            # Ensure axes is always iterable for single-row cases
+            if len(times) == 1:
+                    axes = [axes]
+
+            # Plot truth
+            im1 = axes[i, 0].imshow(
+                truth, cmap="viridis_r", aspect="auto", origin="lower", vmin=vmin, vmax=vmax)
+            axes[i, 0].set_title(f"Truth on {date_str}")
+            axes[i, 0].axis("off")
+            plt.colorbar(im1, ax=axes[i, 0])
+
+            # Plot pred
+            im2 = axes[i, 1].imshow(
+                pred, cmap="viridis_r", aspect="auto", origin="lower", vmin=vmin, vmax=vmax)
+            axes[i, 1].set_title(f"Prediction on {date_str}")
+            axes[i, 1].axis("off")
+            plt.colorbar(im2, ax=axes[i, 1])
+
+            # Plot error
+            error_type = "Absolute" if metric == "MAE" else "Square"
+            im3 = axes[i, 2].imshow(error, cmap="Reds", aspect="auto", origin="lower")
+            axes[i, 2].set_title(
+                f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})")
+            axes[i, 2].axis("off")
+            plt.colorbar(im3, ax=axes[i, 2])
+
+        plt.tight_layout()
+        plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
         plt.close()
 
 
