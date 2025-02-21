@@ -19,7 +19,9 @@ function generateFileGroups() {
         title: `[${prefix}] Metrics`,
         files: Object.fromEntries([
             ["overview", overviewFiles.map(f => `${prefix}/overview/${f}`)],
-            ...variables.map(varName => [varName, variableFiles.map(f => `${prefix}/${varName}/${f}`)])
+            ...variables.map(
+                varName => [varName, variableFiles.map(f => `${prefix}/${varName}/${f}`)]
+            )
         ])
     })).concat([
         {

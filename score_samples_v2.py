@@ -34,32 +34,6 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     return truth.set_coords(["lon", "lat"]), pred.set_coords(["lon", "lat"]), root
 
 
-def compute_std(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-    """
-    Computes the standard deviation for the dataset while handling NaNs safely.
-
-    Parameters:
-        truth (xr.Dataset): The truth dataset.
-        pred (xr.Dataset): The prediction dataset.
-
-    Returns:
-        xr.Dataset: Standard deviation values for valid points.
-    """
-    dim = ["x", "y"]
-
-    # Compute mean across ensemble
-    pred_mean = pred.mean("ensemble") if "ensemble" in pred.dims else pred
-
-    # Ensure only valid (finite) values contribute to the standard deviation
-    valid_mask = np.isfinite(truth) & np.isfinite(pred_mean)
-    truth_valid = truth.where(valid_mask)
-    pred_valid = pred_mean.where(valid_mask)
-
-    # Compute standard deviation safely (ddof=0 avoids division by zero issues)
-    std_dev = pred_valid.std(dim, ddof=0, skipna=True)
-
-    return std_dev
-
 def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     Computes the CRPS while filtering out NaN values.
@@ -103,12 +77,12 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 
     rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
     mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    std_dev = pred.std("ensemble").mean(dim, skipna=True)
-    crps = compute_crps(truth, pred)
+    # std_dev = pred.std("ensemble").mean(dim, skipna=True)
+    # crps = compute_crps(truth, pred)
 
     return (
-        xr.concat([rmse, mae, crps, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "MAE", "CRPS", "STD_DEV"])
+        xr.concat([rmse, mae], dim="metric")
+        .assign_coords(metric=["RMSE", "MAE"])
         .load()
     )
 
@@ -152,7 +126,8 @@ def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Data
 
 def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
-    Computes the absolute difference between truth and prediction datasets while filtering NaN values.
+    Computes the absolute difference between truth and prediction datasets
+    while filtering NaN values.
 
     Parameters:
         truth (xr.Dataset): The truth dataset.

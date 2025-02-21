@@ -21,7 +21,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         : `Experiment: ${exp1 || exp2}`;
 
     // Render collapsible sections
-    generateFileGroups().forEach(({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2));
+    generateFileGroups().forEach(
+        ({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2)
+    );
 
     addCollapsibleEventListeners();
     initializeLightbox();
@@ -88,7 +90,7 @@ function renderTabs(content, files, exp1, exp2) {
             tabContent.classList.add("active");
         }
 
-        tab.onclick = () => activateSingleTab(content, tab, tabContent);
+        tab.addEventListener("click", () => activateSingleTab(content, tab, tabContent));
     });
 }
 

@@ -119,14 +119,18 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
             truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
             pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
 
-            print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / "
-                  f"{pred_bin_count} (pred)")
+            # print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / "
+            #       f"{pred_bin_count} (pred)")
 
             plt.figure(figsize=(10, 6))
 
             # Use log-scale bins if needed
-            bins_truth = np.logspace(np.log10(min(truth_flat)), np.log10(max(truth_flat)), truth_bin_count) if log_scale else truth_bin_count
-            bins_pred = np.logspace(np.log10(min(pred_flat)), np.log10(max(pred_flat)), pred_bin_count) if log_scale else pred_bin_count
+            bins_truth = np.logspace(
+                            np.log10(min(truth_flat)), np.log10(max(truth_flat)), truth_bin_count
+                         ) if log_scale else truth_bin_count
+            bins_pred = np.logspace(
+                            np.log10(min(pred_flat)), np.log10(max(pred_flat)), pred_bin_count
+                        ) if log_scale else pred_bin_count
 
             plt.hist(truth_flat, bins=bins_truth, alpha=0.5, label="Truth", density=True)
             plt.hist(pred_flat, bins=bins_pred, alpha=0.5, label="Prediction", density=True)
