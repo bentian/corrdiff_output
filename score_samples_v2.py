@@ -2,9 +2,8 @@ import multiprocessing
 import numpy as np
 import tqdm
 import xarray as xr
-import pandas as pd
 from functools import partial
-from typing import List, Tuple, Dict
+from typing import Tuple, Dict
 
 try:
     import xskillscore as xs
@@ -204,8 +203,13 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
     return result
 
 
-def extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: xr.Dataset,
-                        metric: str, N: int = 5) -> dict:
+def extract_top_samples(
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    combined_metrics: xr.Dataset,
+    metric: str,
+    N: int = 5
+) -> dict:
     """
     Extracts truth and pred data for selected times based on a given metric,
     computes absolute/squared error, and includes metric values.
@@ -223,7 +227,8 @@ def extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: x
           - truth: Ground truth values
           - pred: Mean of ensemble predictions
           - error: Absolute or squared error based on metric type
-      * "metric_value": xarray.DataArray containing corresponding metric values for each selected time.
+      * "metric_value": xarray.DataArray containing corresponding metric values
+                        for each selected time.
     """
     data_vars = {}
 
@@ -252,8 +257,9 @@ def extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: x
 
     return data_vars
 
-def score_samples(filepath: str, n_ensemble: int = 1
-                  ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
+def score_samples(
+    filepath: str, n_ensemble: int = 1
+) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
     """
     Score the dataset by computing various metrics over all time steps.
 
@@ -262,8 +268,13 @@ def score_samples(filepath: str, n_ensemble: int = 1
         n_ensemble (int, optional): Number of ensemble members. Defaults to 1.
 
     Returns:
-        Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]: Computed metrics, spatial errors
-        flattened truth, and flattened prediction datasets.
+        Tuple:
+            - xr.Dataset: Computed metrics across all time steps.
+            - xr.Dataset: Spatial error dataset.
+            - xr.Dataset: Flattened truth dataset.
+            - xr.Dataset: Flattened prediction dataset.
+            - dict: Dictionary containing datasets for the top N samples
+              with the highest values for selected metrics (e.g., RMSE and MAE).
     """
     truth, pred, _ = open_samples(filepath)
 
