@@ -21,7 +21,7 @@ If you haven't installed `xskillscore`, you may need:
 ## Process and Generate Outputs
    Run the main script to generate plots and metrics:
 
-   `python corrdiff_plotgen.py <input_directory> <output_directory> --n-ensemble 1 --masked yes`
+   `python corrdiff_plotgen.py <input_directory> <output_directory>`
 
    - `<input_directory>`: Directory containing
      - NetCDF (`netcdf/`)
@@ -30,6 +30,7 @@ If you haven't installed `xskillscore`, you may need:
    - `<output_directory>`: Directory where outputs will be saved.
    - `--n-ensemble`: Number of ensemble members (default: 1).
    - `--masked`: Apply landmask (yes or no. default: yes).
+   - `--max-duration`: Max duration to plot training loss (default: None)
 
 ## 📖 Example Run
 

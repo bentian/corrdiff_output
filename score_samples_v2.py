@@ -249,7 +249,7 @@ def score_samples(
             - xr.Dataset: Flattened truth dataset.
             - xr.Dataset: Flattened prediction dataset.
             - dict: Dictionary containing datasets for the top N samples
-              with the highest values for selected metrics (e.g., RMSE and MAE).
+                    with the highest values for selected metrics (e.g., RMSE and MAE).
     """
     truth, pred, _ = open_samples(filepath)
 

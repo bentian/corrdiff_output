@@ -177,10 +177,11 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     suffix = "_masked" if masked else ""
     nc_file = in_dir / "netcdf" / f"output_0_{label}{suffix}.nc"
     metrics, spatial_error, truth_flat, pred_flat, top_samples = score_samples(nc_file, n_ensemble)
-    output_path = ensure_directory_exists(out_dir, label)
 
+    # Create output directory and sub directories for each variable
+    output_path = ensure_directory_exists(out_dir, label)
     for var in spatial_error.data_vars.keys():
-        ensure_directory_exists(output_path, var) # Create subdir for each variable
+        ensure_directory_exists(output_path, var)
 
     # Plots per variable
     ph.plot_monthly_error(spatial_error, output_path)

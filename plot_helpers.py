@@ -125,12 +125,13 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
             plt.figure(figsize=(10, 6))
 
             # Use log-scale bins if needed
-            bins_truth = np.logspace(
-                            np.log10(min(truth_flat)), np.log10(max(truth_flat)), truth_bin_count
-                         ) if log_scale else truth_bin_count
-            bins_pred = np.logspace(
-                            np.log10(min(pred_flat)), np.log10(max(pred_flat)), pred_bin_count
-                        ) if log_scale else pred_bin_count
+            bins_truth = np.logspace(np.log10(min(truth_flat)),
+                                     np.log10(max(truth_flat)), truth_bin_count) \
+                         if log_scale else truth_bin_count
+
+            bins_pred = np.logspace(np.log10(min(pred_flat)),
+                                    np.log10(max(pred_flat)), pred_bin_count) \
+                        if log_scale else pred_bin_count
 
             plt.hist(truth_flat, bins=bins_truth, alpha=0.5, label="Truth", density=True)
             plt.hist(pred_flat, bins=bins_pred, alpha=0.5, label="Prediction", density=True)
@@ -214,8 +215,8 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     - Titles include the corresponding metric value for each time step.
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
-        metric_value_data = var_data["metric_value"]
-        times, metric_values = metric_value_data.time.values, metric_value_data.values
+        metric_data = var_data["metric_value"]
+        times, metric_values = metric_data.time.values, metric_data.values
         samples = var_data["sample"]
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
@@ -232,7 +233,7 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
 
             # Ensure axes is always iterable for single-row cases
             if len(times) == 1:
-                    axes = [axes]
+                axes = [axes]
 
             # Plot truth
             im1 = axes[i, 0].imshow(
