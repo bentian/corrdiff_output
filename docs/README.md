@@ -36,6 +36,7 @@ Then, access `http://localhost:8000` in your browser.
 │── 📂 js/                # JavaScript logic
 │   ├── main.js           # Handles experiment selection forms
 │   ├── render.js         # Dynamically loads and displays experiment results
+│   ├── util.js           # Utilities for render.js
 │
 │── 📂 experiments/       # Contains experiment results (JSON, images, TSV, etc.)
 │   ├── list.json         # List of available experiments
@@ -68,6 +69,10 @@ Then, access `http://localhost:8000` in your browser.
   - Generates collapsible sections for each metric.
   - Adds hash-based navigation for easy linking to specific results.
   - Implements lightbox image viewer for enlarged plots.
+
+`util.js` - Utilities for `render.js`
+  - Provides file group generation and tab activation utilities.
+  - Implements event handlers for hash change and click on collapsible & light box.
 
 # Customization
 
