@@ -240,6 +240,19 @@ def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
         plt.close()
 
 
+def plot_sample_set(axes, index, samples, titles, colormap) -> None:
+    vmin = np.nanmin([samples[0], samples[1]])
+    vmax = np.nanmax([samples[0], samples[1]])
+
+    for j, title in enumerate(titles):
+        # Use the same color scale for truth and prediction for comparison
+        im = axes[index, j].imshow(samples[j], cmap="viridis_r", aspect="auto", origin="lower",
+                                   vmin=vmin, vmax=vmax) if j < 2 else \
+             axes[index, j].imshow(samples[j], cmap=colormap, aspect="auto", origin="lower")
+        axes[index, j].set_title(title)
+        axes[index, j].axis("off")
+        plt.colorbar(im, ax=axes[index, j])
+
 def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None:
     """
     Plots truth, prediction, and error for each time step in each variable, maintaining the order
@@ -276,12 +289,10 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
 
         for i, time in enumerate(times):
-            sample_data = [
+            samples = [
                 var_data["sample"].sel(type=t, time=time).values
                 for t in ["truth", "pred", "error"]
             ]
-            vmin, vmax = np.nanmin([sample_data[0], sample_data[1]]), \
-                         np.nanmax([sample_data[0], sample_data[1]])
 
             # Ensure axes is iterable for single-row cases
             axes = [axes] if len(times) == 1 else axes
@@ -295,16 +306,8 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
                 f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})",
             ]
 
-            # Generate plots
-            for j, title in enumerate(titles):
-                # Use the same color scale for truth and prediction for comparison
-                im = axes[i, j].imshow(sample_data[j], cmap="viridis_r", aspect="auto", origin="lower",
-                                       vmin=vmin, vmax=vmax) if j < 2 else \
-                     axes[i, j].imshow(sample_data[j], cmap=COLOR_MAPS[var_index],
-                                       aspect="auto", origin="lower")
-                axes[i, j].set_title(title)
-                axes[i, j].axis("off")
-                plt.colorbar(im, ax=axes[i, j])
+            # Generate plots for each time step
+            plot_sample_set(axes, i, samples, titles, COLOR_MAPS[var_index])
 
         plt.tight_layout()
         plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
