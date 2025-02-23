@@ -259,7 +259,7 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     ph.plot_pdf(truth_flat, pred_flat, output_path)
     for metric in ["MAE", "RMSE"]:
         ph.plot_metrics_pdf(metrics, metric, output_path)
-        ph.plot_samples(top_samples, metric, output_path)
+        ph.plot_top_samples(top_samples, metric, output_path)
 
     # Overview plots and tables
     save_tables_and_plots(metrics.mean(dim="time"),
