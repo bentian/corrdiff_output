@@ -269,6 +269,7 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
         times = var_data["metric_value"].time.values
+        metric_values = var_data["metric_value"].values
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
 
@@ -288,7 +289,7 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
                 f"Truth on {date_str}",
                 f"Prediction on {date_str}",
                 f"{'Absolute' if metric == 'MAE' else 'Square'} error on {date_str}\n"
-                    f"({metric}={var_data["metric_value"].values[i]:.2f})",
+                    f"({metric}={metric_values[i]:.2f})",
             ]
 
             # Generate plots
