@@ -53,16 +53,16 @@ Usage Example:
 
 """
 import multiprocessing
+from functools import partial
+from typing import Tuple, Dict
 import numpy as np
 import tqdm
 import xarray as xr
-from functools import partial
-from typing import Tuple, Dict
 
 try:
     import xskillscore as xs
-except ImportError:
-    raise ImportError("xskillscore not installed. Try `pip install xskillscore`")
+except ImportError as exc:
+    raise ImportError("xskillscore not installed. Try `pip install xskillscore`") from exc
 
 VAR_MAPPING: Dict[str, str] = {
     "precipitation": "prcp",
@@ -237,7 +237,7 @@ def extract_top_samples(
     pred: xr.Dataset,
     combined_metrics: xr.Dataset,
     metric: str,
-    N: int = 5
+    top_num: int = 5
 ) -> dict:
     """
     Extracts truth and pred data for selected times based on a given metric,
@@ -248,7 +248,7 @@ def extract_top_samples(
     - pred (xarray.Dataset): The predicted dataset with an ensemble dimension.
     - combined_metrics (xarray.Dataset): Dataset containing top date selections.
     - metric (str): The metric to use for selecting top dates (e.g., "RMSE").
-    - N (int): Number of top dates to select (default: 5).
+    - top_num (int): Number of top dates to select (default: 5).
 
     Returns:
     - dict: A dictionary where each variable contains:
@@ -266,7 +266,7 @@ def extract_top_samples(
             continue
 
         # Select top N dates based on metric values
-        top_dates = combined_metrics.sel(metric=metric)[var].to_series().nlargest(N)
+        top_dates = combined_metrics.sel(metric=metric)[var].to_series().nlargest(top_num)
         selected_times = np.array(top_dates.index, dtype="datetime64[ns]")
 
         # Extract data

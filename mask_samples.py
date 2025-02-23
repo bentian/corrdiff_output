@@ -31,9 +31,9 @@ Usage Example:
     >>> save_masked_samples(input_path, output_path)
     Masked dataset saved to masked_output.nc
 """
+from typing import Tuple
 from pathlib import Path
 import xarray as xr
-from typing import Tuple
 
 LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
 
@@ -63,7 +63,7 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
 
 def save_masked_samples(input_file: Path, output_file: Path) -> None:
     """
-    Open prediction and truth samples from a dataset file, apply the landmask, 
+    Open prediction and truth samples from a dataset file, apply the landmask,
     and save them back to a new NetCDF file while preserving metadata.
 
     Parameters:
@@ -90,4 +90,4 @@ def save_masked_samples(input_file: Path, output_file: Path) -> None:
             truth_masked.to_netcdf(output_file, mode="a", group="truth")
             pred_masked.to_netcdf(output_file, mode="a", group="prediction")
 
-    print(f"Masked dataset saved to {output_file}")       
+    print(f"Masked dataset saved to {output_file}")

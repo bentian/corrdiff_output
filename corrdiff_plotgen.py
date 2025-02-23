@@ -246,8 +246,8 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         pd.DataFrame: Computed metrics dataset.
     """
     suffix = "_masked" if masked else ""
-    nc_file = in_dir / "netcdf" / f"output_0_{label}{suffix}.nc"
-    metrics, spatial_error, truth_flat, pred_flat, top_samples = score_samples(nc_file, n_ensemble)
+    metrics, spatial_error, truth_flat, pred_flat, top_samples = \
+        score_samples(in_dir / "netcdf" / f"output_0_{label}{suffix}.nc", n_ensemble)
 
     # Create output directory and sub directories for each variable
     output_path = ensure_directory_exists(out_dir, label)
@@ -262,10 +262,9 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         ph.plot_top_samples(top_samples, metric, output_path)
 
     # Overview plots and tables
-    metric_mean = metrics.mean(dim="time")
-    metrics_grouped = metrics.groupby("time.month").mean(dim="time")
-    save_tables_and_plots(
-        metric_mean, metrics_grouped, ensure_directory_exists(output_path, "overview"))
+    save_tables_and_plots(metrics.mean(dim="time"),
+                          metrics.groupby("time.month").mean(dim="time"),
+                          ensure_directory_exists(output_path, "overview"))
 
     return metrics
 

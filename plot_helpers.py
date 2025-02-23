@@ -80,10 +80,10 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     _, ax = plt.subplots(figsize=(10, 6))
     for i, var in enumerate(variables):
         bars = ax.bar(x + i * width, data_array[i], width, label=var)
-        for bar in bars:
-            height = bar.get_height()
+        for plt_bar in bars:
+            height = plt_bar.get_height()
             ax.annotate(f"{height:{number_format}}",
-                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xy=(plt_bar.get_x() + plt_bar.get_width() / 2, height),
                         xytext=(0, 5), textcoords="offset points",
                         ha='center', va='bottom', fontsize=10, color='black')
 
@@ -91,7 +91,7 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     ax.set_xlabel("Metrics", fontsize=12)
     ax.set_ylabel("Values", fontsize=12)
     ax.set_xticks(x + width * (len(variables) - 1) / 2)
-    ax.set_xticklabels([metric for metric in metrics])
+    ax.set_xticklabels(list(metrics))
     ax.legend(title="Variables")
     ax.grid(alpha=0.3, linestyle="--")
 
@@ -200,7 +200,7 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
             plt.legend()
             plt.grid(which="both" if log_scale else "major", linestyle="--", linewidth=0.5)
 
-            plt.savefig(output_path / f"{var}" / f"pdf.png")
+            plt.savefig(output_path / f"{var}" / "pdf.png")
             plt.close()
 
 def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
@@ -268,48 +268,45 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     - Titles include the corresponding metric value for each time step.
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
-        metric_value_data = var_data["metric_value"]
-        times, metric_values = metric_value_data.time.values, metric_value_data.values
-        samples = var_data["sample"]
+        times, metric_values, samples = (
+            var_data["metric_value"].time.values,
+            var_data["metric_value"].values,
+            var_data["sample"],
+        )
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
+
         for i, time in enumerate(times):
-            date_str = pd.Timestamp(time).date()
-
-            # Extract slices
-            truth = samples.sel(type="truth", time=time).values
-            pred = samples.sel(type="pred", time=time).values
-            error = samples.sel(type="error", time=time).values
-
-            # Determine shared color limits for truth and pred
+            truth, pred, error = [
+                samples.sel(type=t, time=time).values for t in ["truth", "pred", "error"]
+            ]
             vmin, vmax = np.nanmin([truth, pred]), np.nanmax([truth, pred])
 
-            # Ensure axes is always iterable for single-row cases
-            if len(times) == 1:
-                axes = [axes]
+            # Ensure axes is iterable for single-row cases
+            axes = [axes] if len(times) == 1 else axes
 
-            # Plot truth
-            im1 = axes[i, 0].imshow(
-                truth, cmap="viridis_r", aspect="auto", origin="lower", vmin=vmin, vmax=vmax)
-            axes[i, 0].set_title(f"Truth on {date_str}")
-            axes[i, 0].axis("off")
-            plt.colorbar(im1, ax=axes[i, 0])
-
-            # Plot pred
-            im2 = axes[i, 1].imshow(
-                pred, cmap="viridis_r", aspect="auto", origin="lower", vmin=vmin, vmax=vmax)
-            axes[i, 1].set_title(f"Prediction on {date_str}")
-            axes[i, 1].axis("off")
-            plt.colorbar(im2, ax=axes[i, 1])
-
-            # Plot error
+            # Define subplot parameters
+            date_str = pd.Timestamp(time).date()
             error_type = "Absolute" if metric == "MAE" else "Square"
-            im3 = axes[i, 2].imshow(
-                error, cmap=COLOR_MAPS[var_index], aspect="auto", origin="lower")
-            axes[i, 2].set_title(
-                f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})")
-            axes[i, 2].axis("off")
-            plt.colorbar(im3, ax=axes[i, 2])
+            plots = [
+                (truth, "viridis_r", f"Truth on {date_str}"),
+                (pred, "viridis_r", f"Prediction on {date_str}"),
+                (
+                    error,
+                    COLOR_MAPS[var_index],
+                    f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})",
+                ),
+            ]
+
+            # Generate plots
+            for j, (data, cmap, title) in enumerate(plots):
+                # Use the same color scale for truth and prediction for comparison
+                im = axes[i, j].imshow(data, cmap=cmap, aspect="auto", origin="lower",
+                                       vmin=vmin, vmax=vmax) if j < 2 else \
+                     axes[i, j].imshow(data, cmap=cmap, aspect="auto", origin="lower")
+                axes[i, j].set_title(title)
+                axes[i, j].axis("off")
+                plt.colorbar(im, ax=axes[i, j])
 
         plt.tight_layout()
         plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
@@ -340,7 +337,7 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
 
         fig.suptitle(f"Monthly Mean Error of {var}", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])
-        plt.savefig(output_path / f"{var}" / f"monthly_error.png")
+        plt.savefig(output_path / f"{var}" / "monthly_error.png")
         plt.close()
 
 
