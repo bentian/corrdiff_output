@@ -268,42 +268,36 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     - Titles include the corresponding metric value for each time step.
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
-        times, metric_values, samples = (
-            var_data["metric_value"].time.values,
-            var_data["metric_value"].values,
-            var_data["sample"],
-        )
+        times = var_data["metric_value"].time.values
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
 
         for i, time in enumerate(times):
-            truth, pred, error = [
-                samples.sel(type=t, time=time).values for t in ["truth", "pred", "error"]
+            samples = [
+                var_data["sample"].sel(type=t, time=time).values
+                for t in ["truth", "pred", "error"]
             ]
-            vmin, vmax = np.nanmin([truth, pred]), np.nanmax([truth, pred])
+            vmin, vmax = np.nanmin([samples[0], samples[1]]), np.nanmax([samples[1], samples[1]])
 
             # Ensure axes is iterable for single-row cases
             axes = [axes] if len(times) == 1 else axes
 
             # Define subplot parameters
             date_str = pd.Timestamp(time).date()
-            error_type = "Absolute" if metric == "MAE" else "Square"
-            plots = [
-                (truth, "viridis_r", f"Truth on {date_str}"),
-                (pred, "viridis_r", f"Prediction on {date_str}"),
-                (
-                    error,
-                    COLOR_MAPS[var_index],
-                    f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})",
-                ),
+            titles = [
+                f"Truth on {date_str}",
+                f"Prediction on {date_str}",
+                f"{'Absolute' if metric == 'MAE' else 'Square'} error on {date_str}\n"
+                    f"({metric}={var_data["metric_value"].values[i]:.2f})",
             ]
 
             # Generate plots
-            for j, (data, cmap, title) in enumerate(plots):
+            for j, title in enumerate(titles):
                 # Use the same color scale for truth and prediction for comparison
-                im = axes[i, j].imshow(data, cmap=cmap, aspect="auto", origin="lower",
+                im = axes[i, j].imshow(samples[j], cmap="viridis_r", aspect="auto", origin="lower",
                                        vmin=vmin, vmax=vmax) if j < 2 else \
-                     axes[i, j].imshow(data, cmap=cmap, aspect="auto", origin="lower")
+                     axes[i, j].imshow(samples[j], cmap=COLOR_MAPS[var_index],
+                                       aspect="auto", origin="lower")
                 axes[i, j].set_title(title)
                 axes[i, j].axis("off")
                 plt.colorbar(im, ax=axes[i, j])
