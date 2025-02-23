@@ -240,6 +240,54 @@ def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
         plt.close()
 
 
+def plot_sample_images(
+    axes: np.ndarray,
+    index: int,
+    images: List[np.ndarray],
+    titles: List[str],
+    error_cmap: str
+) -> None:
+    """
+    Plots truth, prediction, and error for a given time step within a subplot grid.
+
+    Parameters:
+        axes (np.ndarray):
+            A 2D NumPy array of Matplotlib subplot axes for displaying the images.
+        index (int):
+            The row index in the subplot grid corresponding to the current time step.
+        images (List[np.ndarray]):
+            A list containing three NumPy arrays:
+            - images[0]: Truth values.
+            - images[1]: Prediction values.
+            - images[2]: Error values.
+        titles (List[str]):
+            List of three titles corresponding to the truth, prediction, and error subplots.
+        error_cmap (str):
+            The colormap to be used for the error visualization.
+
+    Generates:
+        - Three side-by-side plots for:
+            1. **Truth** - Ground truth values.
+            2. **Prediction** - Model predictions.
+            3. **Error** - Absolute or squared error, depending on the metric.
+
+    Notes:
+        - Uses "viridis_r" colormap for truth and prediction.
+        - Uses the same color scale (`vmin`, `vmax`) for truth and prediction.
+        - Applies a different colormap (`error_cmap`) for error visualization.
+    """
+    vmin = np.nanmin([images[0], images[1]])
+    vmax = np.nanmax([images[0], images[1]])
+
+    for j, title in enumerate(titles):
+        # Use the same color scale for truth and prediction for comparison
+        im = axes[index, j].imshow(images[j], cmap="viridis_r", aspect="auto", origin="lower",
+                                   vmin=vmin, vmax=vmax) if j < 2 else \
+             axes[index, j].imshow(images[j], cmap=error_cmap, aspect="auto", origin="lower")
+        axes[index, j].set_title(title)
+        axes[index, j].axis("off")
+        plt.colorbar(im, ax=axes[index, j])
+
 def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None:
     """
     Plots truth, prediction, and error for each time step in each variable, maintaining the order
@@ -262,48 +310,35 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     - Saves images for each variable in the format:
         {output_path}/{variable}/top_samples_{metric}.png
     - Each row in the plot represents a different time step, with three columns:
-        1. Truth
-        2. Prediction
-        3. Error (Absolute or Squared, depending on metric type)
+        1. **Truth** - Ground truth values.
+        2. **Prediction** - Model predictions.
+        3. **Error** - Absolute or squared error, depending on the metric.
     - Titles include the corresponding metric value for each time step.
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
-        times, metric_values, samples = (
-            var_data["metric_value"].time.values,
-            var_data["metric_value"].values,
-            var_data["sample"],
-        )
+        times = var_data["metric_value"].time.values
+        metric_values = var_data["metric_value"].values
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
+        axes = [axes] if len(times) == 1 else axes # Ensure axes is iterable for single-row cases
 
         for i, time in enumerate(times):
-            truth, pred, error = [
-                samples.sel(type=t, time=time).values for t in ["truth", "pred", "error"]
+            images = [
+                var_data["sample"].sel(type=t, time=time).values
+                for t in ["truth", "pred", "error"]
             ]
-            vmin, vmax = np.nanmin([truth, pred]), np.nanmax([truth, pred])
-
-            # Ensure axes is iterable for single-row cases
-            axes = [axes] if len(times) == 1 else axes
 
             # Define subplot parameters
             date_str = pd.Timestamp(time).date()
             error_type = "Absolute" if metric == "MAE" else "Square"
-            plots = [
-                (truth, f"Truth on {date_str}"),
-                (pred, f"Prediction on {date_str}"),
-                (error, f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})"),
+            titles = [
+                f"Truth on {date_str}",
+                f"Prediction on {date_str}",
+                f"{error_type} error on {date_str}\n({metric}={metric_values[i]:.2f})",
             ]
 
-            # Generate plots
-            for j, (data, title) in enumerate(plots):
-                # Use the same color scale for truth and prediction for comparison
-                im = axes[i, j].imshow(data, cmap="viridis_r", aspect="auto", origin="lower",
-                                       vmin=vmin, vmax=vmax) if j < 2 else \
-                     axes[i, j].imshow(data, cmap=COLOR_MAPS[var_index],
-                                       aspect="auto", origin="lower")
-                axes[i, j].set_title(title)
-                axes[i, j].axis("off")
-                plt.colorbar(im, ax=axes[i, j])
+            # Generate plots for each time step
+            plot_sample_images(axes, i, images, titles, COLOR_MAPS[var_index])
 
         plt.tight_layout()
         plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
