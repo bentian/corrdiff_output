@@ -1,3 +1,74 @@
+"""
+Module for processing and analyzing model evaluation results.
+
+This module provides functionality to:
+- Process NetCDF datasets containing truth and prediction samples.
+- Compute various evaluation metrics such as RMSE, MAE, and CRPS.
+- Generate plots and save metric tables for further analysis.
+- Convert Hydra configuration YAML files to TSV format.
+- Read TensorBoard logs and plot training loss.
+- Compare models and generate performance summaries.
+
+Dependencies:
+    - argparse (for command-line argument parsing)
+    - datetime (for handling timestamps)
+    - pathlib (for file path management)
+    - typing (for type annotations)
+    - pandas (for data handling and saving tables)
+    - yaml (for processing Hydra YAML configurations)
+    - tensorboard (for extracting training loss from logs)
+    - xarray (for working with NetCDF datasets)
+    - xskillscore (for computing skill scores)
+    - tqdm (for progress tracking)
+    - plot_helpers (custom module for generating plots)
+    - score_samples_v2 (custom module for computing dataset metrics)
+    - mask_samples (custom module for applying landmask to samples)
+
+Functions:
+    - ensure_directory_exists(directory: Path, subdir: Optional[str] = None) -> Path:
+        Ensures the given directory exists, creating it if necessary.
+
+    - read_tensorboard_log(log_dir: Path, scalar_name: str = "training_loss",
+                           max_duration: float = None) -> Tuple[List[datetime], List[float]]:
+        Reads TensorBoard logs and extracts scalar values.
+
+    - read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str,
+                                  max_duration: float = None) -> None:
+        Reads training loss data and generates a plot.
+
+    - yaml_to_tsv(yaml_file_path: Path, tsv_filename: Path) -> None:
+        Converts a Hydra YAML configuration file to TSV format.
+
+    - save_to_tsv(ds: pd.DataFrame, output_path: Path, number_format: str) -> None:
+        Saves a dataset to a TSV file.
+
+    - save_metric_table_and_plot(ds: pd.DataFrame, metric: str, output_path: Path,
+                                 number_format: str) -> None:
+        Saves metric tables and generates corresponding plots.
+
+    - save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame,
+                            output_path: Path, number_format: str = ".2f") -> None:
+        Saves summary tables and generates plots for different metrics.
+
+    - process_model(in_dir: Path, out_dir: Path, label: str, n_ensemble: int,
+                    masked: bool) -> pd.DataFrame:
+        Processes a model, computes metrics, generates plots, and saves results.
+
+    - compare_models(metrics_all: pd.DataFrame, metrics_reg: pd.DataFrame,
+                     output_path: Path) -> None:
+        Compares models by computing metric differences and saving results.
+
+    - process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -> None:
+        Processes both full models and regression-only models, generating results.
+
+    - main() -> None:
+        Main function for processing models, generating results, and
+        handling command-line execution.
+
+Usage Example:
+    >>> from pathlib import Path
+    >>> process_models(Path("input_folder"), Path("output_folder"), n_ensemble=10, masked=True)
+"""
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -241,7 +312,7 @@ def process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -
 
 def main():
     """
-    Main function to process models and generate plots and summary PDFs.
+    Main function to process models and generate plots and tables.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("in_dir", type=Path, help="Folder to read the NetCDF files and config.")

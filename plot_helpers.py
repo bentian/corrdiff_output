@@ -1,3 +1,56 @@
+"""
+Module for generating plots and analyzing evaluation metrics for model predictions.
+
+This module provides functionality to:
+- Generate plots for various model evaluation metrics.
+- Compute and visualize Probability Density Functions (PDFs).
+- Generate monthly mean plots for model metrics.
+- Save evaluation results and metric tables in structured formats.
+- Process and visualize training loss data from TensorBoard logs.
+
+Dependencies:
+    - pathlib (for file path management)
+    - typing (for type annotations)
+    - numpy (for numerical operations)
+    - pandas (for handling structured tabular data)
+    - xarray (for working with NetCDF datasets)
+    - matplotlib (for generating plots)
+
+Constants:
+    COLOR_MAPS (List[str]): A list of color maps used for different variables.
+
+Functions:
+    - plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
+        Generates a bar chart of mean metric values and saves the plot.
+
+    - plot_monthly_metrics(ds: xr.Dataset, metric: str, output_path: Path,
+                           number_format: str) -> None:
+        Generates and saves monthly mean plots for a specified metric.
+
+    - get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
+        Computes the number of bins for histogram plotting and generates a summary note.
+
+    - plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
+        Generates and saves PDFs for each variable, comparing truth vs. prediction.
+
+    - plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
+        Generates PDFs of the specified metric for all variables.
+
+    - plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None:
+        Generates plots of truth, prediction, and error for each time step, sorted by metric value.
+
+    - plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
+        Computes monthly mean error and generates plots.
+
+    - plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
+        Generates and saves a training loss plot over time.
+
+Usage Example:
+    >>> from pathlib import Path
+    >>> import xarray as xr
+    >>> ds = xr.open_dataset("metrics.nc")
+    >>> plot_metrics(ds, Path("output/metrics.png"), number_format=".2f")
+"""
 from pathlib import Path
 from typing import Tuple, List
 import numpy as np
@@ -215,8 +268,8 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     - Titles include the corresponding metric value for each time step.
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
-        metric_data = var_data["metric_value"]
-        times, metric_values = metric_data.time.values, metric_data.values
+        metric_value_data = var_data["metric_value"]
+        times, metric_values = metric_value_data.time.values, metric_value_data.values
         samples = var_data["sample"]
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))

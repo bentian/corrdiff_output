@@ -1,3 +1,57 @@
+"""
+Module for processing and scoring dataset samples using xarray and xskillscore.
+
+This module provides utilities to:
+- Open NetCDF dataset samples (truth and predictions).
+- Compute various evaluation metrics (RMSE, MAE, CRPS).
+- Extract top-ranked samples based on selected metrics.
+- Flatten and filter NaN values for efficient processing.
+- Apply multiprocessing for performance optimization.
+
+Dependencies:
+    - multiprocessing (for parallel processing)
+    - numpy (for numerical operations)
+    - tqdm (for progress tracking)
+    - xarray (for working with NetCDF datasets)
+    - xskillscore (for computing skill scores)
+
+Constants:
+    VAR_MAPPING (Dict[str, str]): Mapping of long variable names to short variable names.
+
+Functions:
+    - open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
+        Opens NetCDF dataset samples, returning truth, prediction, and root datasets.
+
+    - compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+        Computes the Continuous Ranked Probability Score (CRPS) for ensemble predictions.
+
+    - compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+        Computes RMSE and MAE between truth and prediction datasets.
+
+    - flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+        Flattens datasets and removes NaN values for all variables.
+
+    - compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+        Computes absolute differences between truth and prediction datasets.
+
+    - process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
+        Processes a single time step from the dataset, computing metrics and errors.
+
+    - extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: xr.Dataset,
+                          metric: str, N: int = 5) -> dict:
+        Extracts top N samples with the highest metric values.
+
+    - score_samples(filepath: str, n_ensemble: int = 1) ->
+                    Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
+        Computes evaluation metrics, applies multiprocessing, and extracts top-ranked samples.
+
+Usage Example:
+    >>> from dataset_scoring import score_samples
+    >>> metrics, spatial_error, truth_flat, pred_flat, top_samples = \
+    >>>   score_samples("data.nc", n_ensemble=10)
+    >>> print(metrics)
+
+"""
 import multiprocessing
 import numpy as np
 import tqdm

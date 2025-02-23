@@ -1,3 +1,36 @@
+"""
+Module for applying a landmask to truth and prediction datasets and saving masked samples.
+
+This module provides utilities to:
+- Apply a landmask to NetCDF datasets using a predefined landmask file.
+- Mask both truth and prediction datasets based on the landmask.
+- Load and process datasets while preserving metadata.
+- Save masked datasets in a structured format, maintaining groups for "truth" and "prediction".
+
+Dependencies:
+    - pathlib (for handling file paths)
+    - xarray (for working with NetCDF datasets)
+    - typing (for type annotations)
+
+Constants:
+    LANDMASK_NC (str): Path to the landmask NetCDF file.
+
+Functions:
+    - apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+        Applies a landmask to truth and prediction datasets.
+
+    - save_masked_samples(input_file: Path, output_file: Path) -> None:
+        Reads a NetCDF dataset, applies a landmask to truth and prediction samples,
+        and saves the masked dataset while preserving metadata.
+
+Usage Example:
+    >>> from pathlib import Path
+    >>> from landmask_processor import save_masked_samples
+    >>> input_path = Path("input.nc")
+    >>> output_path = Path("masked_output.nc")
+    >>> save_masked_samples(input_path, output_path)
+    Masked dataset saved to masked_output.nc
+"""
 from pathlib import Path
 import xarray as xr
 from typing import Tuple
