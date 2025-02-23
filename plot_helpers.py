@@ -243,7 +243,7 @@ def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
 def plot_sample_images(
     axes: np.ndarray,
     index: int,
-    samples: List[np.ndarray],
+    images: List[np.ndarray],
     titles: List[str],
     error_cmap: str
 ) -> None:
@@ -255,11 +255,11 @@ def plot_sample_images(
             A 2D NumPy array of Matplotlib subplot axes for displaying the images.
         index (int):
             The row index in the subplot grid corresponding to the current time step.
-        samples (List[np.ndarray]):
+        images (List[np.ndarray]):
             A list containing three NumPy arrays:
-            - samples[0]: Truth values.
-            - samples[1]: Prediction values.
-            - samples[2]: Error values.
+            - images[0]: Truth values.
+            - images[1]: Prediction values.
+            - images[2]: Error values.
         titles (List[str]):
             List of three titles corresponding to the truth, prediction, and error subplots.
         error_cmap (str):
@@ -276,14 +276,14 @@ def plot_sample_images(
         - Uses the same color scale (`vmin`, `vmax`) for truth and prediction.
         - Applies a different colormap (`error_cmap`) for error visualization.
     """
-    vmin = np.nanmin([samples[0], samples[1]])
-    vmax = np.nanmax([samples[0], samples[1]])
+    vmin = np.nanmin([images[0], images[1]])
+    vmax = np.nanmax([images[0], images[1]])
 
     for j, title in enumerate(titles):
         # Use the same color scale for truth and prediction for comparison
-        im = axes[index, j].imshow(samples[j], cmap="viridis_r", aspect="auto", origin="lower",
+        im = axes[index, j].imshow(images[j], cmap="viridis_r", aspect="auto", origin="lower",
                                    vmin=vmin, vmax=vmax) if j < 2 else \
-             axes[index, j].imshow(samples[j], cmap=error_cmap, aspect="auto", origin="lower")
+             axes[index, j].imshow(images[j], cmap=error_cmap, aspect="auto", origin="lower")
         axes[index, j].set_title(title)
         axes[index, j].axis("off")
         plt.colorbar(im, ax=axes[index, j])
@@ -316,16 +316,14 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
     - Titles include the corresponding metric value for each time step.
     """
     for var_index, (var, var_data) in enumerate(metric_array[metric].items()):
-        times, metric_values = (
-            var_data["metric_value"].time.values,
-            var_data["metric_value"].values,
-        )
+        times = var_data["metric_value"].time.values
+        metric_values = var_data["metric_value"].values
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
         axes = [axes] if len(times) == 1 else axes # Ensure axes is iterable for single-row cases
 
         for i, time in enumerate(times):
-            samples = [
+            images = [
                 var_data["sample"].sel(type=t, time=time).values
                 for t in ["truth", "pred", "error"]
             ]
@@ -340,7 +338,7 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
             ]
 
             # Generate plots for each time step
-            plot_sample_images(axes, i, samples, titles, COLOR_MAPS[var_index])
+            plot_sample_images(axes, i, images, titles, COLOR_MAPS[var_index])
 
         plt.tight_layout()
         plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
