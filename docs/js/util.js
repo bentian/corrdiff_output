@@ -11,8 +11,8 @@ function generateFileGroups() {
     ];
     const variableFiles = [
         "pdf.png", "monthly_error.png",
-        "pdf_rmse.png", "top_samples_rmse.png",
-        "pdf_mae.png", "top_samples_mae.png"
+        "cnt_rmse.png", "top_samples_rmse.png",
+        "cnt_mae.png", "top_samples_mae.png"
     ];
 
     return prefixes.map(prefix => ({

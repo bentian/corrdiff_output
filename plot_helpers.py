@@ -203,10 +203,9 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
             plt.savefig(output_path / f"{var}" / "pdf.png")
             plt.close()
 
-def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
+def plot_metrics_cnt(ds: xr.Dataset, metric: str, output_path: Path) -> None:
     """
-    Plot the Probability Density Function (PDF) of a specified metric
-    for each variable in the dataset.
+    Plot the occurrences of a specified metric for each variable in the dataset.
 
     Parameters:
     ds (xr.Dataset): The input dataset containing various metrics for different variables.
@@ -222,21 +221,20 @@ def plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
     # Define colors for plotting
     colors = plt.cm.tab10.colors  # Use tab10 colormap for up to 10 distinct colors
 
-    # Plot and save PDF for each variable
+    # Plot and save for each variable
     for i, (var, data) in enumerate(metric_data.data_vars.items()):
         plt.figure(figsize=(6, 4))
-        plt.hist(data.values, bins=36, density=True, alpha=0.5,
-                 color=colors[i % len(colors)], edgecolor='black')
+        plt.hist(data.values, bins=36, alpha=0.5, color=colors[i % len(colors)], edgecolor='black')
 
         _, note = get_bin_count_n_note(data.values)
-        plt.title(f'PDF of {metric} for {var}\n{note}')
+        plt.title(f'{metric} count for {var}\n{note}')
 
         plt.xlabel(f'{metric} values')
-        plt.ylabel('Density')
+        plt.ylabel('# of days')
         plt.grid(alpha=0.3, linestyle="--")
         plt.tight_layout()
 
-        plt.savefig(output_path / f"{var}" / f"pdf_{metric.lower()}.png")
+        plt.savefig(output_path / f"{var}" / f"cnt_{metric.lower()}.png")
         plt.close()
 
 
