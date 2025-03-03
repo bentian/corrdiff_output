@@ -66,11 +66,12 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
     """
     n_groups = len(pivot_df)
     index = np.arange(n_groups)  # X-axis positions
-    bar_width = 0.2  # Bar width to align BL and D1 pairs
+    n_bars = len(pivot_df.columns)  # Number of bars per suffix
+    bar_width = 0.8 / n_bars  # Adjust bar width dynamically to prevent overlap
 
     # Define colors for BL and D1 in "all" and "reg" datasets
-    colors = {"BL-all": "tab:blue", "D1-all": "tab:green",
-              "BL-reg": "tab:orange", "D1-reg": "tab:red"}
+    colors = {"BL-all": "tab:blue", "D1-all": "tab:green", "D2-all": "tab:purple",
+              "BL-reg": "tab:orange", "D1-reg": "tab:red", "D2-reg": "tab:brown"}
 
     for i, (label, prefix) in enumerate(pivot_df.columns):
         tag = f"{prefix}-{label}"
@@ -86,7 +87,7 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
 
     ax.set_xticks(index + bar_width * ((len(pivot_df.columns) / 2) - 0.5))
     ax.set_xticklabels(pivot_df.index, rotation=45, ha="right")
-    ax.set_xlabel("Experiment Suffix")
+    ax.set_xlabel("Experiments Suffix")
     ax.set_ylabel(metric_name)
     ax.set_ylim(ymin=ymin)  # Ensure minimum y-axis threshold
     ax.set_title(f"{metric_name} Comparison for PRCP")
@@ -116,7 +117,7 @@ def plot_prcp_metrics(folder_path: str)  -> None:
     plot_grouped_bars(axes[1], mae_pivot, "MAE", ymin=3.5)
 
     plt.tight_layout()
-    plt.savefig("data/prcp_cmp.png")
+    plt.savefig("docs/experiments/prcp_cmp.png")
     plt.close()
 
 

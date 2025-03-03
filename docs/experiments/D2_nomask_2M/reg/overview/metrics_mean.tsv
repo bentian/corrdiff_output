@@ -1,0 +1,3 @@
+metric	prcp	t2m	u10m	v10m
+RMSE	8.59	0.40	0.73	0.86
+MAE	3.94	0.30	0.55	0.64
