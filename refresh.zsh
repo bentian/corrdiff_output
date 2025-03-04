@@ -2,8 +2,9 @@
 
 # Define dictionary (associative array)
 declare -A my_dict=(
-  ["BL"]="data/Baseline/"
-  ["D1"]="data/D1/"
+  ["BL"]="data/Baseline"
+  ["D1"]="data/D1"
+  ["D2"]="data/D2"
 )
 
 out_dir="docs/experiments"
@@ -12,22 +13,24 @@ output_list=()
 # Iterate over dictionary keys
 for key value in ${(kv)my_dict}; do
   typeset -A experiments
+
+  # Default set of experiments
   experiments=(
-    "${key}_nomask_2M"   "$value/2M --masked=no"
     "${key}_2M"          "$value/2M"
-    "${key}_4M"          "$value/4M"
-    "${key}_4M_1322"     "$value/4M"
-    "${key}_2M_ds4"      "$value/ds_4/2M"
+    "${key}_nomask_2M"   "$value/2M --masked=no"
   )
 
+  # Add full experiments only if key is not "D2"
+  if [[ "$key" != "D2" ]]; then
+    experiments+=(
+      "${key}_4M"          "$value/4M"
+      "${key}_4M_1322"     "$value/4M"
+      # "${key}_2M_ds4"      "$value/ds_4/2M"
+    )
+  fi
+
   # Store experiment order in an indexed array
-  experiment_order=(
-    "${key}_nomask_2M"
-    "${key}_2M"
-    "${key}_4M"
-    "${key}_4M_1322"
-    "${key}_2M_ds4"
-  )
+  experiment_order=("${(@k)experiments}")
 
   # Run experiments
   for exp_name in "${experiment_order[@]}"; do
