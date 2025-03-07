@@ -7,7 +7,7 @@ by prefix ("BL" or "D1") and dataset type ("all" or "reg"). The script generates
 a grouped bar chart comparing these experiments.
 
 Output:
-- A bar chart (saved as "data/prcp_cmp.png") showing RMSE and MAE comparisons.
+- A bar chart (saved as "{folder_path}/prcp_cmp.png") showing RMSE and MAE comparisons.
 """
 from pathlib import Path
 import pandas as pd
@@ -103,7 +103,7 @@ def plot_prcp_metrics(folder_path: str)  -> None:
         folder_path (str): Path to the experiment data directory.
 
     Output:
-        - Saves a bar chart as "data/prcp_cmp.png" showing RMSE and MAE comparisons.
+        - Saves a bar chart as "{folder_path}/prcp_cmp.png" showing RMSE and MAE comparisons.
     """
     metrics_df = extract_prcp_metrics(folder_path)
 
@@ -117,7 +117,7 @@ def plot_prcp_metrics(folder_path: str)  -> None:
     plot_grouped_bars(axes[1], mae_pivot, "MAE", ymin=3.5)
 
     plt.tight_layout()
-    plt.savefig("docs/experiments/prcp_cmp.png")
+    plt.savefig(f"{folder_path}/prcp_cmp.png")
     plt.close()
 
 
