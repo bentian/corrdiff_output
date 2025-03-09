@@ -12,13 +12,17 @@ output_list=()
 
 # Iterate over dictionary keys
 for key value in ${(kv)my_dict}; do
-  typeset -A experiments
-
   # Default set of experiments
-  experiments=(
+  typeset -A experiments=(
     "${key}_2M"          "$value/2M"
-    "${key}_nomask_2M"   "$value/2M --masked=no"
-    "${key}_extreme_1M"  "$value/extreme/2M"
+    "${key}_2M_ens64"    "$value/2M_ens64"
+    "${key}_nomask_2M"   "$value/2M"
+    "${key}_extreme_1M"  "$value/2M_extreme"
+  )
+
+  typeset -A flags=(
+    "${key}_2M_ens64"    "--n-ensemble=64"
+    "${key}_nomask_2M"   "--masked=no"
   )
 
   # Add full experiments only if key is not "D2"
@@ -34,9 +38,10 @@ for key value in ${(kv)my_dict}; do
   experiment_order=("${(@k)experiments}")
 
   # Run experiments
-  for exp_name in "${experiment_order[@]}"; do
-    exp_path="${experiments[$exp_name]}"
-    python3 corrdiff_plotgen.py "$exp_path" "$out_dir/$exp_name"
+  for exp_name exp_path in ${(kv)experiments}; do
+    exp_flag="${flags[$exp_name]:-}"  # Get flag or empty string
+    echo "$exp_path" "$out_dir/$exp_name" ${exp_flag:+$exp_flag}
+    python3 corrdiff_plotgen.py "$exp_path" "$out_dir/$exp_name" ${exp_flag:+$exp_flag}
     output_list+=("$exp_name")
   done
 done

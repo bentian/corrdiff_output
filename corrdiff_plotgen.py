@@ -225,7 +225,7 @@ def save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame
     save_to_tsv(ds_mean, filename.with_suffix(".tsv"), number_format)
     ph.plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
-    for metric in ["MAE", "RMSE"]:
+    for metric in ["MAE", "RMSE", "CRPS", "STD_DEV"]:
         save_metric_table_and_plot(ds_group_by_month, metric, output_path, number_format)
 
 
@@ -322,7 +322,8 @@ def main():
     args = parser.parse_args()
 
     masked = args.masked.lower() == "yes"
-    print(f"corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} masked={masked}")
+    print(f"corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
+          f"n_ensemble={args.n_ensemble} masked={masked}")
 
     # Ensure masked NetCDF files exist
     if masked:

@@ -7,7 +7,9 @@ function generateFileGroups() {
     const overviewFiles = [
         "metrics_mean.tsv", "metrics_mean.png",
         "monthly_rmse.tsv", "monthly_rmse.png",
-        "monthly_mae.tsv", "monthly_mae.png"
+        "monthly_mae.tsv", "monthly_mae.png",
+        "monthly_crps.tsv", "monthly_crps.png",
+        "monthly_std_dev.tsv", "monthly_std_dev.png",
     ];
     const variableFiles = [
         "pdf.png", "monthly_error.png",
