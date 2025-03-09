@@ -99,13 +99,15 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
 
 def plot_prcp_metrics(folder_path: str) -> None:
     """
-    Extracts RMSE, MAE, CRPS, and STD_DEV values, groups them by suffix, and generates grouped bar charts.
+    Extracts RMSE, MAE, CRPS, and STD_DEV values, groups them by suffix,
+    and generates grouped bar charts.
 
     Parameters:
         folder_path (str): Path to the experiment data directory.
 
     Output:
-        - Saves bar charts as "{folder_path}/prcp_cmp.png" showing RMSE, MAE, CRPS, and STD_DEV comparisons.
+        - Saves bar charts as "{folder_path}/prcp_cmp.png" showing
+          RMSE, MAE, CRPS, and STD_DEV comparisons.
     """
     metrics_df = extract_prcp_metrics(folder_path)
 
@@ -121,7 +123,7 @@ def plot_prcp_metrics(folder_path: str) -> None:
     y_limits = {"RMSE": 7.5, "MAE": 3.5, "CRPS": 3.5}
 
     # Create figure with 4 subplots
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+    _, axes = plt.subplots(2, 2, figsize=(14, 12))
 
     # Plot each metric
     for ax, (metric_name, pivot_data) in zip(axes.flatten(), metric_pivots.items()):
