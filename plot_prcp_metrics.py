@@ -28,7 +28,7 @@ def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
 
     folder = Path(folder_path)
     for exp_dir in folder.iterdir():
-        if not exp_dir.is_dir() or exp_dir.name.endswith("_ds4"):
+        if not exp_dir.is_dir() or exp_dir.name.endswith("_extreme_1M"):
             continue
 
         for label in ["all", "reg"]:  # Include both dataset types
