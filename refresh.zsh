@@ -18,6 +18,7 @@ for key value in ${(kv)my_dict}; do
   experiments=(
     "${key}_2M"          "$value/2M"
     "${key}_nomask_2M"   "$value/2M --masked=no"
+    "${key}_extreme_1M"  "$value/extreme/2M"
   )
 
   # Add full experiments only if key is not "D2"
