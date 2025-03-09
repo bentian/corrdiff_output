@@ -49,6 +49,8 @@ def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
                         "suffix": exp_suffix,  # e.g., "2M", "4M_1322"
                         "RMSE": df.loc["RMSE", "prcp"],
                         "MAE": df.loc["MAE", "prcp"],
+                        "CRPS": df.loc["CRPS", "prcp"],
+                        "STD_DEV": df.loc["STD_DEV", "prcp"],
                     })
 
     return pd.DataFrame(metrics_list).sort_values(by=["suffix", "label", "prefix"])
@@ -95,26 +97,35 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
     ax.legend(title="Group", loc="upper left", bbox_to_anchor=(1, 1))
 
 
-def plot_prcp_metrics(folder_path: str)  -> None:
+def plot_prcp_metrics(folder_path: str) -> None:
     """
-    Extracts RMSE and MAE values, groups them by suffix, and generates a grouped bar chart.
+    Extracts RMSE, MAE, CRPS, and STD_DEV values, groups them by suffix, and generates grouped bar charts.
 
     Parameters:
         folder_path (str): Path to the experiment data directory.
 
     Output:
-        - Saves a bar chart as "{folder_path}/prcp_cmp.png" showing RMSE and MAE comparisons.
+        - Saves bar charts as "{folder_path}/prcp_cmp.png" showing RMSE, MAE, CRPS, and STD_DEV comparisons.
     """
     metrics_df = extract_prcp_metrics(folder_path)
 
     # Pivot data for plotting
-    rmse_pivot = metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="RMSE")
-    mae_pivot = metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="MAE")
+    metric_pivots = {
+        "RMSE": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="RMSE"),
+        "MAE": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="MAE"),
+        "CRPS": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="CRPS"),
+        "STD_DEV": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="STD_DEV"),
+    }
 
-    # Create figure
-    _, axes = plt.subplots(1, 2, figsize=(14, 6))
-    plot_grouped_bars(axes[0], rmse_pivot, "RMSE", ymin=7.5)
-    plot_grouped_bars(axes[1], mae_pivot, "MAE", ymin=3.5)
+    # Define metric-specific y-axis limits
+    y_limits = {"RMSE": 7.5, "MAE": 3.5, "CRPS": 3.5}
+
+    # Create figure with 4 subplots
+    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+    # Plot each metric
+    for ax, (metric_name, pivot_data) in zip(axes.flatten(), metric_pivots.items()):
+        plot_grouped_bars(ax, pivot_data, metric_name, ymin=y_limits.get(metric_name, 0))
 
     plt.tight_layout()
     plt.savefig(f"{folder_path}/prcp_cmp.png")

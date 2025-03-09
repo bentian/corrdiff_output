@@ -16,7 +16,7 @@ sampler.boundary_pix	2
 sampler.overlap_pix	0
 generation.num_ensembles	64
 generation.seed_batch_size	1
-generation.inference_mode	regression
+generation.inference_mode	all
 generation.patch_size	448
 generation.patch_shape_x	448
 generation.patch_shape_y	448

@@ -40,7 +40,6 @@ for key value in ${(kv)my_dict}; do
   # Run experiments
   for exp_name exp_path in ${(kv)experiments}; do
     exp_flag="${flags[$exp_name]:-}"  # Get flag or empty string
-    echo "$exp_path" "$out_dir/$exp_name" ${exp_flag:+$exp_flag}
     python3 corrdiff_plotgen.py "$exp_path" "$out_dir/$exp_name" ${exp_flag:+$exp_flag}
     output_list+=("$exp_name")
   done
