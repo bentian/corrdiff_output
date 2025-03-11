@@ -72,8 +72,10 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
     bar_width = 0.8 / n_bars  # Adjust bar width dynamically to prevent overlap
 
     # Define colors for BL and D1 in "all" and "reg" datasets
-    colors = {"BL-all": "tab:blue", "D1-all": "tab:green", "D2-all": "tab:purple",
-              "BL-reg": "tab:orange", "D1-reg": "tab:red", "D2-reg": "tab:brown"}
+    colors = {"BL-all": "tab:blue", "D1-all": "tab:green",
+              "D2-all": "tab:purple", "D3-all": "tab:pink",
+              "BL-reg": "tab:orange", "D1-reg": "tab:red",
+              "D2-reg": "tab:brown", "D3-reg": "tab:olive"}
 
     for i, (label, prefix) in enumerate(pivot_df.columns):
         tag = f"{prefix}-{label}"

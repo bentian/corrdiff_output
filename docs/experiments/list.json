@@ -16,5 +16,9 @@
   "D2_2M",
   "D2_2M_ens64",
   "D2_extreme_1M",
-  "D2_nomask_2M"
+  "D2_nomask_2M",
+
+  "D3_2M",
+  "D3_2M_ens64",
+  "D3_nomask_2M"
 ]
