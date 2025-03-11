@@ -318,7 +318,6 @@ def main():
     parser.add_argument("out_dir", type=Path, help="Folder to save the plots and tables.")
     parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
     parser.add_argument("--masked", type=str, default="yes", help="Whether to apply landmask.")
-    parser.add_argument("--max-duration", type=float, help="Max duration to plot training loss.")
     args = parser.parse_args()
 
     masked = args.masked.lower() == "yes"
@@ -345,7 +344,7 @@ def main():
 
     # Process training loss
     for label in ["regression", "diffusion"]:
-        read_training_loss_and_plot(args.in_dir, args.out_dir, label, args.max_duration)
+        read_training_loss_and_plot(args.in_dir, args.out_dir, label)
 
 
 if __name__ == "__main__":
