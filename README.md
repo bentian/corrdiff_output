@@ -30,11 +30,10 @@ If you haven't installed `xskillscore`, you may need:
    - `<output_directory>`: Directory where outputs will be saved.
    - `--n-ensemble`: Number of ensemble members (default: 1).
    - `--masked`: Apply landmask (yes or no. default: yes).
-   - `--max-duration`: Max duration to plot training loss (default: None)
 
 ## 📖 Example Run
 
-`python corrdiff_plotgen.py data/Baseline output/ --n-ensemble 1 --masked yes`
+`python corrdiff_plotgen.py data/Baseline output/ --n-ensemble=1 --masked=no`
 
 This will:
 - ✅ Process NetCDF datasets
@@ -65,6 +64,7 @@ The script produces:
  ┣ 📜 mask_samples.py         # Applies landmask to datasets
  ┣ 📜 score_samples_v2.py     # Computes model evaluation metrics
  ┣ 📜 plot_helpers.py         # Contains helper functions for visualization
+ ┣ 📜 plot_prcp_metrics.py    # Create PRCP metrics plot among experiments
  ┣ 📜 refresh.zsh             # Zsh script for refreshing plots and tables under docs/experiments/
  ┗ 📜 README.md               # Project documentation
 ```
@@ -92,6 +92,10 @@ The script produces:
   - PDF distributions for variables.
   - Monthly error visualizations.
 
+## 🔹 plot_prcp_metrics.py - Created PRCP Metrics Plot
+  - Bar charts for metrics among experiments
+  - Group experiments with name prefix and suffix
+
 ## 🔹 refresh.zsh - Zsh Automation Script
   - Refreshes the plots and tables.
-  - Runs CorrDiff scripts in a batch.
+  - Runs plot generation scripts in a batch.
