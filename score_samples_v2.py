@@ -82,11 +82,13 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
         tuple: A tuple containing truth, prediction, and root datasets.
     """
     root = xr.open_dataset(f)
-    pred = xr.open_dataset(f, group="prediction").merge(root)
     truth = xr.open_dataset(f, group="truth").merge(root)
+    pred = xr.open_dataset(f, group="input").merge(root)[[
+        "precipitation", "temperature_2m", "eastward_wind_10m",
+        "northward_wind_10m", "lon", "lat"
+    ]]
 
     return truth.set_coords(["lon", "lat"]), pred.set_coords(["lon", "lat"]), root
-
 
 def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
@@ -129,14 +131,14 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     dim = ["x", "y"]
 
-    rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    std_dev = pred.std("ensemble").mean(dim, skipna=True)
-    crps = compute_crps(truth, pred)
+    rmse = xs.rmse(truth, pred, dim=dim, skipna=True)
+    mae = xs.mae(truth, pred, dim=dim, skipna=True)
+    # std_dev = pred.mean(dim, skipna=True)
+    # crps = compute_crps(truth, pred)
 
     return (
-        xr.concat([rmse, mae, crps, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "MAE", "CRPS", "STD_DEV"])
+        xr.concat([rmse, mae], dim="metric")
+        .assign_coords(metric=["RMSE", "MAE"])
         .load()
     )
 
@@ -218,7 +220,7 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
     truth, pred, _ = open_samples(filepath)
     truth = truth.isel(time=index).load()
     if n_ensemble > 0:
-        pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
+        pred = pred.isel(time=index)
     pred = pred.load()
 
     truth_flat, pred_flat = flatten_and_filter_nan(truth, pred)
@@ -271,7 +273,7 @@ def extract_top_samples(
 
         # Extract data
         truth_selected = truth[var].sel(time=selected_times).load()
-        pred_selected = pred[var].sel(time=selected_times).mean("ensemble").load()
+        pred_selected = pred[var].sel(time=selected_times).load()
 
         abs_error = compute_abs_difference(truth_selected, pred_selected)
         error = abs_error if metric == "MAE" else abs_error ** 2

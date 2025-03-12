@@ -37,7 +37,8 @@ import xarray as xr
 
 LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
 
-def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+def apply_landmask(truth: xr.Dataset, pred: xr.Dataset, input_ds: xr.Dataset
+                   ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Apply landmask to truth and prediction datasets.
 
@@ -54,12 +55,13 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
     # Expand landmask dimensions to match truth and pred
     landmask_expanded = landmask.expand_dims(dim={"time": truth.sizes["time"]})
     truth_masked = truth.where(landmask_expanded == 1)
+    input_masked = input_ds.where(landmask_expanded == 1)
 
     if "ensemble" in pred.dims:
         landmask_expanded = landmask_expanded.expand_dims(dim={"ensemble": pred.sizes["ensemble"]})
     pred_masked = pred.where(landmask_expanded == 1)
 
-    return truth_masked, pred_masked
+    return truth_masked, pred_masked, input_masked
 
 def save_masked_samples(input_file: Path, output_file: Path) -> None:
     """
@@ -75,9 +77,10 @@ def save_masked_samples(input_file: Path, output_file: Path) -> None:
         time_coord = ds.coords["time"]
 
         with xr.open_dataset(input_file, group="truth", engine="netcdf4") as truth_ds, \
-             xr.open_dataset(input_file, group="prediction", engine="netcdf4") as pred_ds:
+             xr.open_dataset(input_file, group="prediction", engine="netcdf4") as pred_ds, \
+             xr.open_dataset(input_file, group="input", engine="netcdf4") as input_ds:
             # Apply landmask
-            truth_masked, pred_masked = apply_landmask(truth_ds, pred_ds)
+            truth_masked, pred_masked, input_masked = apply_landmask(truth_ds, pred_ds, input_ds)
 
             new_ds = xr.Dataset(coords={"time": time_coord})  # Preserves time
 
@@ -89,5 +92,6 @@ def save_masked_samples(input_file: Path, output_file: Path) -> None:
             new_ds.to_netcdf(output_file, mode="w")
             truth_masked.to_netcdf(output_file, mode="a", group="truth")
             pred_masked.to_netcdf(output_file, mode="a", group="prediction")
+            input_masked.to_netcdf(output_file, mode="a", group="input")
 
     print(f"Masked dataset saved to {output_file}")

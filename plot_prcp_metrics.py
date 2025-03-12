@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-METRICS = ["RMSE", "MAE", "CRPS", "STD_DEV"]
+METRICS = ["RMSE", "MAE"]
 
 def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
     """
@@ -63,10 +63,9 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
     bar_width = 0.8 / n_bars  # Adjust bar width dynamically to prevent overlap
 
     # Define colors for BL and D1 in "all" and "reg" datasets
-    colors = {"BL-all": "tab:blue", "D1-all": "tab:green",
-              "D2-all": "tab:purple", "D3-all": "tab:pink",
-              "BL-reg": "tab:orange", "D1-reg": "tab:red",
-              "D2-reg": "tab:brown", "D3-reg": "tab:olive"}
+    colors = {"BL-all": "tab:blue", "D1-all": "tab:green", "D2-all": "tab:purple",
+              "D3-all": "tab:pink", "ERA5-all": "tab:grey", "BL-reg": "tab:orange",
+              "D1-reg": "tab:red", "D2-reg": "tab:brown", "D3-reg": "tab:olive"}
 
     for i, (label, prefix) in enumerate(pivot_df.columns):
         tag = f"{prefix}-{label}"
@@ -105,7 +104,7 @@ def plot_prcp_metrics(folder_path: str) -> None:
     y_limits = {"RMSE": 7.5, "MAE": 3.5, "CRPS": 3.5}
 
     # Create figure with 4 subplots
-    _, axes = plt.subplots(2, 2, figsize=(14, 12))
+    _, axes = plt.subplots(1, 2, figsize=(14, 6))
     for ax, (metric_name, pivot_data) in zip(axes.flatten(), metric_pivots.items()):
         plot_grouped_bars(ax, pivot_data, metric_name, ymin=y_limits.get(metric_name, 0))
 

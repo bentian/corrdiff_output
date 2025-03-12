@@ -359,7 +359,7 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
         axes = axes.flatten()
 
         for month in range(1, 13):
-            data = monthly_mean[var].sel(month=month).mean(dim="ensemble")
+            data = monthly_mean[var].sel(month=month)
             im = axes[month - 1].imshow(data, cmap=COLOR_MAPS[index], origin="lower")
             axes[month - 1].set_title(f"Month {month}", fontsize=10)
             axes[month - 1].set_axis_off()
