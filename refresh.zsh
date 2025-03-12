@@ -5,6 +5,7 @@ declare -A my_dict=(
   ["BL"]="data/Baseline"
   ["D1"]="data/D1"
   ["D2"]="data/D2"
+  ["D3"]="data/D3"
 )
 
 out_dir="docs/experiments"
@@ -17,7 +18,6 @@ for key value in ${(kv)my_dict}; do
     "${key}_2M"          "$value/2M"
     "${key}_2M_ens64"    "$value/2M_ens64"
     "${key}_nomask_2M"   "$value/2M"
-    "${key}_extreme_1M"  "$value/2M_extreme"
   )
 
   typeset -A flags=(
@@ -25,14 +25,13 @@ for key value in ${(kv)my_dict}; do
     "${key}_nomask_2M"   "--masked=no"
   )
 
-  # Add full experiments only if key is not "D2"
-  if [[ "$key" != "D2" ]]; then
-    experiments+=(
-      "${key}_4M"          "$value/4M"
-      "${key}_4M_1322"     "$value/4M"
-      # "${key}_2M_ds4"      "$value/ds_4/2M"
-    )
-  fi
+  # Add experiments based on key conditions
+  [[ "$key" != "D3" ]] && experiments+=("${key}_extreme_1M" "$value/2M_extreme")
+  [[ "$key" != "D2" ]] && experiments+=(
+    "${key}_4M"      "$value/4M"
+    "${key}_4M_1322" "$value/4M"
+    # "${key}_2M_ds4"  "$value/ds_4/2M"
+  )
 
   # Store experiment order in an indexed array
   experiment_order=("${(@k)experiments}")
@@ -44,6 +43,7 @@ for key value in ${(kv)my_dict}; do
     output_list+=("$exp_name")
   done
 done
+python3 plot_prcp_metric.py
 
 # Save output_list as JSON
 output_json=$(printf '%s\n' "${output_list[@]}" | jq -R . | jq -s .)
