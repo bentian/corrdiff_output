@@ -1,22 +1,17 @@
 """
-Module for extracting and plotting RMSE and MAE values for precipitation (prcp)
+Module for extracting and plotting metric values for precipitation (prcp)
 across multiple experiments.
-
-Experiments are grouped by suffix (e.g., "2M", "4M") and further categorized
-by prefix ("BL" or "D1") and dataset type ("all" or "reg"). The script generates
-a grouped bar chart comparing these experiments.
-
-Output:
-- A bar chart (saved as "{folder_path}/prcp_cmp.png") showing RMSE and MAE comparisons.
 """
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+METRICS = ["RMSE", "MAE", "CRPS", "STD_DEV"]
+
 def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
     """
-    Extract RMSE and MAE values for 'prcp' from 'metrics_mean.tsv' files in multiple experiments.
+    Extract RMSE, MAE, CRPS, and STD_DEV values from 'metrics_mean.tsv' files.
 
     Parameters:
         folder_path (str): Path to the folder containing experiment subdirectories.
@@ -31,39 +26,35 @@ def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
         if not exp_dir.is_dir() or exp_dir.name.endswith("_extreme_1M"):
             continue
 
-        for label in ["all", "reg"]:  # Include both dataset types
+        prefix, suffix = exp_dir.name.split("_", 1) if "_" in exp_dir.name \
+                         else (exp_dir.name, "base")
+
+        for label in ["all", "reg"]:
             metrics_file = exp_dir / label / "overview" / "metrics_mean.tsv"
+            if not metrics_file.exists():
+                continue
 
-            if metrics_file.exists():
-                df = pd.read_csv(metrics_file, sep="\t", index_col=0)
-                if "prcp" in df.columns:
-                    # Extract prefix ("BL" or "D1") and suffix (e.g., "2M", "4M_1322")
-                    parts = exp_dir.name.split("_")
-                    exp_prefix, exp_suffix = \
-                        parts[0], "_".join(parts[1:]) if len(parts) > 1 else "base"
-
-                    metrics_list.append({
-                        "experiment": exp_dir.name,
-                        "label": label,  # "all" or "reg"
-                        "prefix": exp_prefix,  # "BL" or "D1"
-                        "suffix": exp_suffix,  # e.g., "2M", "4M_1322"
-                        "RMSE": df.loc["RMSE", "prcp"],
-                        "MAE": df.loc["MAE", "prcp"],
-                        "CRPS": df.loc["CRPS", "prcp"],
-                        "STD_DEV": df.loc["STD_DEV", "prcp"],
-                    })
+            df = pd.read_csv(metrics_file, sep="\t", index_col=0)
+            if "prcp" in df.columns:
+                metrics_list.append({
+                    "experiment": exp_dir.name,
+                    "label": label,    # "all" or "reg"
+                    "prefix": prefix,  # e.g., "BL", "D1"
+                    "suffix": suffix,  # e.g., "2M", "4M"
+                    **df.loc[METRICS, "prcp"].to_dict(),
+                })
 
     return pd.DataFrame(metrics_list).sort_values(by=["suffix", "label", "prefix"])
 
 
 def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ymin: float) -> None:
     """
-    Plot grouped bar charts for RMSE and MAE comparisons.
+    Plot grouped bar charts for RMSE, MAE, CRPS, and STD_DEV.
 
     Parameters:
         ax (plt.Axes): The subplot axis to draw on.
         pivot_df (pd.DataFrame): Pivoted DataFrame containing the metric values.
-        metric_name (str): Name of the metric being plotted (RMSE or MAE).
+        metric_name (str): Name of the metric being plotted.
         ymin (float): Minimum y-axis value for better scaling.
     """
     n_groups = len(pivot_df)
@@ -82,13 +73,6 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
         ax.bar(index + i * bar_width, pivot_df[(label, prefix)], width=bar_width,
                label=tag, color=colors[tag], edgecolor="black")
 
-        # Add value labels
-        # for bar in bars:
-        #     height = bar.get_height()
-        #     ax.annotate(f"{height:.2f}", xy=(bar.get_x() + bar.get_width() / 2, height),
-        #                 xytext=(0, 5), textcoords="offset points", ha="center", va="bottom",
-        #                 fontsize=10, color="black")
-
     ax.set_xticks(index + bar_width * ((len(pivot_df.columns) / 2) - 0.5))
     ax.set_xticklabels(pivot_df.index, rotation=45, ha="right")
     ax.set_xlabel("Experiments Suffix")
@@ -101,24 +85,20 @@ def plot_grouped_bars(ax: plt.axes, pivot_df: pd.DataFrame, metric_name: str, ym
 
 def plot_prcp_metrics(folder_path: str) -> None:
     """
-    Extracts RMSE, MAE, CRPS, and STD_DEV values, groups them by suffix,
-    and generates grouped bar charts.
+    Extracts precipitation metrics and generates grouped bar charts.
 
     Parameters:
         folder_path (str): Path to the experiment data directory.
 
     Output:
-        - Saves bar charts as "{folder_path}/prcp_cmp.png" showing
-          RMSE, MAE, CRPS, and STD_DEV comparisons.
+        - Saves bar charts as "{folder_path}/prcp_cmp.png" showing metric comparisons.
     """
     metrics_df = extract_prcp_metrics(folder_path)
 
     # Pivot data for plotting
     metric_pivots = {
-        "RMSE": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="RMSE"),
-        "MAE": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="MAE"),
-        "CRPS": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="CRPS"),
-        "STD_DEV": metrics_df.pivot(index="suffix", columns=["label", "prefix"], values="STD_DEV"),
+        metric: metrics_df.pivot(index="suffix", columns=["label", "prefix"], values=metric)
+        for metric in METRICS
     }
 
     # Define metric-specific y-axis limits
@@ -126,8 +106,6 @@ def plot_prcp_metrics(folder_path: str) -> None:
 
     # Create figure with 4 subplots
     _, axes = plt.subplots(2, 2, figsize=(14, 12))
-
-    # Plot each metric
     for ax, (metric_name, pivot_data) in zip(axes.flatten(), metric_pivots.items()):
         plot_grouped_bars(ax, pivot_data, metric_name, ymin=y_limits.get(metric_name, 0))
 

@@ -43,6 +43,7 @@ for key value in ${(kv)my_dict}; do
     output_list+=("$exp_name")
   done
 done
+python3 plot_prcp_metric.py
 
 # Save output_list as JSON
 output_json=$(printf '%s\n' "${output_list[@]}" | jq -R . | jq -s .)
