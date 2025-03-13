@@ -14,16 +14,21 @@ function generateFileGroups() {
     const variableFiles = [
         "pdf.png", "monthly_error.png",
         "cnt_rmse.png", "top_samples_rmse.png",
-        "cnt_mae.png", "top_samples_mae.png"
+        "cnt_mae.png", "top_samples_mae.png",
     ];
+    const ensembleFile = "metrics_v_ensembles.png";
 
     return prefixes.map(prefix => ({
         title: `[${prefix}] Metrics`,
         files: Object.fromEntries([
             ["overview", overviewFiles.map(f => `${prefix}/overview/${f}`)],
-            ...variables.map(
-                varName => [varName, variableFiles.map(f => `${prefix}/${varName}/${f}`)]
-            )
+            ...variables.map(varName => [
+                varName,
+                [
+                    ...variableFiles.map(f => `${prefix}/${varName}/${f}`),
+                    ...(prefix === "all" ? [`${prefix}/${varName}/${ensembleFile}`] : [])
+                ]
+            ])
         ])
     })).concat([
         {

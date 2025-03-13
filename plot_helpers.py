@@ -371,6 +371,57 @@ def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
         plt.close()
 
 
+def plot_metrics_vs_ensembles(datasets: List[xr.Dataset], output_path: Path):
+    """
+    Plots metrics vs. number of ensembles (log-scale x-axis), where each line represents
+    a different metric. Each data point is labeled with its corresponding value.
+
+    Parameters:
+        datasets (List[xr.Dataset]): List of xarray Datasets with different ensemble sizes.
+    """
+    if not datasets:
+        raise ValueError("The dataset list is empty.")
+
+    # Extract number of ensembles from attributes
+    ensemble_sizes = np.array([ds.attrs["n_ensemble"] for ds in datasets])
+
+    # Variables to plot
+    variables = datasets[0].data_vars
+    metrics = datasets[0].metric.values  # ['RMSE', 'MAE', 'CRPS', 'STD_DEV']
+
+    for var in variables:
+        plt.figure(figsize=(10, 6))
+
+        for metric_idx, metric_name in enumerate(metrics):
+            values = np.array([
+                ds[var].isel(metric=metric_idx).mean(dim="time").values for ds in datasets
+            ])
+
+            # Filter out missing data (NaNs)
+            valid_mask = ~np.isnan(values)
+            filtered_x, filtered_y = ensemble_sizes[valid_mask], values[valid_mask]
+
+            # Plot the data
+            plt.plot(filtered_x, filtered_y, marker="o", label=metric_name)
+
+            # Add data labels to each point
+            for x, y in zip(filtered_x, filtered_y):
+                plt.text(x, y, f"{y:.2f}", fontsize=10, ha="right", va="bottom")
+
+        plt.xscale("log")  # Set x-axis to log scale
+        plt.xticks(ensemble_sizes, labels=map(str, ensemble_sizes))
+        plt.xlabel("Number of Ensembles (log scale)")
+        plt.ylabel("Metric Value")
+        plt.title(f"Metrics ({var}) vs. Number of Ensembles")
+
+        plt.legend(title="Metric", loc="upper left", bbox_to_anchor=(1, 1))
+        plt.subplots_adjust(right=0.85)
+        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+
+        plt.savefig(output_path / var / "metrics_v_ensembles.png")
+        plt.close()
+
+
 def plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
     """
     Create a training loss plot with time on the x-axis and save it to a PNG file.

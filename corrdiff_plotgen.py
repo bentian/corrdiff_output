@@ -261,6 +261,13 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         ph.plot_metrics_cnt(metrics, metric, output_path)
         ph.plot_top_samples(top_samples, metric, output_path)
 
+    # Plot metrics vs. # ensembles
+    if label == "all" and n_ensemble == 64:
+        ph.plot_metrics_vs_ensembles([
+            score_samples(in_dir / "netcdf" / f"output_0_{label}{suffix}.nc", n_ens)[0]
+            for n_ens in (1, 4, 16)
+        ] + [metrics], output_path)
+
     # Overview plots and tables
     save_tables_and_plots(metrics.mean(dim="time"),
                           metrics.groupby("time.month").mean(dim="time"),
