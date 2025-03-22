@@ -114,9 +114,8 @@ function initializeLightbox() {
         }
     });
 
-    closeLightbox.addEventListener("click", () => lightbox.style.display = "none");
     lightbox.addEventListener("click", (event) => {
-        if (event.target === lightbox) {
+        if (event.target === lightbox || event.target === closeLightbox) {
             lightbox.style.display = "none";
         }
     });
