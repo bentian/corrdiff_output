@@ -59,7 +59,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 # Color maps for each variable
-COLOR_MAPS: List[str] = ["Blues", "Oranges", "Greens", "Reds"]
+COLOR_MAPS: List[str] = ["Blues", "Oranges", "Greens", "Reds", "Purples", "Greys"]
 
 def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     """
@@ -75,7 +75,7 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     data_array = np.array([ds[var] for var in variables])
 
     x = np.arange(len(metrics))
-    width = 0.2
+    width = 0.125
 
     _, ax = plt.subplots(figsize=(10, 6))
     for i, var in enumerate(variables):
@@ -169,8 +169,9 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
                 pred_flat = np.where(pred_flat > 0, pred_flat, 1e-10)
 
             # Get bin counts
-            truth_bin_count, truth_note = get_bin_count_n_note(truth_flat)
-            pred_bin_count, pred_note = get_bin_count_n_note(pred_flat)
+            bin_width = 0.001 if var == 'q2m' else 1
+            truth_bin_count, truth_note = get_bin_count_n_note(truth_flat, bin_width)
+            pred_bin_count, pred_note = get_bin_count_n_note(pred_flat, bin_width)
 
             # print(f"Variable: {var} | PDF bin count: {truth_bin_count} (truth) / "
             #       f"{pred_bin_count} (pred)")
@@ -391,6 +392,7 @@ def plot_metrics_vs_ensembles(datasets: List[xr.Dataset], output_path: Path):
 
     for var in variables:
         plt.figure(figsize=(10, 6))
+        number_format = ".5f" if var == 'q2m' else ".2f"
 
         for metric_idx, metric_name in enumerate(metrics):
             values = np.array([
@@ -406,7 +408,7 @@ def plot_metrics_vs_ensembles(datasets: List[xr.Dataset], output_path: Path):
 
             # Add data labels to each point
             for x, y in zip(filtered_x, filtered_y):
-                plt.text(x, y, f"{y:.2f}", fontsize=10, ha="right", va="bottom")
+                plt.text(x, y, f"{y:{number_format}}", fontsize=10, ha="right", va="bottom")
 
         plt.xscale("log")  # Set x-axis to log scale
         plt.xticks(ensemble_sizes, labels=map(str, ensemble_sizes))

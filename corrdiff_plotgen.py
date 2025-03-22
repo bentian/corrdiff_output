@@ -206,7 +206,7 @@ def save_metric_table_and_plot(ds: pd.DataFrame, metric: str,
     """
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
     filename = output_path / f"monthly_{metric.lower()}"
-    save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), number_format)
+    save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), ".5f")
     ph.plot_monthly_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
 
@@ -222,7 +222,7 @@ def save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame
         number_format (str): Format string for floating-point numbers. Defaults to ".2f".
     """
     filename = output_path / "metrics_mean"
-    save_to_tsv(ds_mean, filename.with_suffix(".tsv"), number_format)
+    save_to_tsv(ds_mean, filename.with_suffix(".tsv"), ".5f")
     ph.plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
     for metric in ["MAE", "RMSE", "CRPS", "STD_DEV"]:

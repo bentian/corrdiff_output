@@ -69,6 +69,8 @@ VAR_MAPPING: Dict[str, str] = {
     "temperature_2m": "t2m",
     "eastward_wind_10m": "u10m",
     "northward_wind_10m": "v10m",
+    "specific_humidity_2m": "q2m",
+    "mean_solar_flux_down_sfc": "mswdnb",
 }
 
 def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
