@@ -1,9 +1,12 @@
 /**
  * Generates file groups to render.
+ * @param {string[]} extraVariables - Extra variables to append to default variables.
  */
-function generateFileGroups() {
+function generateFileGroups(extraVariables) {
     const prefixes = ["all", "reg"];
-    const variables = ["prcp", "t2m", "u10m", "v10m"];
+    const defaultVariables = ["prcp", "t2m", "u10m", "v10m"];
+    const variables = [...defaultVariables, ...extraVariables];
+
     const overviewFiles = [
         "metrics_mean.tsv", "metrics_mean.png",
         "monthly_rmse.tsv", "monthly_rmse.png",
