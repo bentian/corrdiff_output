@@ -93,8 +93,8 @@ The script produces:
   - Monthly error visualizations.
 
 ## 🔹 plot_prcp_metrics.py - Created PRCP Metrics Plot
-  - Bar charts for metrics among experiments
-  - Group experiments with name prefix and suffix
+  - Bar chart for metrics among experiments.
+  - Groups experiments by name prefix and suffix.
 
 ## 🔹 refresh.zsh - Zsh Automation Script
   - Refreshes the plots and tables.

@@ -38,7 +38,7 @@ Functions:
         Processes a single time step from the dataset, computing metrics and errors.
 
     - extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: xr.Dataset,
-                          metric: str, N: int = 5) -> dict:
+                          metric: str, top_num: int = 5) -> dict:
         Extracts top N samples with the highest metric values.
 
     - score_samples(filepath: str, n_ensemble: int = 1) ->
