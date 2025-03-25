@@ -24,16 +24,19 @@ async function loadExperiments() {
             return;
         }
 
-        populateDropdown(exp1Select, experiments);
-        populateDropdown(exp2Select, experiments);
-        populateDropdown(summaryExpSelect, experiments);
+        const grouped = groupByPrefix(experiments);
+
+        populateDropdownWithGroups(exp1Select, grouped);
+        populateDropdownWithGroups(exp2Select, grouped);
+        populateDropdownWithGroups(summaryExpSelect, grouped);
 
         // Set default selections if more than one experiment is available
-        if (experiments.length > 1) {
-            exp1Select.selectedIndex = 0;
-            exp2Select.selectedIndex = 1;
-            summaryExpSelect.selectedIndex = 0;
-        }
+        const firstOption = exp1Select.querySelector("option");
+        const secondOption = exp2Select.querySelectorAll("option")[1];
+        if (firstOption) exp1Select.value = firstOption.value;
+        if (secondOption) exp2Select.value = secondOption.value;
+        if (firstOption) summaryExpSelect.value = firstOption.value;
+
     } catch (error) {
         console.error("Error fetching experiments:", error);
         setDropdownError(exp1Select);
@@ -43,19 +46,47 @@ async function loadExperiments() {
 }
 
 /**
- * Populates a given dropdown with experiment options.
- * @param {HTMLSelectElement} selectElement - The dropdown element to populate.
+ * Groups an array of experiment names by their prefix.
+ *
+ * Prefix is determined by splitting each experiment string at the first underscore (_).
+ * For example, "ERA5_modelA" has the prefix "ERA5".
+ *
  * @param {string[]} experiments - List of experiment names.
+ * @returns {Object} An object where keys are prefixes and values are arrays of experiment names.
  */
-function populateDropdown(selectElement, experiments) {
-    if (!selectElement) return;
+function groupByPrefix(experiments) {
+    return experiments.reduce((acc, exp) => {
+        const prefix = exp.split("_")[0]; // Customize as needed
+        if (!acc[prefix]) acc[prefix] = [];
+        acc[prefix].push(exp);
+        return acc;
+    }, {});
+}
 
-    experiments.forEach((exp) => {
-        const option = document.createElement("option");
-        option.value = exp;
-        option.textContent = exp;
-        selectElement.appendChild(option);
-    });
+/**
+ * Populates a <select> dropdown with grouped options using <optgroup> tags.
+ *
+ * Each group is labeled by a prefix, and contains related experiment <option> elements.
+ *
+ * @param {HTMLSelectElement} selectElement - The dropdown element to populate.
+ * @param {Object} groupedData - An object with prefixes as keys and arrays of experiment names as values.
+ */
+function populateDropdownWithGroups(selectElement, groupedData) {
+    selectElement.innerHTML = ""; // Clear existing options
+
+    for (const [prefix, exps] of Object.entries(groupedData)) {
+        const group = document.createElement("optgroup");
+        group.label = prefix;
+
+        exps.forEach(exp => {
+            const option = document.createElement("option");
+            option.value = exp;
+            option.textContent = exp;
+            group.appendChild(option);
+        });
+
+        selectElement.appendChild(group);
+    }
 }
 
 /**
