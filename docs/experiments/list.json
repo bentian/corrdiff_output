@@ -20,5 +20,8 @@
 
   "D3_2M",
   "D3_2M_ens64",
-  "D3_nomask_2M"
+  "D3_nomask_2M",
+
+  "ERA5_2M",
+  "ERA5_nomask_2M"
 ]

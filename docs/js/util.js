@@ -1,19 +1,35 @@
 /**
  * Generates file groups to render.
- * @param {string[]} extraVariables - Extra variables to append to default variables.
+ * @param {string} exp1 - Experiment 1 name.
+ * @param {string} exp2 - Experiment 2 name (optional).
  */
-function generateFileGroups(extraVariables) {
-    const prefixes = ["all", "reg"];
-    const defaultVariables = ["prcp", "t2m", "u10m", "v10m"];
-    const variables = [...defaultVariables, ...extraVariables];
+function generateFileGroups(exp1, exp2) {
+    const bothERA5 = exp1.startsWith("ERA5") && exp2.startsWith("ERA5");
+    const hasY1 = exp1.startsWith("Y1") || exp2.startsWith("Y1");
+    const hasEns64 = exp1.endsWith("ens64") || exp2.endsWith("ens64");
 
-    const overviewFiles = [
-        "metrics_mean.tsv", "metrics_mean.png",
-        "monthly_rmse.tsv", "monthly_rmse.png",
-        "monthly_mae.tsv", "monthly_mae.png",
-        "monthly_crps.tsv", "monthly_crps.png",
-        "monthly_std_dev.tsv", "monthly_std_dev.png",
-    ];
+    // Prefixes & variables
+    const prefixes = bothERA5 ? ["all"] : ["all", "reg"];
+    const defaultVariables = ["prcp", "t2m", "u10m", "v10m"];
+    const variables = hasY1
+        ? [...defaultVariables, "q2m", "mswdnb"]
+        : defaultVariables;
+
+    // Overview files
+    const basicOverviewFiles = [
+            "metrics_mean.tsv", "metrics_mean.png",
+            "monthly_rmse.tsv", "monthly_rmse.png",
+            "monthly_mae.tsv", "monthly_mae.png",
+        ];
+    const overviewFiles = bothERA5
+        ? basicOverviewFiles
+        : [
+            ...basicOverviewFiles,
+            "monthly_crps.tsv", "monthly_crps.png",
+            "monthly_std_dev.tsv", "monthly_std_dev.png",
+        ];
+
+    // Variable files
     const variableFiles = [
         "pdf.png", "monthly_error.png",
         "cnt_rmse.png", "top_samples_rmse.png",
@@ -21,32 +37,42 @@ function generateFileGroups(extraVariables) {
     ];
     const ensembleFile = "metrics_v_ensembles.png";
 
-    return prefixes.map(prefix => ({
-        title: `[${prefix}] Metrics`,
-        files: Object.fromEntries([
-            ["overview", overviewFiles.map(f => `${prefix}/overview/${f}`)],
-            ...variables.map(varName => [
-                varName,
-                [
-                    ...variableFiles.map(f => `${prefix}/${varName}/${f}`),
-                    ...(prefix === "all" ? [`${prefix}/${varName}/${ensembleFile}`] : [])
-                ]
-            ])
-        ])
-    })).concat([
-        {
-            title: "[all - reg] Metrics",
-            files: overviewFiles.map(f => `minus_reg/${f}`)
-        },
-        {
-            title: "Training Loss",
-            files: ["training_loss_regression.png", "training_loss_diffusion.png"]
-        },
-        {
-            title: "Config",
-            files: ["train_config.tsv", "generate_config.tsv"]
-        }
-    ]);
+    // Create basic file groups
+    const groupList = prefixes.map(prefix => {
+        const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
+        const buildVarFiles = varName => [
+            ...variableFiles.map(f => buildPath(varName, f)),
+            ...(hasEns64 && prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
+        ];
+
+        return {
+            title: `[${prefix}] Metrics`,
+            files: {
+                overview: overviewFiles.map(f => buildPath("overview", f)),
+                ...Object.fromEntries(variables.map(varName => [varName, buildVarFiles(varName)]))
+            }
+        };
+    });
+
+    // Append file groups
+    if (!bothERA5) {
+        groupList.push(
+            {
+                title: "[all - reg] Metrics",
+                files: overviewFiles.map(f => `minus_reg/${f}`)
+            },
+            {
+                title: "Training Loss",
+                files: ["training_loss_regression.png", "training_loss_diffusion.png"]
+            },
+            {
+                title: "Config",
+                files: ["train_config.tsv", "generate_config.tsv"]
+            }
+        );
+    }
+
+    return groupList;
 }
 
 /**

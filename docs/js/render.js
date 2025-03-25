@@ -21,9 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         : `Experiment: ${exp1 || exp2}`;
 
     // Render collapsible sections
-    generateFileGroups(
-        (exp1.startsWith("Y1") || exp2.startsWith("Y1")) ? ["q2m", "mswdnb"] : []
-    ).forEach(
+    generateFileGroups(exp1, exp2).forEach(
         ({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2)
     );
 
