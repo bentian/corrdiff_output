@@ -49,7 +49,7 @@ async function loadExperiments() {
  * Groups an array of experiment names by their prefix.
  *
  * Prefix is determined by splitting each experiment string at the first underscore (_).
- * For example, "ERA5_modelA" has the prefix "ERA5".
+ * For example, "ERA5_2M" has the prefix "ERA5".
  *
  * @param {string[]} experiments - List of experiment names.
  * @returns {Object} An object where keys are prefixes and values are arrays of experiment names.
@@ -69,7 +69,8 @@ function groupByPrefix(experiments) {
  * Each group is labeled by a prefix, and contains related experiment <option> elements.
  *
  * @param {HTMLSelectElement} selectElement - The dropdown element to populate.
- * @param {Object} groupedData - An object with prefixes as keys and arrays of experiment names as values.
+ * @param {Object} groupedData - An object with prefixes as keys and
+ *                               arrays of experiment names as values.
  */
 function populateDropdownWithGroups(selectElement, groupedData) {
     selectElement.innerHTML = ""; // Clear existing options
@@ -91,6 +92,7 @@ function populateDropdownWithGroups(selectElement, groupedData) {
 
 /**
  * Sets an error message for a dropdown when experiments fail to load.
+ *
  * @param {HTMLSelectElement} selectElement - The dropdown element.
  */
 function setDropdownError(selectElement) {
@@ -100,6 +102,7 @@ function setDropdownError(selectElement) {
 
 /**
  * Handles the submission of the comparison form.
+ *
  * @param {Event} event - The form submission event.
  */
 function handleComparisonSubmit(event) {
@@ -118,6 +121,7 @@ function handleComparisonSubmit(event) {
 
 /**
  * Handles the submission of the summary form.
+ *
  * @param {Event} event - The form submission event.
  */
 function handleSummarySubmit(event) {

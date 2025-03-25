@@ -96,6 +96,7 @@ function renderTabs(content, files, exp1, exp2) {
 
 /**
  * Renders a file row inside a collapsible section.
+ *
  * @param {string} file - The file name.
  * @param {HTMLElement} content - The content container.
  * @param {string} exp1 - Experiment 1 name.
@@ -134,6 +135,7 @@ function renderFileRow(file, content, exp1, exp2) {
 
 /**
  * Renders an image row.
+ *
  * @param {HTMLElement} row - The row container.
  * @param {string} file - The file name.
  * @param {string} exp1 - Experiment 1 name.
@@ -157,6 +159,7 @@ function renderImageRow(row, file, exp1, exp2) {
 
 /**
  * Renders a TSV row.
+ *
  * @param {HTMLElement} row - The row container.
  * @param {string} file - The file name.
  * @param {string} exp1 - Experiment 1 name.
@@ -177,6 +180,7 @@ async function renderTSVRow(row, file, exp1, exp2) {
 
 /**
  * Fetches and parses TSV files into HTML tables.
+ *
  * @param {string} url - The TSV file URL.
  * @returns {Promise<string>} - HTML table string.
  */

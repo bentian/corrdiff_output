@@ -1,5 +1,6 @@
 /**
  * Generates file groups to render.
+ *
  * @param {string} exp1 - Experiment 1 name.
  * @param {string} exp2 - Experiment 2 name (optional).
  */
