@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-METRICS = ["RMSE", "MAE"]
+METRICS = ["RMSE", "MAE", "CORR"]
 
 def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
     """
