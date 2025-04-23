@@ -131,12 +131,13 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 
     rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
     mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
+    corr = xs.pearson_r(truth, pred.mean("ensemble"), dim=dim, skipna=True)
     std_dev = pred.std("ensemble").mean(dim, skipna=True)
     crps = compute_crps(truth, pred)
 
     return (
-        xr.concat([rmse, mae, crps, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "MAE", "CRPS", "STD_DEV"])
+        xr.concat([rmse, mae, corr, crps, std_dev], dim="metric")
+        .assign_coords(metric=["RMSE", "MAE", "CORR", "CRPS", "STD_DEV"])
         .load()
     )
 

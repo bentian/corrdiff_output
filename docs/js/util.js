@@ -5,9 +5,9 @@
  * @param {string} exp2 - Experiment 2 name (optional).
  */
 function generateFileGroups(exp1, exp2) {
-    const bothERA5 = exp1.startsWith("ERA5") && exp2.startsWith("ERA5");
-    const hasY1 = exp1.startsWith("Y1") || exp2.startsWith("Y1");
-    const hasEns64 = exp1.endsWith("ens64") || exp2.endsWith("ens64");
+    const bothERA5 = exp1.startsWith("ERA5") && exp2?.startsWith("ERA5");
+    const hasY1 = exp1.startsWith("Y1") || exp2?.startsWith("Y1");
+    const hasEns64 = exp1.endsWith("ens64") || exp2?.endsWith("ens64");
 
     // Prefixes & variables
     const prefixes = bothERA5 ? ["all"] : ["all", "reg"];
@@ -21,6 +21,7 @@ function generateFileGroups(exp1, exp2) {
             "metrics_mean.tsv", "metrics_mean.png",
             "monthly_rmse.tsv", "monthly_rmse.png",
             "monthly_mae.tsv", "monthly_mae.png",
+            "monthly_corr.tsv", "monthly_corr.png",
         ];
     const overviewFiles = bothERA5
         ? basicOverviewFiles

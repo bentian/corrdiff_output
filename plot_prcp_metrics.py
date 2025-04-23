@@ -7,11 +7,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-METRICS = ["RMSE", "MAE", "CRPS", "STD_DEV"]
+METRICS = ["RMSE", "MAE", "CORR", "CRPS", "STD_DEV"]
 
 def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
     """
-    Extract RMSE, MAE, CRPS, and STD_DEV values from 'metrics_mean.tsv' files.
+    Extract RMSE, MAE, CORR, CRPS, and STD_DEV values from 'metrics_mean.tsv' files.
 
     Parameters:
         folder_path (str): Path to the folder containing experiment subdirectories.
@@ -23,7 +23,12 @@ def extract_prcp_metrics(folder_path: str) -> pd.DataFrame:
 
     folder = Path(folder_path)
     for exp_dir in folder.iterdir():
-        if not exp_dir.is_dir() or exp_dir.name.endswith("_extreme_1M"):
+        if (
+            not exp_dir.is_dir()
+            or exp_dir.name.endswith("_extreme_1M")
+            or exp_dir.name.startswith("ERA5")
+            or exp_dir.name.startswith("Y1")
+        ):
             continue
 
         prefix, suffix = exp_dir.name.split("_", 1) if "_" in exp_dir.name \
@@ -104,10 +109,15 @@ def plot_prcp_metrics(folder_path: str) -> None:
     # Define metric-specific y-axis limits
     y_limits = {"RMSE": 7.5, "MAE": 3.5, "CRPS": 3.5}
 
-    # Create figure with 4 subplots
-    _, axes = plt.subplots(2, 2, figsize=(14, 12))
-    for ax, (metric_name, pivot_data) in zip(axes.flatten(), metric_pivots.items()):
+    # Create figure with 5 subplots
+    _, axes = plt.subplots(3, 2, figsize=(16, 14))
+    axes = axes.flatten()  # Flatten once and reuse
+    for ax, (metric_name, pivot_data) in zip(axes, metric_pivots.items()):
         plot_grouped_bars(ax, pivot_data, metric_name, ymin=y_limits.get(metric_name, 0))
+
+    # Hide any unused axes (e.g. the 6th subplot if only 5 are used)
+    for ax in axes[len(metric_pivots):]:
+        ax.set_visible(False)
 
     plt.tight_layout()
     plt.savefig(f"{folder_path}/prcp_cmp.png")

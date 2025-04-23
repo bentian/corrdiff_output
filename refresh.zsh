@@ -27,7 +27,7 @@ for key value in ${(kv)my_dict}; do
 
   # Add experiments based on key conditions
   [[ "$key" != "D3" ]] && experiments+=("${key}_extreme_1M" "$value/2M_extreme")
-  [[ "$key" != "D2" ]] && experiments+=(
+  [[ "$key" != "D2" && "$key" != "D3" ]] && experiments+=(
     "${key}_4M"      "$value/4M"
     "${key}_4M_1322" "$value/4M"
     # "${key}_2M_ds4"  "$value/ds_4/2M"

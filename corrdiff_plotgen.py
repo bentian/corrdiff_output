@@ -225,7 +225,7 @@ def save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame
     save_to_tsv(ds_mean, filename.with_suffix(".tsv"), number_format)
     ph.plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
-    for metric in ["MAE", "RMSE", "CRPS", "STD_DEV"]:
+    for metric in ["MAE", "RMSE", "CORR", "CRPS", "STD_DEV"]:
         save_metric_table_and_plot(ds_group_by_month, metric, output_path, number_format)
 
 
