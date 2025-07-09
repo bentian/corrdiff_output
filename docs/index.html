@@ -35,55 +35,6 @@
                 <button type="submit" class="btn">Compare</button>
             </form>
         </div>
-
-        <div class="experiment-info" style="margin-top: 40px; text-align: center;">
-            <h2>Experiment Name Prefix</h2>
-            <div class="render-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Prefix</th>
-                            <th>Baseline ERA5 variables</th>
-                            <th>Terrain height</th>
-                            <th>Weighted precipitation</th>
-                            <th>Slope & Aspect</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>BL</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
-                        <tr><td>D1</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
-                        <tr><td>D2</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
-                        <tr><td>D3</td><td>✅</td><td>✅</td><td>❌</td><td>✅</td></tr>
-                        <tr><td>ERA5</td><td colspan="4">Interpolated ERA5 data</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <h2 style="margin-top: 50px;">Experiment Name Suffix</h2>
-            <div class="render-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Suffix</th>
-                            <th>Training data</th>
-                            <th>Training duration</th>
-                            <th>Landmask?</th>
-                            <th># ensembles</th>
-                            <th>Test data</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>2M</td><td>2018–2022</td><td>2M</td><td>✅</td><td>1</td><td>2023</td></tr>
-                        <tr><td>2M_ens64</td><td>2018–2022</td><td>2M</td><td>✅</td><td>64</td><td>2023</td></tr>
-                        <tr><td>4M</td><td>2018–2022</td><td>4M</td><td>✅</td><td>1</td><td>2023</td></tr>
-                        <tr><td>4M_1322</td><td>2013–2022</td><td>4M</td><td>✅</td><td>1</td><td>2023</td></tr>
-                        <tr><td>extreme_1M</td><td>2018–2022 w/ extreme data</td><td>2M + 1M</td><td>✅</td><td>1</td><td>2023</td></tr>
-                        <tr><td>nomask_2M</td><td>2018–2022</td><td>2M</td><td>❌</td><td>1</td><td>2023</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
     </div>
 
     <script src="js/main.js"></script>

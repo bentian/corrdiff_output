@@ -1,27 +1,4 @@
 [
   "BL_2M",
-  "BL_2M_ens64",
-  "BL_4M",
-  "BL_4M_1322",
-  "BL_extreme_1M",
-  "BL_nomask_2M",
-
-  "D1_2M",
-  "D1_2M_ens64",
-  "D1_4M",
-  "D1_4M_1322",
-  "D1_extreme_1M",
-  "D1_nomask_2M",
-
-  "D2_2M",
-  "D2_2M_ens64",
-  "D2_extreme_1M",
-  "D2_nomask_2M",
-
-  "D3_2M",
-  "D3_2M_ens64",
-  "D3_nomask_2M",
-
-  "ERA5_2M",
-  "ERA5_nomask_2M"
+  "BL_2M_ens64"
 ]
