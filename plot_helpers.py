@@ -44,6 +44,12 @@ Functions:
 
     - plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
         Generates and saves a training loss plot over time.
+
+Usage Example:
+    >>> from pathlib import Path
+    >>> import xarray as xr
+    >>> ds = xr.open_dataset("metrics.nc")
+    >>> plot_metrics(ds, Path("output/metrics.png"), number_format=".2f")
 """
 from pathlib import Path
 from typing import Tuple, List
