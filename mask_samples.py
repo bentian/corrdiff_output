@@ -59,6 +59,9 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
         landmask_expanded = landmask_expanded.expand_dims(dim={"ensemble": pred.sizes["ensemble"]})
     pred_masked = pred.where(landmask_expanded == 1)
 
+    # Clamp to remove negative precipitation
+    pred_masked["precipitation"] = pred_masked["precipitation"].clip(min=0)
+
     return truth_masked, pred_masked
 
 def save_masked_samples(input_file: Path, output_file: Path) -> None:
