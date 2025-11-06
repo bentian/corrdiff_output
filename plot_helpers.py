@@ -431,7 +431,7 @@ def plot_training_loss(wall_times: List[float], values: List[float], output_file
         values (List[float]): Loss values (y-axis values).
         output_file (Path): File path to save the output plot.
     """
-    window_size = 20
+    window_size = min(20, len(values))
     smoothed_values = np.convolve(values, np.ones(window_size) / window_size, mode='valid')
 
     plt.figure(figsize=(10, 6))
