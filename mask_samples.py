@@ -50,24 +50,20 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
     grid = xr.open_dataset(LANDMASK_NC, engine='netcdf4')
     landmask = grid.LANDMASK.rename({"south_north": "y", "west_east": "x"})
 
-    # Pre-expand for ensemble once (if needed)
-    landmask_pred_base = landmask
-    if "ensemble" in pred.dims:
-        landmask_pred_base = landmask_pred_base.expand_dims(ensemble=pred.sizes["ensemble"])
+    # Expand landmask dimensions to match truth and pred
+    lm_time = landmask.expand_dims(time=truth.sizes["time"])
+    lm_pred = lm_time.expand_dims(ensemble=pred.sizes["ensemble"]) \
+                if "ensemble" in pred.dims else lm_time
 
-    truth_chunks = []
-    pred_chunks = []
-
-    times = truth["time"].values
-    for t in tqdm(times, desc="Applying landmask", unit="t"):
-        lm_t = landmask.expand_dims(time=[t])
-        truth_t = truth.sel(time=[t]).where(lm_t == 1)
-
-        lm_pred_t = landmask_pred_base.expand_dims(time=[t])
-        pred_t = pred.sel(time=[t]).where(lm_pred_t == 1)
-
-        truth_chunks.append(truth_t)
-        pred_chunks.append(pred_t)
+    truth_chunks, pred_chunks = [], []
+    for i in tqdm(range(truth.sizes["time"]), desc="Applying landmask", unit="t"):
+        s = slice(i, i + 1)
+        truth_chunks.append(
+            truth.isel(time=s).where(lm_time.isel(time=s) == 1)
+        )
+        pred_chunks.append(
+            pred.isel(time=s).where(lm_pred.isel(time=s) == 1)
+        )
 
     truth_masked = xr.concat(truth_chunks, dim="time")
     pred_masked = xr.concat(pred_chunks, dim="time")
