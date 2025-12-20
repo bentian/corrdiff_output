@@ -210,9 +210,9 @@ def save_metric_table_and_plot(ds: xr.Dataset, metric: str,
     filename = output_path / metric.lower()
     save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), number_format)
 
-    ph.plot_monthly_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format) \
-        if output_path.name.startswith("monthly") else \
-        ph.plot_nyear_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format)
+    plot_fn = ph.plot_monthly_metrics if output_path.name.startswith("monthly") \
+                else ph.plot_nyear_metrics
+    plot_fn(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
 def save_tables_and_plots(ds_mean: xr.Dataset, ds_group_by_month: xr.Dataset,
                           ds_group_by_nyear: xr.Dataset, output_path: Path,
