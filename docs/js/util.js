@@ -10,7 +10,7 @@ function generateFileGroups(exp1, exp2) {
 
     // Overview files
     const metrics = ["rmse", "mae", "corr", "crps", "std_dev"];
-    const periods = hasSSP ? ["monthly", "nyear"] : ["monthly"];
+    const periods = hasSSP ? ["monthly_metrics", "nyear_metrics"] : ["monthly_metrics"];
     const exts = ["tsv", "png"];
     const overviewFiles = [
         "metrics_mean.tsv",
