@@ -22,18 +22,11 @@ Functions:
     - save_masked_samples(input_file: Path, output_file: Path) -> None:
         Reads a NetCDF dataset, applies a landmask to truth and prediction samples,
         and saves the masked dataset while preserving metadata.
-
-Usage Example:
-    >>> from pathlib import Path
-    >>> from landmask_processor import save_masked_samples
-    >>> input_path = Path("input.nc")
-    >>> output_path = Path("masked_output.nc")
-    >>> save_masked_samples(input_path, output_path)
-    Masked dataset saved to masked_output.nc
 """
 from typing import Tuple
 from pathlib import Path
 import xarray as xr
+from tqdm.auto import tqdm
 
 LANDMASK_NC = "./data/ssp_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
 
@@ -51,13 +44,27 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
     grid = xr.open_dataset(LANDMASK_NC, engine='netcdf4')
     landmask = grid.LANDMASK.rename({"south_north": "y", "west_east": "x"})
 
-    # Expand landmask dimensions to match truth and pred
-    landmask_expanded = landmask.expand_dims(dim={"time": truth.sizes["time"]})
-    truth_masked = truth.where(landmask_expanded == 1)
-
+    # Pre-expand for ensemble once (if needed)
+    landmask_pred_base = landmask
     if "ensemble" in pred.dims:
-        landmask_expanded = landmask_expanded.expand_dims(dim={"ensemble": pred.sizes["ensemble"]})
-    pred_masked = pred.where(landmask_expanded == 1)
+        landmask_pred_base = landmask_pred_base.expand_dims(ensemble=pred.sizes["ensemble"])
+
+    truth_chunks = []
+    pred_chunks = []
+
+    times = truth["time"].values
+    for t in tqdm(times, desc="Applying landmask", unit="t"):
+        lm_t = landmask.expand_dims(time=[t])
+        truth_t = truth.sel(time=[t]).where(lm_t == 1)
+
+        lm_pred_t = landmask_pred_base.expand_dims(time=[t])
+        pred_t = pred.sel(time=[t]).where(lm_pred_t == 1)
+
+        truth_chunks.append(truth_t)
+        pred_chunks.append(pred_t)
+
+    truth_masked = xr.concat(truth_chunks, dim="time")
+    pred_masked = xr.concat(pred_chunks, dim="time")
 
     # Clamp to remove negative precipitation
     pred_masked["precipitation"] = pred_masked["precipitation"].clip(min=0)

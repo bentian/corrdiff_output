@@ -65,10 +65,6 @@ Functions:
     - main() -> None:
         Main function for processing models, generating results, and
         handling command-line execution.
-
-Usage Example:
-    >>> from pathlib import Path
-    >>> process_models(Path("input_folder"), Path("output_folder"), n_ensemble=10, masked=True)
 """
 import argparse
 from datetime import datetime
@@ -78,6 +74,7 @@ import xarray as xr
 import pandas as pd
 import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+from datetime import datetime
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
@@ -369,6 +366,10 @@ def process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -
     compare_models(metrics_all, metrics_reg, ensure_directory_exists(out_dir, "minus_reg"))
 
 
+def get_timestamp() -> None:
+    """Get current timestamp string"""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def main():
     """
     Main function to process models and generate plots and tables.
@@ -381,7 +382,7 @@ def main():
     args = parser.parse_args()
 
     masked = args.masked.lower() == "yes"
-    print(f"corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
+    print(f"[{get_timestamp()}] corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
           f"n_ensemble={args.n_ensemble} masked={masked}")
 
     # Ensure masked NetCDF files exist
@@ -405,6 +406,8 @@ def main():
     # Process training loss
     for label in ["regression", "diffusion"]:
         read_training_loss_and_plot(args.in_dir, args.out_dir, label)
+
+    print(f"[{get_timestamp()}] corrdiff_plotgen completed")
 
 
 if __name__ == "__main__":
