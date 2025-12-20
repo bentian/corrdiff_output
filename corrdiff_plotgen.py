@@ -74,7 +74,6 @@ import xarray as xr
 import pandas as pd
 import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-from datetime import datetime
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
