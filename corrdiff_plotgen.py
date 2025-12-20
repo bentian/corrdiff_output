@@ -42,12 +42,13 @@ Functions:
     - save_to_tsv(ds: pd.DataFrame, output_path: Path, number_format: str) -> None:
         Saves a dataset to a TSV file.
 
-    - save_metric_table_and_plot(ds: pd.DataFrame, metric: str, output_path: Path,
+    - save_metric_table_and_plot(ds: xr.Dataset, metric: str, output_path: Path,
                                  number_format: str) -> None:
         Saves metric tables and generates corresponding plots.
 
-    - save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame,
-                            output_path: Path, number_format: str = ".2f") -> None:
+    - save_tables_and_plots(ds_mean: xr.Dataset, ds_group_by_month: xr.Dataset,
+                            ds_group_by_nyear: xr.Dataset, output_path: Path,
+                            number_format: str = ".2f") -> None:
         Saves summary tables and generates plots for different metrics.
 
     - process_model(in_dir: Path, out_dir: Path, label: str, n_ensemble: int,
@@ -73,6 +74,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple, List
+import xarray as xr
 import pandas as pd
 import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
@@ -193,31 +195,35 @@ def save_to_tsv(ds: pd.DataFrame, output_path: Path, number_format: str) -> None
     ds.to_dataframe().to_csv(output_path, sep="\t", float_format=f"%{number_format}")
 
 
-def save_metric_table_and_plot(ds: pd.DataFrame, metric: str,
+def save_metric_table_and_plot(ds: xr.Dataset, metric: str,
                                output_path: Path, number_format: str) -> None:
     """
     Save metric tables and generate plots.
 
     Parameters:
-        ds (pd.DataFrame): Dataset containing metric values.
+        ds (xr.Dataset): Dataset containing metric values.
         metric (str): The metric to process (e.g., "MAE", "RMSE").
         output_path (Path): Path where the TSV and plot files should be saved.
         number_format (str): Format string for floating-point numbers.
     """
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
-    filename = output_path / f"monthly_{metric.lower()}"
+    filename = output_path / metric.lower()
     save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), number_format)
-    ph.plot_monthly_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
+    ph.plot_monthly_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format) \
+        if output_path.name.startswith("monthly") else \
+        ph.plot_nyear_metrics(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
-def save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame,
-                          output_path: Path, number_format: str = ".2f") -> None:
+def save_tables_and_plots(ds_mean: xr.Dataset, ds_group_by_month: xr.Dataset,
+                          ds_group_by_nyear: xr.Dataset, output_path: Path,
+                          number_format: str = ".2f") -> None:
     """
     Save summary tables and generate plots for metrics.
 
     Parameters:
-        ds_mean (pd.DataFrame): Mean dataset of metrics.
-        ds_group_by_month (pd.DataFrame): Monthly grouped dataset of metrics.
+        ds_mean (xr.Dataset): Mean dataset of metrics.
+        ds_group_by_month (xr.Dataset): Monthly grouped dataset of metrics.
+        ds_group_by_nyear (xr.Dataset): N-year grouped dataset of metrics.
         output_path (Path): Output directory where files should be saved.
         number_format (str): Format string for floating-point numbers. Defaults to ".2f".
     """
@@ -226,8 +232,53 @@ def save_tables_and_plots(ds_mean: pd.DataFrame, ds_group_by_month: pd.DataFrame
     ph.plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
     for metric in ["MAE", "RMSE", "CORR", "CRPS", "STD_DEV"]:
-        save_metric_table_and_plot(ds_group_by_month, metric, output_path, number_format)
+        save_metric_table_and_plot(ds_group_by_month, metric,
+                                   ensure_directory_exists(output_path, "monthly_metrics"),
+                                   number_format)
+        save_metric_table_and_plot(ds_group_by_nyear, metric,
+                                   ensure_directory_exists(output_path, "nyear_metrics"),
+                                   number_format)
 
+
+def groupby_nyear(metrics: xr.Dataset, n_years: int = 10) -> xr.Dataset:
+    """
+    Group a time-indexed dataset into fixed N-year bins and compute
+    the mean over time for each bin.
+
+    The time coordinate is assumed to be daily (or higher frequency).
+    Years are grouped starting from the first year in the dataset,
+    producing labeled bins such as "2015-2020", "2021-2026", etc.
+    The final bin is truncated to the last available year if needed.
+
+    Parameters
+    ----------
+    metrics : xr.Dataset
+        Dataset with a ``time`` coordinate and one or more data variables
+        (e.g., MAE, RMSE, CRPS, or physical variables).
+    n_years : int, optional
+        Number of years per bin. Default is 6.
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset grouped by ``year_bin`` with the time dimension averaged
+        out, suitable for N-yearly aggregation and plotting.
+    """
+    years = metrics["time"].dt.year
+    base = int(years.min())
+    max_year = int(years.max())
+
+    bin_start = base + ((years - base) // n_years) * n_years
+    bin_end = (bin_start + (n_years - 1)).clip(max=max_year)
+
+    # Make string labels like "2015-2020"
+    year_bin = bin_start.astype(str) + "-" + bin_end.astype(str)
+
+    return (
+        metrics.assign_coords(year_bin=("time", year_bin.data))
+        .groupby("year_bin")
+        .mean(dim="time")
+    )
 
 # Model processing functions
 def process_model(in_dir: Path, out_dir: Path, label: str,
@@ -270,7 +321,8 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
 
     # Overview plots and tables
     save_tables_and_plots(metrics.mean(dim="time"),
-                          metrics.groupby("time.month").mean(dim="time"),
+                          metrics.groupby("time.month").mean(dim="time"),   # group by month
+                          groupby_nyear(metrics),                           # group by nyear
                           ensure_directory_exists(output_path, "overview"))
 
     return metrics
@@ -287,11 +339,12 @@ def compare_models(metrics_all: pd.DataFrame, metrics_reg: pd.DataFrame,
         output_path (Path): Output directory where comparison results should be saved.
     """
     metrics_mean_diff = metrics_all.mean(dim="time") - metrics_reg.mean(dim="time")
-    metrics_grouped_diff = (
+    metrics_monthly_diff = (
         metrics_all.groupby("time.month").mean(dim="time")
         - metrics_reg.groupby("time.month").mean(dim="time")
     )
-    save_tables_and_plots(metrics_mean_diff, metrics_grouped_diff,
+    save_tables_and_plots(metrics_mean_diff, metrics_monthly_diff,
+                          groupby_nyear(metrics_all - metrics_reg),
                           output_path, number_format=".3f")
 
 

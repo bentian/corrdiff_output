@@ -124,6 +124,42 @@ def plot_monthly_metrics(ds: xr.Dataset, metric: str,
     plt.savefig(output_path)
     plt.close()
 
+def plot_nyear_metrics(ds: xr.Dataset, metric: str,
+                       output_path: Path, number_format: str) -> None:
+    """
+    Plot N-year mean values for a given metric.
+
+    Parameters:
+        ds (xr.Dataset): Dataset containing N-year mean values.
+        metric (str): Metric to plot.
+        output_path (Path): File path to save the output plot.
+        number_format (str): Formatting string for displaying numeric values.
+    """
+    _, ax = plt.subplots(figsize=(10, 6))
+    df_grouped = ds.to_dataframe()
+
+    # Use index as x-axis (e.g., "2015-2020", "2021-2026", ...)
+    x = df_grouped.index.astype(str)
+
+    for variable in df_grouped.columns:
+        y = df_grouped[variable]
+        ax.plot(x, y, marker="o", label=variable)
+        # Annotate values
+        for xi, yi in zip(x, y):
+            ax.annotate(f"{yi:{number_format}}", (xi, yi),
+                        textcoords="offset points", xytext=(0, 5),
+                        ha="center", fontsize=8)
+
+    ax.set_title(f"Decadal Mean for {metric}", fontsize=14)
+    ax.set_xlabel("Decade", fontsize=12)
+    ax.set_ylabel(f"{metric} Value", fontsize=12)
+
+    ax.legend(title="Variables")
+    ax.grid(alpha=0.3, linestyle="--")
+
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
 
 def get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
     """

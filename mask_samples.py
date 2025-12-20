@@ -35,7 +35,7 @@ from typing import Tuple
 from pathlib import Path
 import xarray as xr
 
-LANDMASK_NC = "./data/wrf_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
+LANDMASK_NC = "./data/ssp_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
 
 def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
