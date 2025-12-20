@@ -23,12 +23,18 @@ Functions:
         Reads a NetCDF dataset, applies a landmask to truth and prediction samples,
         and saves the masked dataset while preserving metadata.
 """
+from datetime import datetime
 from typing import Tuple
 from pathlib import Path
 import xarray as xr
 from tqdm.auto import tqdm
 
 LANDMASK_NC = "./data/ssp_208x208_grid_coords.nc"  # Path to the landmask NetCDF file
+
+def get_timestamp() -> None:
+    """Get current timestamp string"""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
@@ -71,6 +77,7 @@ def apply_landmask(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.
 
     return truth_masked, pred_masked
 
+
 def save_masked_samples(input_file: Path, output_file: Path) -> None:
     """
     Open prediction and truth samples from a dataset file, apply the landmask,
@@ -100,4 +107,4 @@ def save_masked_samples(input_file: Path, output_file: Path) -> None:
             truth_masked.to_netcdf(output_file, mode="a", group="truth")
             pred_masked.to_netcdf(output_file, mode="a", group="prediction")
 
-    print(f"Masked dataset saved to {output_file}")
+    print(f"[{get_timestamp()}] Masked dataset saved to {output_file}")

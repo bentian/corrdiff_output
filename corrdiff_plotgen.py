@@ -77,7 +77,7 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
-from mask_samples import save_masked_samples
+from mask_samples import save_masked_samples, get_timestamp
 
 
 # General utility functions
@@ -364,10 +364,6 @@ def process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -
     # Compare models
     compare_models(metrics_all, metrics_reg, ensure_directory_exists(out_dir, "minus_reg"))
 
-
-def get_timestamp() -> None:
-    """Get current timestamp string"""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def main():
     """
