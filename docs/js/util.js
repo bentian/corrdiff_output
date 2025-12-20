@@ -5,31 +5,22 @@
  * @param {string} exp2 - Experiment 2 name (optional).
  */
 function generateFileGroups(exp1, exp2) {
-    const bothERA5 = exp1.startsWith("ERA5") && exp2?.startsWith("ERA5");
-    const hasY1 = exp1.startsWith("Y1") || exp2?.startsWith("Y1");
     const hasEns64 = exp1.endsWith("ens64") || exp2?.endsWith("ens64");
-
-    // Prefixes & variables
-    const prefixes = bothERA5 ? ["all"] : ["all", "reg"];
-    const defaultVariables = ["prcp", "t2m", "u10m", "v10m"];
-    const variables = hasY1
-        ? [...defaultVariables, "q2m", "mswdnb"]
-        : defaultVariables;
+    const hasSSP = exp1.startsWith("W") || exp2?.startsWith("W")
 
     // Overview files
-    const basicOverviewFiles = [
-            "metrics_mean.tsv", "metrics_mean.png",
-            "monthly_rmse.tsv", "monthly_rmse.png",
-            "monthly_mae.tsv", "monthly_mae.png",
-            "monthly_corr.tsv", "monthly_corr.png",
-        ];
-    const overviewFiles = bothERA5
-        ? basicOverviewFiles
-        : [
-            ...basicOverviewFiles,
-            "monthly_crps.tsv", "monthly_crps.png",
-            "monthly_std_dev.tsv", "monthly_std_dev.png",
-        ];
+    const metrics = ["rmse", "mae", "corr", "crps", "std_dev"];
+    const periods = hasSSP ? ["monthly", "nyear"] : ["monthly"];
+    const exts = ["tsv", "png"];
+    const overviewFiles = [
+        "metrics_mean.tsv",
+        "metrics_mean.png",
+        ...periods.flatMap(period =>
+            metrics.flatMap(metric =>
+            exts.map(ext => `${period}/${metric}.${ext}`)
+            )
+        ),
+    ];
 
     // Variable files
     const variableFiles = [
@@ -38,6 +29,10 @@ function generateFileGroups(exp1, exp2) {
         "cnt_mae.png", "top_samples_mae.png",
     ];
     const ensembleFile = "metrics_v_ensembles.png";
+
+    // Prefixes & variables
+    const prefixes = ["all", "reg"];
+    const variables = ["prcp", "t2m", "u10m", "v10m"]
 
     // Create basic file groups
     const groupList = prefixes.map(prefix => {
@@ -56,23 +51,23 @@ function generateFileGroups(exp1, exp2) {
         };
     });
 
+    console.log(groupList)
+
     // Append file groups
-    if (!bothERA5) {
-        groupList.push(
-            {
-                title: "[all - reg] Metrics",
-                files: overviewFiles.map(f => `minus_reg/${f}`)
-            },
-            {
-                title: "Training Loss",
-                files: ["training_loss_regression.png", "training_loss_diffusion.png"]
-            },
-            {
-                title: "Config",
-                files: ["train_config.tsv", "generate_config.tsv"]
-            }
-        );
-    }
+    groupList.push(
+        {
+            title: "[all - reg] Metrics",
+            files: overviewFiles.map(f => `minus_reg/${f}`)
+        },
+        {
+            title: "Training Loss",
+            files: ["training_loss_regression.png", "training_loss_diffusion.png"]
+        },
+        {
+            title: "Config",
+            files: ["train_config.tsv", "generate_config.tsv"]
+        }
+    );
 
     return groupList;
 }
