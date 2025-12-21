@@ -66,7 +66,7 @@ def _create_out_vars(src: xr.Dataset, group: Dataset) -> dict[str, Variable]:
         out[name] = group.variables[name]
     return out
 
-def _init_group_schema_like_input(group: Dataset, src: xr.Dataset) -> dict[str, Variable]:
+def _init_group_schema_as_input(group: Dataset, src: xr.Dataset) -> dict[str, Variable]:
     """
     Create only dimensions and data variables to match the input group format
     (i.e., dimensions without coordinates).
@@ -123,22 +123,19 @@ def _stream_mask_and_write(
     tchunk: int,
 ) -> None:
     """Stream over time chunks, apply landmask, and write masked variables."""
-    g_truth = _get_or_create_group(nc, "truth")
-    g_pred = _get_or_create_group(nc, "prediction")
-
-    truth_out = _init_group_schema_like_input(g_truth, truth)
-    pred_out = _init_group_schema_like_input(g_pred, pred)
+    truth_out = _init_group_schema_as_input(_get_or_create_group(nc, "truth"), truth)
+    pred_out = _init_group_schema_as_input(_get_or_create_group(nc, "prediction"), pred)
     ntime = truth.sizes["time"]
 
     for t0 in tqdm(range(0, ntime, tchunk), desc="Mask+write", unit="chunk"):
         t1 = min(t0 + tchunk, ntime)
         s = slice(t0, t1)
 
-        truth_t = truth.isel(time=s).load()
-        pred_t = pred.isel(time=s).load()
-
-        lm_t = landmask_xy.expand_dims(time=t1 - t0)
-        truth_m, pred_m = _mask_chunk(truth_t, pred_t, lm_t)
+        truth_m, pred_m = _mask_chunk(
+            truth.isel(time=s).load(),
+            pred.isel(time=s).load(),
+            landmask_xy.expand_dims(time=t1 - t0)
+        )
 
         _write_vars_chunk(truth_out, truth_m, t0, t1)
         _write_vars_chunk(pred_out, pred_m, t0, t1)
