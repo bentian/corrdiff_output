@@ -26,6 +26,18 @@ h1 {
     color: #34495e;
 }
 
+a:link, a:visited {
+  color: #2563eb;       /* modern blue (Tailwind blue-600) */
+  text-decoration: none;  /* remove underline */
+  border-bottom: 3px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+/* Hover / focus: subtle visual affordance */
+a:hover, a:focus {
+    border-bottom-color: #2563eb;
+}
+
 /* Collapsible Section */
 .collapsible {
     background-color: #3498db;
