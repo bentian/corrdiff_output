@@ -141,7 +141,7 @@ def _stream_mask_and_write(
         _write_vars_chunk(pred_out, pred_m, t0, t1)
 
 
-def save_masked_samples(input_file, output_file, tchunk: int = 64) -> None:
+def save_masked_samples(input_file, output_file, tchunk: int = TCHUNK_SIZE) -> None:
     """
     Stream-apply a spatial landmask to truth and prediction samples in a NetCDF file.
 
