@@ -1,4 +1,5 @@
 import {
+    fetchExperimentValue,
     generateFileGroups,
     handleHashChange,
     activateSingleTab,
@@ -16,9 +17,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    document.getElementById("render-heading").textContent = exp2
-        ? `Comparison: ${exp1} vs. ${exp2}`
-        : `Experiment: ${exp1 || exp2}`;
+    // Render heading with links
+    await renderExperimentHeading(exp1, exp2);
 
     // Render collapsible sections
     generateFileGroups(exp1, exp2).forEach(
@@ -31,6 +31,52 @@ document.addEventListener("DOMContentLoaded", async () => {
     handleHashChange();
     window.addEventListener("hashchange", handleHashChange);
 });
+
+/**
+ * Renders the page heading for a single experiment or a comparison view.
+ *
+ * The experiment names (`exp1`, `exp2`) are displayed as hyperlinks whose
+ * URLs are looked up from `experiments/list.json`. Links open in a new tab.
+ *
+ * @param {string|null} exp1 - Primary experiment key.
+ * @param {string|null} exp2 - Secondary experiment key (optional).
+ */
+async function renderExperimentHeading(exp1, exp2) {
+    const headingEl = document.getElementById("render-heading");
+    if (!headingEl) return;
+
+    // Helper to build a hyperlink
+    const makeLink = (label, url) => {
+        const a = document.createElement("a");
+        a.textContent = label;
+        a.href = url ?? "#";
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        return a;
+    };
+
+    headingEl.textContent = ""; // clear existing content
+
+    if (exp1 && exp2) {
+        const [url1, url2] = await Promise.all([
+            fetchExperimentValue(exp1),
+            fetchExperimentValue(exp2),
+        ]);
+
+        headingEl.append("Comparison: ");
+        headingEl.append(makeLink(exp1, url1));
+        headingEl.append(" vs. ");
+        headingEl.append(makeLink(exp2, url2));
+    } else {
+        const exp = exp1 || exp2;
+        if (!exp) return;
+
+        const url = await fetchExperimentValue(exp);
+
+        headingEl.append("Experiment: ");
+        headingEl.append(makeLink(exp, url));
+    }
+}
 
 /**
  * Renders a collapsible section for a file group.

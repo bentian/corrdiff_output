@@ -1,3 +1,44 @@
+let _experimentCache = null;
+
+/**
+ * Loads and caches the experiment mapping from `experiments/list.json`.
+ * Subsequent calls return the cached result to avoid repeated network requests.
+ *
+ * @returns {Promise<Record<string, string>>} A mapping of experiment names to URLs.
+ * @throws {Error} If the fetch request fails.
+ */
+async function loadExperimentMap() {
+    if (_experimentCache) return _experimentCache;
+
+    const response = await fetch("experiments/list.json");
+    if (!response.ok) {
+        throw new Error(`Failed to fetch experiments: ${response.statusText}`);
+    }
+
+    _experimentCache = await response.json();
+    return _experimentCache;
+}
+
+/**
+ * Fetches all experiment names.
+ *
+ * @returns {Promise<string[]>} An array of experiment keys defined in `list.json`.
+ */
+async function fetchExperimentKeys() {
+    return Object.keys(await loadExperimentMap());
+}
+
+/**
+ * Fetches the value (e.g., URL) associated with a given experiment name.
+ *
+ * @param {string} key - The experiment identifier.
+ * @returns {Promise<string | null>} The experiment value if found, otherwise null.
+ */
+async function fetchExperimentValue(key) {
+    const map = await loadExperimentMap();
+    return map[key] ?? null;
+}
+
 /**
  * Generates file groups to render.
  *
@@ -149,6 +190,7 @@ function initializeLightbox() {
 
 // Export functions for use in render.js
 export {
+    fetchExperimentKeys, fetchExperimentValue,
     generateFileGroups, handleHashChange, activateSingleTab,
     addCollapsibleEventListeners, initializeLightbox
 };

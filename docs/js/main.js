@@ -1,3 +1,5 @@
+import { fetchExperimentKeys } from "./util.js";
+
 document.addEventListener("DOMContentLoaded", async () => {
     await loadExperiments();
 
@@ -15,11 +17,8 @@ async function loadExperiments() {
     const summaryExpSelect = document.getElementById("summary-exp");
 
     try {
-        const response = await fetch("experiments/list.json");
-        if (!response.ok) throw new Error(`Failed to fetch experiments: ${response.statusText}`);
-
-        const experiments = await response.json();
-        if (!Array.isArray(experiments) || experiments.length === 0) {
+        const experiments = await fetchExperimentKeys();
+        if (experiments.length === 0) {
             console.error("No experiments found in the list.json file.");
             return;
         }
