@@ -51,6 +51,9 @@ Functions:
                             number_format: str = ".2f") -> None:
         Saves summary tables and generates plots for different metrics.
 
+    - groupby_nyear(metrics: xr.Dataset, n_years: int) -> Optional[xr.Dataset]:
+        Groups a time-indexed dataset into fixed N-year bins and averages over time.
+
     - process_model(in_dir: Path, out_dir: Path, label: str, n_ensemble: int,
                     masked: bool) -> pd.DataFrame:
         Processes a model, computes metrics, generates plots, and saves results.
@@ -220,6 +223,7 @@ def save_tables_and_plots(ds_mean: xr.Dataset, ds_group_by_month: xr.Dataset,
         ds_mean (xr.Dataset): Mean dataset of metrics.
         ds_group_by_month (xr.Dataset): Monthly grouped dataset of metrics.
         ds_group_by_nyear (xr.Dataset): N-year grouped dataset of metrics.
+                                        None if metrics data contains only single year data.
         output_path (Path): Output directory where files should be saved.
         number_format (str): Format string for floating-point numbers. Defaults to ".2f".
     """
@@ -231,20 +235,24 @@ def save_tables_and_plots(ds_mean: xr.Dataset, ds_group_by_month: xr.Dataset,
         save_metric_table_and_plot(ds_group_by_month, metric,
                                    ensure_directory_exists(output_path, "monthly_metrics"),
                                    number_format)
-        save_metric_table_and_plot(ds_group_by_nyear, metric,
-                                   ensure_directory_exists(output_path, "nyear_metrics"),
-                                   number_format)
+        if ds_group_by_nyear:   # metrics data > 1 year
+            save_metric_table_and_plot(ds_group_by_nyear, metric,
+                                       ensure_directory_exists(output_path, "nyear_metrics"),
+                                       number_format)
 
 
-def groupby_nyear(metrics: xr.Dataset, n_years: int = 10) -> xr.Dataset:
+def groupby_nyear(metrics: xr.Dataset, n_years: int = 10) -> Optional[xr.Dataset]:
     """
     Group a time-indexed dataset into fixed N-year bins and compute
     the mean over time for each bin.
 
-    The time coordinate is assumed to be daily (or higher frequency).
+    The ``time`` coordinate is assumed to be daily or higher frequency.
     Years are grouped starting from the first year in the dataset,
-    producing labeled bins such as "2015-2020", "2021-2026", etc.
+    producing labeled bins such as ``"2010-2019"``, ``"2020-2029"``, etc.
     The final bin is truncated to the last available year if needed.
+
+    If the dataset spans only a single year, no N-year aggregation is
+    performed and ``None`` is returned.
 
     Parameters
     ----------
@@ -252,17 +260,18 @@ def groupby_nyear(metrics: xr.Dataset, n_years: int = 10) -> xr.Dataset:
         Dataset with a ``time`` coordinate and one or more data variables
         (e.g., MAE, RMSE, CRPS, or physical variables).
     n_years : int, optional
-        Number of years per bin. Default is 6.
+        Number of years per bin. Default is 10.
 
     Returns
     -------
-    xr.Dataset
-        Dataset grouped by ``year_bin`` with the time dimension averaged
-        out, suitable for N-yearly aggregation and plotting.
+    xr.Dataset : optional
+        Dataset grouped by ``year_bin`` with the ``time`` dimension averaged
+        out. Returns ``None`` if the input spans only a single year.
     """
     years = metrics["time"].dt.year
-    base = int(years.min())
-    max_year = int(years.max())
+    base, max_year = int(years.min()), int(years.max())
+    if base == max_year:
+        return None     # Skip grouping if only single year data
 
     bin_start = base + ((years - base) // n_years) * n_years
     bin_end = (bin_start + (n_years - 1)).clip(max=max_year)
