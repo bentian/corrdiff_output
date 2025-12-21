@@ -106,9 +106,8 @@ def _write_vars_chunk(out_vars: dict[str, Variable], ds_chunk: xr.Dataset,
 
         ncvar[tuple(sl)] = arr
 
-
-def save_masked_samples(input_file, output_file, tchunk: int = 64) -> None:
-    # --- copy root group exactly (so open_samples() keeps working)
+def _copy_root_group(input_file, output_file) -> None:
+    """Copy root group (time, lat, lon, attrs) unchanged to output file."""
     with xr.open_dataset(input_file, engine="netcdf4") as root_in:
         xr.Dataset(
             coords={"time": root_in["time"]},
@@ -116,35 +115,55 @@ def save_masked_samples(input_file, output_file, tchunk: int = 64) -> None:
             attrs=dict(root_in.attrs),
         ).to_netcdf(output_file, mode="w")
 
-    # --- landmask
+def _stream_mask_and_write(
+    nc: Dataset,
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    landmask_xy: xr.DataArray,
+    tchunk: int,
+) -> None:
+    """Stream over time chunks, apply landmask, and write masked variables."""
+    g_truth = _get_or_create_group(nc, "truth")
+    g_pred = _get_or_create_group(nc, "prediction")
+
+    truth_out = _init_group_schema_like_input(g_truth, truth)
+    pred_out = _init_group_schema_like_input(g_pred, pred)
+    ntime = truth.sizes["time"]
+
+    for t0 in tqdm(range(0, ntime, tchunk), desc="Mask+write", unit="chunk"):
+        t1 = min(t0 + tchunk, ntime)
+        s = slice(t0, t1)
+
+        truth_t = truth.isel(time=s).load()
+        pred_t = pred.isel(time=s).load()
+
+        lm_t = landmask_xy.expand_dims(time=t1 - t0)
+        truth_m, pred_m = _mask_chunk(truth_t, pred_t, lm_t)
+
+        _write_vars_chunk(truth_out, truth_m, t0, t1)
+        _write_vars_chunk(pred_out, pred_m, t0, t1)
+
+
+def save_masked_samples(input_file, output_file, tchunk: int = 64) -> None:
+    """
+    Stream-apply a spatial landmask to truth and prediction samples in a NetCDF file.
+
+    The root group is copied unchanged (including ``time``, ``lat``, and ``lon``)
+    to preserve compatibility with existing readers. The ``truth`` and
+    ``prediction`` groups are rewritten to contain only masked data variables and
+    dimensions (no coordinates), matching the original input format. Processing
+    is performed in time chunks to keep memory usage bounded.
+    """
+    _copy_root_group(input_file, output_file)
+
     grid = xr.open_dataset(LANDMASK_NC, engine="netcdf4")
     landmask_xy = grid.LANDMASK.rename({"south_north": "y", "west_east": "x"})
 
-    # --- input groups
     truth = xr.open_dataset(input_file, group="truth", engine="netcdf4")
-    pred  = xr.open_dataset(input_file, group="prediction", engine="netcdf4")
-    ntime = truth.sizes["time"]
+    pred = xr.open_dataset(input_file, group="prediction", engine="netcdf4")
 
-    # --- append groups to existing root file
     with Dataset(output_file, mode="a") as nc:
-        g_truth = _get_or_create_group(nc, "truth")
-        g_pred  = _get_or_create_group(nc, "prediction")
-
-        truth_out = _init_group_schema_like_input(g_truth, truth)  # dims + vars only
-        pred_out  = _init_group_schema_like_input(g_pred,  pred)   # dims + vars only
-
-        for t0 in tqdm(range(0, ntime, tchunk), desc="Mask+write", unit="chunk"):
-            t1 = min(t0 + tchunk, ntime)
-            s = slice(t0, t1)
-
-            truth_t = truth.isel(time=s).load()
-            pred_t = pred.isel(time=s).load()
-
-            lm_t = landmask_xy.expand_dims(time=(t1 - t0))
-            truth_m, pred_m = _mask_chunk(truth_t, pred_t, lm_t)
-
-            _write_vars_chunk(truth_out, truth_m, t0, t1)
-            _write_vars_chunk(pred_out, pred_m, t0, t1)
+        _stream_mask_and_write(nc, truth, pred, landmask_xy, tchunk)
 
     truth.close()
     pred.close()
