@@ -159,6 +159,7 @@ def save_masked_samples(input_file, output_file, tchunk: int = TCHUNK_SIZE) -> N
     truth = xr.open_dataset(input_file, group="truth", engine="netcdf4")
     pred = xr.open_dataset(input_file, group="prediction", engine="netcdf4")
 
+    print(f"[{get_timestamp()}] Start sample masking with chunk size={tchunk} ...")
     with Dataset(output_file, mode="a") as nc:
         _stream_mask_and_write(nc, truth, pred, landmask_xy, tchunk)
 

@@ -101,11 +101,8 @@ def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     dim = ["x", "y"]
 
-    # Compute mean across ensemble
-    pred_mean = pred.mean("ensemble") if "ensemble" in pred.dims else pred
-
-    # Create a mask for finite values in both truth and prediction
-    valid_mask = np.isfinite(truth) & np.isfinite(pred_mean)
+    # Valid where truth is finite AND at least one ensemble member is finite
+    valid_mask = np.isfinite(truth) & pred.notnull().any(dim="ensemble")
 
     # Apply the mask (remove NaNs)
     truth_valid = truth.where(valid_mask)
