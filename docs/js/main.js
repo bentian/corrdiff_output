@@ -55,7 +55,7 @@ async function loadExperiments() {
  */
 function groupByPrefix(experiments) {
     return experiments.reduce((acc, exp) => {
-        const prefix = exp.split("_")[0]; // Customize as needed
+        const prefix = exp.split("-")[0]; // Customize as needed
         if (!acc[prefix]) acc[prefix] = [];
         acc[prefix].push(exp);
         return acc;
