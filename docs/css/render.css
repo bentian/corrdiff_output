@@ -154,6 +154,12 @@ a:hover, a:focus {
     flex-wrap: wrap;
 }
 
+/* Fallback image when loading plot / table fails. */
+.fallback-plot {
+    width: 50%;
+    border-radius: 8px;
+}
+
 .render-plot {
     width: 48%;
     border-radius: 8px;

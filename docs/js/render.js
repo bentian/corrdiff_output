@@ -7,6 +7,8 @@ import {
     initializeLightbox
 } from "./util.js";
 
+const FALLBACK_PNG = "./no_plot_table_available.png";
+
 document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
     const exp1 = params.get("exp1");
@@ -180,77 +182,126 @@ function renderFileRow(file, content, exp1, exp2) {
 }
 
 /**
- * Renders an image row.
+ * Creates an <img> element with a built-in fallback.
  *
- * @param {HTMLElement} row - The row container.
- * @param {string} file - The file name.
- * @param {string} exp1 - Experiment 1 name.
- * @param {string} exp2 - Experiment 2 name (optional).
+ * If the image fails to load (e.g., missing file or 404), the source is
+ * automatically replaced with the shared fallback image while preserving
+ * layout size and styling. The fallback is applied only once to prevent
+ * infinite error loops.
+ *
+ * @param {string} src - Image source URL.
+ * @param {string} alt - Alternative text for the image.
+ * @returns {HTMLImageElement} Configured image element.
+ */
+function createImage(src, alt) {
+    const img = document.createElement("img");
+    img.className = "render-plot";
+    img.alt = alt;
+    img.src = src;
+
+    img.onerror = () => {
+        console.warn(`Error loading image: ${src}`);
+        img.onerror = null; // prevent loop
+
+        img.className = "fallback-plot";
+        img.alt = "Plot not available";
+        img.src = FALLBACK_PNG;
+    };
+
+    return img;
+}
+
+/**
+ * Renders one or two experiment plot images into a row.
+ *
+ * For each experiment, an <img> element is created using the provided file name.
+ * If an image fails to load, it automatically falls back to the shared
+ * "no_plot_table_available.png" placeholder while preserving layout size.
+ *
+ * @param {HTMLElement} row  - Container element for the row.
+ * @param {string} file      - Plot image file name.
+ * @param {string} exp1      - Primary experiment name.
+ * @param {string} [exp2]    - Optional secondary experiment name.
  */
 function renderImageRow(row, file, exp1, exp2) {
-    const img1 = document.createElement("img");
-    img1.src = `experiments/${exp1}/${file}`;
-    img1.alt = `${exp1} - ${file}`;
-    img1.className = "render-plot";
-    row.appendChild(img1);
+    row.appendChild(createImage(`experiments/${exp1}/${file}`, `${exp1} - ${file}`));
 
     if (exp2) {
-        const img2 = document.createElement("img");
-        img2.src = `experiments/${exp2}/${file}`;
-        img2.alt = `${exp2} - ${file}`;
-        img2.className = "render-plot";
-        row.appendChild(img2);
+        row.appendChild(createImage(`experiments/${exp2}/${file}`, `${exp2} - ${file}`));
     }
 }
 
 /**
- * Renders a TSV row.
+ * Renders one or two TSV tables into a row.
  *
- * @param {HTMLElement} row - The row container.
- * @param {string} file - The file name.
- * @param {string} exp1 - Experiment 1 name.
- * @param {string} exp2 - Experiment 2 name (optional).
+ * Each TSV file is fetched and converted into an HTML table. If a TSV file
+ * is unavailable, empty, or fails to parse, a fallback image is rendered
+ * instead, using the same sizing and styling as plot images to maintain
+ * visual alignment between table rows and image rows.
+ *
+ * @param {HTMLElement} row  - Container element for the row.
+ * @param {string} file      - TSV file name.
+ * @param {string} exp1      - Primary experiment name.
+ * @param {string} [exp2]    - Optional secondary experiment name.
+ * @returns {Promise<void>}
  */
 async function renderTSVRow(row, file, exp1, exp2) {
-    const tablePromises = [fetchTSV(`experiments/${exp1}/${file}`)];
-    if (exp2) tablePromises.push(fetchTSV(`experiments/${exp2}/${file}`));
+    const urls = [`experiments/${exp1}/${file}`];
+    if (exp2) urls.push(`experiments/${exp2}/${file}`);
 
-    const tablesHTML = await Promise.all(tablePromises);
-    tablesHTML.forEach((tableHTML) => {
-        const tableDiv = document.createElement("div");
-        tableDiv.className = "render-table";
-        tableDiv.innerHTML = tableHTML;
-        row.appendChild(tableDiv);
+    const results = await Promise.all(urls.map(fetchTSV));
+
+    results.forEach((tableHTML) => {
+        if (!tableHTML) {
+            const img = document.createElement("img");
+            img.className = "fallback-plot";
+            img.alt = "Table not available";
+            img.src = FALLBACK_PNG;
+
+            row.appendChild(img);
+            return;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "render-table";
+        wrapper.innerHTML = tableHTML;
+        row.appendChild(wrapper);
     });
 }
 
 /**
- * Fetches and parses TSV files into HTML tables.
+ * Fetches a TSV file and converts it into an HTML table.
  *
- * @param {string} url - The TSV file URL.
- * @returns {Promise<string>} - HTML table string.
+ * Returns null if the file cannot be fetched, is empty, or an error occurs.
+ * The caller is responsible for handling fallback rendering.
+ *
+ * @param {string} url - URL of the TSV file.
+ * @returns {Promise<string|null>} HTML table markup or null if unavailable.
  */
 async function fetchTSV(url) {
     try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+        const res = await fetch(url);
+        if (!res.ok) return null;
 
-        const tsvText = await response.text();
-        const rows = tsvText.split("\n").filter((row) => row.trim() !== "");
+        const text = await res.text();
+        const lines = text.split("\n").filter(Boolean);
+        if (!lines.length) return null;
+
         const table = document.createElement("table");
 
-        rows.forEach((row, index) => {
+        lines.forEach((line, i) => {
             const tr = document.createElement("tr");
-            row.split("\t").forEach((cell) => {
-                const td = document.createElement(index === 0 ? "th" : "td");
-                td.textContent = cell.trim();
-                tr.appendChild(td);
+            line.split("\t").forEach((cell) => {
+                const el = document.createElement(i === 0 ? "th" : "td");
+                el.textContent = cell.trim();
+                tr.appendChild(el);
             });
             table.appendChild(tr);
         });
 
         return table.outerHTML;
-    } catch (error) {
-        return `<p>Error loading TSV: ${url}</p>`;
+    } catch {
+        console.warn(`Error loading TSV: ${url}`);
+        return null;
     }
 }
