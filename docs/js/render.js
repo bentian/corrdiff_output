@@ -49,6 +49,8 @@ async function renderExperimentHeading(exp1, exp2) {
 
     // Helper to build a hyperlink
     const makeLink = (label, url) => {
+        if (!url) return label; // render text only
+
         const a = document.createElement("a");
         a.textContent = label;
         a.href = url ?? "#";
