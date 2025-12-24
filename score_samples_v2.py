@@ -319,9 +319,8 @@ def score_samples(
     """
     truth, pred, _ = open_samples(filepath)
 
-    ntime = truth.sizes["time"]
     nprocess = 32
-
+    ntime = truth.sizes["time"]
     with multiprocessing.Pool(nprocess) as pool:
         results = list(
             tqdm.tqdm(

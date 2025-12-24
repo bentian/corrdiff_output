@@ -80,7 +80,7 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 
 import plot_helpers as ph
 from score_samples_v2 import score_samples
-from mask_samples import save_masked_samples, get_timestamp
+from mask_samples import save_masked_samples_per_year, get_timestamp
 
 
 # General utility functions
@@ -303,7 +303,7 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     """
     suffix = "_masked" if masked else ""
     metrics, spatial_error, truth_flat, pred_flat, top_samples = \
-        score_samples(in_dir / "netcdf" / f"output_0_{label}{suffix}.nc", n_ensemble)
+        score_samples(in_dir / "netcdf" / "masked" / f"output_{label}_2023.nc", n_ensemble)
 
     # Create output directory and sub directories for each variable
     output_path = ensure_directory_exists(out_dir, label)
@@ -391,10 +391,13 @@ def main():
 
     # Ensure masked NetCDF files exist
     if masked:
-        for filename in ["output_0_all", "output_0_reg"]:
-            masked_file = args.in_dir / "netcdf" / f"{filename}_masked.nc"
-            if not masked_file.exists():
-                save_masked_samples(args.in_dir / "netcdf" / f"{filename}.nc", masked_file)
+        masked_dir = args.in_dir / "netcdf" / "masked"
+        if not masked_dir.exists():
+            ensure_directory_exists(masked_dir)
+            for filename in ("output_0_all", "output_0_reg"):
+                save_masked_samples_per_year(args.in_dir / "netcdf" / f"{filename}.nc",
+                                             masked_dir / filename.replace("_0_", "_"))
+    return
 
     # Process models
     ensure_directory_exists(args.out_dir)
