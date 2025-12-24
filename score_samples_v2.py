@@ -64,12 +64,18 @@ try:
 except ImportError as exc:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`") from exc
 
+
 VAR_MAPPING: Dict[str, str] = {
     "precipitation": "prcp",
     "temperature_2m": "t2m",
     "eastward_wind_10m": "u10m",
     "northward_wind_10m": "v10m",
 }
+
+
+# -----------------------------
+# IO
+# -----------------------------
 
 def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     """
@@ -87,6 +93,10 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
 
     return truth.set_coords(["lon", "lat"]), pred.set_coords(["lon", "lat"]), root
 
+
+# -----------------------------
+# Metrics
+# -----------------------------
 
 def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
@@ -113,6 +123,7 @@ def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 
     return crps
 
+
 def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     Compute RMSE, CRPS, and standard deviation between truth and prediction datasets.
@@ -125,10 +136,11 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
         xr.Dataset: A dataset containing computed metrics.
     """
     dim = ["x", "y"]
+    pred_mean = pred.mean("ensemble")
 
-    rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    corr = xs.pearson_r(truth, pred.mean("ensemble"), dim=dim, skipna=True)
+    rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
+    mae = xs.mae(truth, pred_mean, dim=dim, skipna=True)
+    corr = xs.pearson_r(truth, pred_mean, dim=dim, skipna=True)
     std_dev = pred.std("ensemble").mean(dim, skipna=True)
     crps = compute_crps(truth, pred)
 
@@ -138,6 +150,10 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
         .load()
     )
 
+
+# -----------------------------
+# Spatial error + flatten
+# -----------------------------
 
 def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
@@ -154,23 +170,23 @@ def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Data
     pred_data = {}
 
     for var in truth.data_vars:
-        if var in pred:
-            truth_flat = truth[var].values.flatten()
-            pred_flat = pred[var].mean("ensemble").values.flatten() \
-                        if "ensemble" in pred.dims else pred[var].values.flatten()
+        if var not in pred:
+            continue
 
-            # Filter out NaNs and align truth and pred
-            valid_mask = np.isfinite(truth_flat) & np.isfinite(pred_flat)
-            truth_data[var] = ("points", truth_flat[valid_mask])
-            pred_data[var] = ("points", pred_flat[valid_mask])
+        # Use ravel to create a view instead of a copy (flatten)
+        t = truth[var].data.ravel()
+        p = (pred[var].mean("ensemble") if "ensemble" in pred[var].dims else pred[var]).data.ravel()
+
+        # Filter out NaNs and align truth and pred
+        m = np.isfinite(t) & np.isfinite(p)
+        truth_data[var] = ("points", t[m])
+        pred_data[var] = ("points", p[m])
 
     combined_truth = xr.Dataset(
-        truth_data,
-        coords={"points": np.arange(len(next(iter(truth_data.values()))[1]))},
+        truth_data, coords={"points": np.arange(len(next(iter(truth_data.values()))[1]))},
     )
     combined_pred = xr.Dataset(
-        pred_data,
-        coords={"points": np.arange(len(next(iter(pred_data.values()))[1]))},
+        pred_data, coords={"points": np.arange(len(next(iter(pred_data.values()))[1]))},
     )
 
     return combined_truth, combined_pred
@@ -188,15 +204,13 @@ def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     Returns:
         xr.Dataset: The absolute difference dataset with NaNs removed.
     """
-    # Compute mean across ensemble
+    # Compute mean across ensemble, but still keep ensemble dim
     pred_mean = pred.mean("ensemble").expand_dims("ensemble") if "ensemble" in pred.dims else pred
 
-    # Compute absolute difference
-    abs_diff = abs(pred_mean - truth)
-
-    # Filter out NaNs by setting them to NaN where either input is NaN
+    # Compute absolute difference, and filter out NaNs by
+    # setting them to NaN where either input is NaN
     valid_mask = np.isfinite(truth) & np.isfinite(pred_mean)
-    abs_diff = abs_diff.where(valid_mask)
+    abs_diff = abs(pred_mean - truth).where(valid_mask)
 
     return abs_diff
 
@@ -305,14 +319,17 @@ def score_samples(
     """
     truth, pred, _ = open_samples(filepath)
 
-    with multiprocessing.Pool(32) as pool:
+    ntime = truth.sizes["time"]
+    nprocess = 32
+
+    with multiprocessing.Pool(nprocess) as pool:
         results = list(
             tqdm.tqdm(
                 pool.imap(
                     partial(process_sample, filepath=filepath, n_ensemble=n_ensemble),
-                    range(truth.sizes["time"]),
+                    range(ntime),
                 ),
-                total=truth.sizes["time"],
+                total=ntime,
             )
         )
 
