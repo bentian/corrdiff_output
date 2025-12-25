@@ -46,7 +46,6 @@ async function fetchExperimentValue(key) {
  * @param {string} exp2 - Experiment 2 name (optional).
  */
 function generateFileGroups(exp1, exp2) {
-    const hasEns64 = exp1.endsWith("ens64") || exp2?.endsWith("ens64");
     const hasSSP = exp1.startsWith("W") || exp2?.startsWith("W")
 
     // Overview files
@@ -80,7 +79,7 @@ function generateFileGroups(exp1, exp2) {
         const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
-            ...(hasEns64 && prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
+            ...(prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
         ];
 
         return {
