@@ -61,6 +61,8 @@ import warnings
 import xarray as xr
 import numpy as np
 
+from mask_samples import get_timestamp
+
 try:
     import xskillscore as xs
 except ImportError as exc:
@@ -309,6 +311,8 @@ def score_samples(
             - dict: Dictionary containing datasets for the top N samples
                     with the highest values for selected metrics (e.g., RMSE and MAE).
     """
+    print(f"[{get_timestamp()}] score_samples: filepath={filepath} n_ensemble={n_ensemble}")
+
     truth, pred, _ = open_samples(filepath)
 
     with multiprocessing.Pool(32) as pool:
@@ -339,6 +343,8 @@ def score_samples(
             truth.rename(VAR_MAPPING), pred.rename(VAR_MAPPING), combined_metrics, metric
         ) for metric in ["MAE", "RMSE"]
     }
+
+    print(f"[{get_timestamp()}] score_samples completed")
 
     return combined_metrics, combined_data["error"], \
         combined_data["truth_flat"], combined_data["pred_flat"], top_samples
