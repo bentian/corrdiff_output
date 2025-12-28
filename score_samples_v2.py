@@ -55,9 +55,11 @@ Usage Example:
 import multiprocessing
 from functools import partial
 from typing import Tuple, Dict
-import numpy as np
+
 import tqdm
+import warnings
 import xarray as xr
+import numpy as np
 
 try:
     import xskillscore as xs
@@ -129,8 +131,12 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
     mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
     corr = xs.pearson_r(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    std_dev = pred.std("ensemble").mean(dim, skipna=True)
-    crps = compute_crps(truth, pred)
+
+    # Compute CRPS and STD_DEV (suppress expected NaN-related warnings)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        std_dev = pred.std("ensemble").mean(dim, skipna=True)
+        crps = compute_crps(truth, pred)
 
     return (
         xr.concat([rmse, mae, corr, crps, std_dev], dim="metric")
