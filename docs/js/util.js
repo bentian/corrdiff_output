@@ -91,8 +91,6 @@ function generateFileGroups(exp1, exp2) {
         };
     });
 
-    console.log(groupList)
-
     // Append file groups
     groupList.push(
         {
@@ -110,6 +108,40 @@ function generateFileGroups(exp1, exp2) {
     );
 
     return groupList;
+}
+
+/**
+ * Scrolls an element into view only after its layout is stable.
+ *
+ * This function waits for all <img> elements inside the target element
+ * to finish loading before calling `scrollIntoView()`. This prevents
+ * incorrect scroll positions caused by late-loading images that change
+ * the element's height after the scroll occurs.
+ *
+ * If the element contains no images, scrolling happens immediately.
+ * Images that are already loaded (`img.complete === true`) are counted
+ * as ready and do not delay scrolling.
+ *
+ * @param {HTMLElement} el - The target element to scroll into view.
+ */
+function scrollWhenReady(el) {
+    const imgs = el.querySelectorAll("img");
+    let pending = imgs.length;
+
+    if (!pending) {
+        el.scrollIntoView({ block: "center" });
+        return;
+    }
+
+    imgs.forEach(img => {
+        if (img.complete) {
+            if (--pending === 0) el.scrollIntoView({ block: "center" });
+        } else {
+            img.addEventListener("load", () => {
+                if (--pending === 0) el.scrollIntoView({ block: "center" });
+            }, { once: true });
+        }
+    });
 }
 
 /**
@@ -135,7 +167,7 @@ function handleHashChange() {
         activateSingleTab(targetContent, targetTabContent.tab, targetTabContent);
     }
 
-    targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollWhenReady(targetRow)
 }
 
 /**
