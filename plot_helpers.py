@@ -413,15 +413,17 @@ def plot_p90_by_nyear(
             t2d = truth_p90[var].sel({period_dim: p}).values
             p2d = pred_p90[var].sel({period_dim: p}).values
 
-            images = [t2d, p2d, np.abs(p2d - t2d)]
-            titles = [
-                f"Truth p90 ({label})",
-                f"Prediction p90 ({label})",
-                f"|Prediction - Truth| ({label})",
-            ]
-
             # Generate plot for each period
-            plot_sample_images(axes, i, images, titles, COLOR_MAPS[var_index])
+            plot_sample_images(
+                axes, i,
+                [t2d, p2d, np.abs(p2d - t2d)],  # images
+                [   # titles
+                    f"Truth p90 ({label})",
+                    f"Prediction p90 ({label})",
+                    f"|Prediction - Truth| ({label})",
+                ],
+                COLOR_MAPS[var_index]
+            )
 
         plt.tight_layout()
         plt.savefig(output_path / f"{var}" / "p90_by_nyear.png")
