@@ -400,31 +400,27 @@ def plot_p90_by_nyear(
     if period_dim not in truth_p90.dims or period_dim not in pred_p90.dims:
         raise ValueError(f"Both datasets must contain dim '{period_dim}'")
 
-    vars = ['prcp', 't2m']
-
     periods = truth_p90[period_dim].values
     n_rows = len(periods)
 
-    for var_index, var in enumerate(vars):
+    for var_index, var in enumerate(['prcp', 't2m']):
         fig, axes = plt.subplots(n_rows, 3, figsize=(12, 4 * n_rows))
         if n_rows == 1:
             axes = np.array([axes])  # shape -> (1, 3)
 
         for i, p in enumerate(periods):
+            label = str(p)
             t2d = truth_p90[var].sel({period_dim: p}).values
             p2d = pred_p90[var].sel({period_dim: p}).values
-            d2d = np.abs(p2d - t2d)
 
-            label = str(p)
-
-            images = [t2d, p2d, d2d]
+            images = [t2d, p2d, np.abs(p2d - t2d)]
             titles = [
                 f"Truth p90 ({label})",
                 f"Prediction p90 ({label})",
                 f"|Prediction - Truth| ({label})",
             ]
 
-            # Reuse your existing helper (keeps colormap style consistent with the rest of your code)
+            # Generate plot for each period
             plot_sample_images(axes, i, images, titles, COLOR_MAPS[var_index])
 
         plt.tight_layout()

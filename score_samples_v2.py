@@ -310,6 +310,10 @@ def extract_top_samples(
 # -----------------------------------------------------------------------------
 # p90 grids
 # -----------------------------------------------------------------------------
+def time_quantile_2d(ds: xr.Dataset, var_names, q01: float) -> xr.Dataset:
+    """Return per-variable q-th quantile over time as 2D (y, x) fields."""
+    return ds[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True)
+
 def p90_by_nyear_period(
     truth: xr.Dataset,
     pred: xr.Dataset,
@@ -346,8 +350,8 @@ def p90_by_nyear_period(
     if "time" not in truth.dims or "time" not in pred.dims:
         raise ValueError("Both truth and pred must have a 'time' dimension")
 
+    var_names = list(truth.data_vars)
     q01 = q / 100.0
-    vars = list(truth.data_vars)
 
     truth_blocks: List[xr.Dataset] = []
     pred_blocks: List[xr.Dataset] = []
@@ -362,19 +366,17 @@ def p90_by_nyear_period(
         sel_end = end - pd.Timedelta("1ns")
 
         truth_w = truth.sel(time=slice(start, sel_end))
-        pred_w = pred.sel(time=slice(start, sel_end))
+        pred_w = pred.sel(time=slice(start, sel_end)).map(
+            # always use ensemble mean if present
+            lambda da: da.mean("ensemble", skipna=True) if "ensemble" in da.dims else da
+        )
 
-        # always ensemble-mean if present
-        pred_w = pred_w.map(lambda da: da.mean("ensemble", skipna=True)
-                            if "ensemble" in da.dims else da)
-
-        truth_blocks.append(truth_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True))
-        pred_blocks.append(pred_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True))
+        truth_blocks.append(time_quantile_2d(truth_w, var_names, q01))
+        pred_blocks.append(time_quantile_2d(pred_w, var_names, q01))
 
         label_end_year = min(start.year + n_years - 1, tmax.year)
-        label = f"{start.year:04d}-{label_end_year:04d}"
+        labels.append(f"{start.year:04d}-{label_end_year:04d}")
 
-        labels.append(label)
         start = end
 
     truth_p90 = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
