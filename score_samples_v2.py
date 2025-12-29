@@ -406,22 +406,22 @@ def p90_by_nyear_period(
         raise ValueError("Both truth and pred must have a 'time' dimension")
 
     q01 = q / 100.0
-
-    truth_blocks: List[xr.Dataset] = []
-    pred_blocks: List[xr.Dataset] = []
-    labels: List[str] = []
+    truth_blocks, pred_blocks = [], []
+    labels = []
 
     start = pd.to_datetime(truth.time.min().item())
     tmax = pd.to_datetime(truth.time.max().item())
+
     while start <= tmax:
         end = start + pd.DateOffset(years=n_years)
 
-        truth_blk, pred_blk = window_p90(truth, pred, start, end, q01)
-        truth_blocks.append(truth_blk)
-        pred_blocks.append(pred_blk)
+        t_blk, p_blk = window_p90(truth, pred, start, end, q01)
+        truth_blocks.append(t_blk)
+        pred_blocks.append(p_blk)
 
-        label_end_year = min(start.year + n_years - 1, tmax.year)
-        labels.append(f"{start.year:04d}-{label_end_year:04d}")
+        labels.append(
+            f"{start.year:04d}-{min(start.year + n_years - 1, tmax.year):04d}"
+        )
 
         start = end
 
