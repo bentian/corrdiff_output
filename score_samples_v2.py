@@ -24,8 +24,9 @@ import warnings
 from functools import partial
 from typing import Iterable, Dict, List, Tuple, Callable
 
-import numpy as np
 import tqdm
+import numpy as np
+import pandas as pd
 import xarray as xr
 
 from mask_samples import get_timestamp
@@ -307,6 +308,84 @@ def extract_top_samples(
 
 
 # -----------------------------------------------------------------------------
+# p90 grids
+# -----------------------------------------------------------------------------
+def p90_by_nyear_period(
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    n_years: int = 10,
+    q: float = 90.0,
+) -> Tuple[xr.Dataset, xr.Dataset]:
+    """
+    Compute two 2D percentile datasets (y, x):
+      1) truth_pXX: q-th percentile over time within a years-long window
+      2) pred_pXX : q-th percentile over time within the same window, using ensemble mean
+
+    Requirements enforced:
+      - returns TWO datasets: (truth_pXX_ds, pred_pXX_ds)
+      - uses a time window of `years` (default 10)
+
+    Assumes your layouts:
+      truth[var]: (time, y, x)
+      pred[var]:  (ensemble, time, y, x)  (or possibly (time, y, x))
+
+    Parameters
+    ----------
+    truth, pred : xr.Dataset
+    n_years : int
+        Window length in years (default 10).
+    q : float
+        Percentile in [0, 100] (default 90).
+
+    Returns
+    -------
+    (truth_p_ds, pred_p_ds) : Tuple[xr.Dataset, xr.Dataset]
+        Each dataset has variables for each requested var, dims (y, x).
+        Variable names are the same as input variable names.
+    """
+    if "time" not in truth.dims or "time" not in pred.dims:
+        raise ValueError("Both truth and pred must have a 'time' dimension")
+
+    q01 = q / 100.0
+    vars = list(truth.data_vars)
+
+    t0 = pd.to_datetime(truth.time.min().item())
+    t1 = pd.to_datetime(truth.time.max().item())
+
+    truth_blocks: List[xr.Dataset] = []
+    pred_blocks: List[xr.Dataset] = []
+    labels: List[str] = []
+
+    start = t0
+    while start <= t1:
+        end = start + pd.DateOffset(years=n_years)
+        sel_end = end - pd.Timedelta("1ns")
+
+        truth_w = truth.sel(time=slice(start, sel_end))
+        pred_w = pred.sel(time=slice(start, sel_end))
+
+        # always ensemble-mean if present
+        pred_w = pred_w.map(
+            lambda da: da.mean("ensemble", skipna=True) if "ensemble" in da.dims else da
+        )
+
+        truth_blocks.append(
+            truth_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True)
+        )
+        pred_blocks.append(
+            pred_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True)
+        )
+
+        labels.append(f"{start.year:04d}-{(end.year - 1):04d}")
+        start = end
+
+    truth_p = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
+    pred_p = xr.concat(pred_blocks, dim=xr.IndexVariable("period", labels))
+
+    return truth_p, pred_p
+
+
+# -----------------------------------------------------------------------------
 # Scoring entrypoints
 # -----------------------------------------------------------------------------
 def score_samples(
@@ -346,6 +425,9 @@ def score_samples(
     truth_m = truth.rename(VAR_MAPPING)
     pred_m = pred.rename(VAR_MAPPING)
     top_samples = {m: extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
+
+    truth_p90, pred_p90 = p90_by_nyear_period(truth, pred)
+    print(truth_p90, pred_p90)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
