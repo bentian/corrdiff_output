@@ -310,9 +310,64 @@ def extract_top_samples(
 # -----------------------------------------------------------------------------
 # p90 grids
 # -----------------------------------------------------------------------------
-def time_quantile_2d(ds: xr.Dataset, var_names, q01: float) -> xr.Dataset:
-    """Return per-variable q-th quantile over time as 2D (y, x) fields."""
-    return ds[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True)
+def window_p90(
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    q01: float,
+) -> Tuple[xr.Dataset, xr.Dataset]:
+    """
+    Compute per-variable time-quantile (e.g., p90) 2D fields over a fixed time window.
+
+    For the interval [start, end), this function:
+      1) selects the corresponding time slice from `truth` and `pred`
+      2) reduces `pred` by ensemble mean if an ``ensemble`` dimension is present
+      3) computes the q01-th quantile over the ``time`` dimension for each variable
+
+    The result for each variable is a 2D field (y, x).
+
+    Notes
+    -----
+    - The slice end is treated as exclusive by using ``end - 1ns``, because
+      label-based slicing in xarray is inclusive.
+    - ``skipna=True`` ensures NaNs are ignored; grid points with all-NaN
+      values over the window will remain NaN.
+
+    Parameters
+    ----------
+    truth : xr.Dataset
+        Dataset with variables shaped (time, y, x).
+    pred : xr.Dataset
+        Dataset with variables shaped (ensemble, time, y, x) or (time, y, x).
+    start : pd.Timestamp
+        Inclusive start of the time window.
+    end : pd.Timestamp
+        Exclusive end of the time window.
+    q01 : float
+        Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
+
+    Returns
+    -------
+    (truth_q, pred_q) : Tuple[xr.Dataset, xr.Dataset]
+        Two datasets containing per-variable quantile fields with dims (y, x).
+        Variable names match those in `truth`.
+    """
+    # Use end - 1ns to mimic [start, end) given slice end is
+    # inclusive in label-based selection.
+    sel_end = end - pd.Timedelta("1ns")
+
+    truth_w = truth.sel(time=slice(start, sel_end))
+    pred_w = pred.sel(time=slice(start, sel_end)).map(
+        # always use ensemble mean if present
+        lambda da: da.mean("ensemble", skipna=True) if "ensemble" in da.dims else da
+    )
+
+    var_names = list(truth.data_vars)
+    return (
+        truth_w[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True),
+        pred_w[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True)
+    )
 
 def p90_by_nyear_period(
     truth: xr.Dataset,
@@ -350,7 +405,6 @@ def p90_by_nyear_period(
     if "time" not in truth.dims or "time" not in pred.dims:
         raise ValueError("Both truth and pred must have a 'time' dimension")
 
-    var_names = list(truth.data_vars)
     q01 = q / 100.0
 
     truth_blocks: List[xr.Dataset] = []
@@ -361,18 +415,10 @@ def p90_by_nyear_period(
     tmax = pd.to_datetime(truth.time.max().item())
     while start <= tmax:
         end = start + pd.DateOffset(years=n_years)
-        # Use end - 1ns to mimic [start, end) given slice end is
-        # inclusive in label-based selection.
-        sel_end = end - pd.Timedelta("1ns")
 
-        truth_w = truth.sel(time=slice(start, sel_end))
-        pred_w = pred.sel(time=slice(start, sel_end)).map(
-            # always use ensemble mean if present
-            lambda da: da.mean("ensemble", skipna=True) if "ensemble" in da.dims else da
-        )
-
-        truth_blocks.append(time_quantile_2d(truth_w, var_names, q01))
-        pred_blocks.append(time_quantile_2d(pred_w, var_names, q01))
+        truth_blk, pred_blk = window_p90(truth, pred, start, end, q01)
+        truth_blocks.append(truth_blk)
+        pred_blocks.append(pred_blk)
 
         label_end_year = min(start.year + n_years - 1, tmax.year)
         labels.append(f"{start.year:04d}-{label_end_year:04d}")
