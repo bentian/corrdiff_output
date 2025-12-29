@@ -42,6 +42,10 @@ Functions:
     - plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
         Computes monthly mean error and generates plots.
 
+    - plot_nyear_metrics(ds: xr.Dataset, metric: str, output_path: Path,
+                         number_format: str) -> None:
+        Computes N-year mean error and generates plots.
+
     - plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
         Generates and saves a training loss plot over time.
 """

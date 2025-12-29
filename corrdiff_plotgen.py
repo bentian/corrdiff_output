@@ -39,7 +39,7 @@ Functions:
     - yaml_to_tsv(yaml_file_path: Path, tsv_filename: Path) -> None:
         Converts a Hydra YAML configuration file to TSV format.
 
-    - save_to_tsv(ds: pd.DataFrame, output_path: Path, number_format: str) -> None:
+    - save_to_tsv(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
         Saves a dataset to a TSV file.
 
     - save_metric_table_and_plot(ds: xr.Dataset, metric: str, output_path: Path,
@@ -55,10 +55,10 @@ Functions:
         Groups a time-indexed dataset into fixed N-year bins and averages over time.
 
     - process_model(in_dir: Path, out_dir: Path, label: str, n_ensemble: int,
-                    masked: bool) -> pd.DataFrame:
+                    masked: bool) -> xr.Dataset:
         Processes a model, computes metrics, generates plots, and saves results.
 
-    - compare_models(metrics_all: pd.DataFrame, metrics_reg: pd.DataFrame,
+    - compare_models(metrics_all: xr.Dataset, metrics_reg: xr.Dataset,
                      output_path: Path) -> None:
         Compares models by computing metric differences and saving results.
 
@@ -182,12 +182,12 @@ def yaml_to_tsv(yaml_file_path: Path, tsv_filename: Path) -> None:
     df.to_csv(tsv_filename, sep="\t", index=True)
 
 
-def save_to_tsv(ds: pd.DataFrame, output_path: Path, number_format: str) -> None:
+def save_to_tsv(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     """
     Save a dataset to a TSV file.
 
     Parameters:
-        ds (pd.DataFrame): The dataset to save.
+        ds (xr.Dataset): The dataset to save.
         output_path (Path): Path where the TSV file should be saved.
         number_format (str): Format string for floating-point numbers.
     """
@@ -287,7 +287,7 @@ def groupby_nyear(metrics: xr.Dataset, n_years: int = 10) -> Optional[xr.Dataset
 
 # Model processing functions
 def process_model(in_dir: Path, out_dir: Path, label: str,
-                  n_ensemble: int, masked: bool) -> pd.DataFrame:
+                  n_ensemble: int, masked: bool) -> xr.Dataset:
     """
     Process a model, generate plots, and save metrics.
 
@@ -299,7 +299,7 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         masked (bool): Whether to apply landmask.
 
     Returns:
-        pd.DataFrame: Computed metrics dataset.
+        xr.Dataset: Computed metrics dataset.
     """
     suffix = "_masked" if masked else ""
     metrics, spatial_error, truth_flat, pred_flat, top_samples = \
@@ -333,14 +333,14 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     return metrics
 
 
-def compare_models(metrics_all: pd.DataFrame, metrics_reg: pd.DataFrame,
+def compare_models(metrics_all: xr.Dataset, metrics_reg: xr.Dataset,
                    output_path: Path) -> None:
     """
     Compare models and save results.
 
     Parameters:
-        metrics_all (pd.DataFrame): Metrics dataset for the full model.
-        metrics_reg (pd.DataFrame): Metrics dataset for the regression-only model.
+        metrics_all (xr.Dataset): Metrics dataset for the full model.
+        metrics_reg (xr.Dataset): Metrics dataset for the regression-only model.
         output_path (Path): Output directory where comparison results should be saved.
     """
     metrics_mean_diff = metrics_all.mean(dim="time") - metrics_reg.mean(dim="time")
