@@ -357,13 +357,10 @@ def window_p90(
     # inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
 
-    truth_w = truth.sel(time=slice(start, sel_end))
-    pred_w = pred.sel(time=slice(start, sel_end)).map(
-        # always use ensemble mean if present
-        lambda da: da.mean("ensemble", skipna=True) if "ensemble" in da.dims else da
-    )
-
     var_names = list(truth.data_vars)
+    truth_w = truth[var_names].sel(time=slice(start, sel_end))
+    pred_w = pred[var_names].sel(time=slice(start, sel_end)).mean("ensemble", skipna=True)
+
     return (
         truth_w[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True),
         pred_w[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True)
@@ -405,10 +402,10 @@ def p90_by_nyear_period(
     if "time" not in truth.dims or "time" not in pred.dims:
         raise ValueError("Both truth and pred must have a 'time' dimension")
 
-    q01 = q / 100.0
     truth_blocks, pred_blocks = [], []
     labels = []
 
+    q01 = q / 100.0
     start = pd.to_datetime(truth.time.min().item())
     tmax = pd.to_datetime(truth.time.max().item())
 
