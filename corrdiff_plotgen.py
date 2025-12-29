@@ -79,7 +79,7 @@ import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 import plot_helpers as ph
-from score_samples_v2 import score_samples, score_samples_multi_ensemble
+from score_samples_v2 import score_samples, score_samples_multi_ensemble, N_YEARS
 from mask_samples import save_masked_samples, get_timestamp
 
 
@@ -241,7 +241,7 @@ def save_tables_and_plots(ds_mean: xr.Dataset, ds_group_by_month: xr.Dataset,
                                        number_format)
 
 
-def groupby_nyear(metrics: xr.Dataset, n_years: int = 10) -> Optional[xr.Dataset]:
+def groupby_nyear(metrics: xr.Dataset, n_years: int = N_YEARS) -> Optional[xr.Dataset]:
     """
     Group a time-indexed dataset into fixed N-year bins and compute
     the mean over time for each bin.
@@ -302,7 +302,7 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         xr.Dataset: Computed metrics dataset.
     """
     suffix = "_masked" if masked else ""
-    metrics, spatial_error, truth_flat, pred_flat, top_samples = \
+    metrics, spatial_error, top_samples, flats, p90s = \
         score_samples(in_dir / "netcdf" / f"output_0_{label}{suffix}.nc", n_ensemble)
 
     # Create output directory and sub directories for each variable
@@ -311,11 +311,12 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         ensure_directory_exists(output_path, var)
 
     # Plots per variable
+    ph.plot_pdf(*flats, output_path)
     ph.plot_monthly_error(spatial_error, output_path)
-    ph.plot_pdf(truth_flat, pred_flat, output_path)
     for metric in ["MAE", "RMSE"]:
         ph.plot_metrics_cnt(metrics, metric, output_path)
         ph.plot_top_samples(top_samples, metric, output_path)
+        ph.plot_p90_by_nyear(*p90s, output_path)
 
     # Plot metrics vs. # ensembles
     if label == "all" and n_ensemble == 64:

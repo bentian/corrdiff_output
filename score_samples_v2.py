@@ -43,7 +43,7 @@ VAR_MAPPING: Dict[str, str] = {
     "eastward_wind_10m": "u10m",
     "northward_wind_10m": "v10m",
 }
-
+N_YEARS = 10
 
 # -----------------------------------------------------------------------------
 # IO
@@ -313,7 +313,7 @@ def extract_top_samples(
 def p90_by_nyear_period(
     truth: xr.Dataset,
     pred: xr.Dataset,
-    n_years: int = 10,
+    n_years: int = N_YEARS,
     q: float = 90.0,
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
@@ -349,41 +349,46 @@ def p90_by_nyear_period(
     q01 = q / 100.0
     vars = list(truth.data_vars)
 
-    t0 = pd.to_datetime(truth.time.min().item())
-    t1 = pd.to_datetime(truth.time.max().item())
-
     truth_blocks: List[xr.Dataset] = []
     pred_blocks: List[xr.Dataset] = []
     labels: List[str] = []
 
-    start = t0
-    while start <= t1:
+    start = pd.to_datetime(truth.time.min().item())
+    tmax = pd.to_datetime(truth.time.max().item())
+    while start <= tmax:
         end = start + pd.DateOffset(years=n_years)
+        # Use end - 1ns to mimic [start, end) given slice end is
+        # inclusive in label-based selection.
         sel_end = end - pd.Timedelta("1ns")
 
         truth_w = truth.sel(time=slice(start, sel_end))
         pred_w = pred.sel(time=slice(start, sel_end))
 
         # always ensemble-mean if present
-        pred_w = pred_w.map(
-            lambda da: da.mean("ensemble", skipna=True) if "ensemble" in da.dims else da
-        )
+        pred_w = pred_w.map(lambda da: da.mean("ensemble", skipna=True)
+                            if "ensemble" in da.dims else da)
 
-        truth_blocks.append(
-            truth_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True)
-        )
-        pred_blocks.append(
-            pred_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True)
-        )
+        truth_blocks.append(truth_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True))
+        pred_blocks.append(pred_w[vars].quantile(q01, dim="time", skipna=True).squeeze(drop=True))
 
-        labels.append(f"{start.year:04d}-{(end.year - 1):04d}")
+        label_end_year = min(start.year + n_years - 1, tmax.year)
+        label = f"{start.year:04d}-{label_end_year:04d}"
+
+        labels.append(label)
         start = end
 
-    truth_p = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
-    pred_p = xr.concat(pred_blocks, dim=xr.IndexVariable("period", labels))
+    truth_p90 = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
+    pred_p90 = xr.concat(pred_blocks, dim=xr.IndexVariable("period", labels))
 
-    return truth_p, pred_p
+    # Optional NetCDF export
+    # encoding = {
+    #     v: {"zlib": True, "complevel": 4}
+    #     for v in truth_p90.data_vars
+    # }
+    # truth_p90.to_netcdf(f"truth_p{int(q)}.nc", encoding=encoding)
+    # pred_p90.to_netcdf(f"pred_p{int(q)}.nc", encoding=encoding)
 
+    return truth_p90, pred_p90
 
 # -----------------------------------------------------------------------------
 # Scoring entrypoints
@@ -418,20 +423,20 @@ def score_samples(
     metrics.attrs["n_ensemble"] = n_ensemble
 
     error = concat_from_results(results, "error", dim="time")
-    truth_flat = concat_from_results(results, "truth_flat", dim="points")
-    pred_flat = concat_from_results(results, "pred_flat", dim="points")
+    flats = (
+        concat_from_results(results, "truth_flat", dim="points"),
+        concat_from_results(results, "pred_flat", dim="points"),
+    )
 
-    # Top samples
+    # Top samples & p90 grids
     truth_m = truth.rename(VAR_MAPPING)
     pred_m = pred.rename(VAR_MAPPING)
     top_samples = {m: extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
-
-    truth_p90, pred_p90 = p90_by_nyear_period(truth, pred)
-    print(truth_p90, pred_p90)
+    p90s = p90_by_nyear_period(truth_m, pred_m)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
-    return metrics, error, truth_flat, pred_flat, top_samples
+    return metrics, error, top_samples, flats, p90s
 
 
 def process_sample_multi_ensemble(
