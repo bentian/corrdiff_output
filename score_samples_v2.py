@@ -357,13 +357,13 @@ def window_p90(
     # inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
 
-    var_names = list(truth.data_vars)
+    var_names = ['prcp', 't2m'] # list(truth.data_vars)
     truth_w = truth[var_names].sel(time=slice(start, sel_end))
     pred_w = pred[var_names].sel(time=slice(start, sel_end)).mean("ensemble", skipna=True)
 
     return (
-        truth_w[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True),
-        pred_w[var_names].quantile(q01, "time", skipna=True).squeeze(drop=True)
+        truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
+        pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True)
     )
 
 def p90_by_nyear_period(
