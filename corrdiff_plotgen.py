@@ -79,7 +79,7 @@ import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 import plot_helpers as ph
-from score_samples_v2 import score_samples
+from score_samples_v2 import score_samples, score_samples_multi_ensemble
 from mask_samples import save_masked_samples, get_timestamp
 
 
@@ -319,10 +319,14 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
 
     # Plot metrics vs. # ensembles
     if label == "all" and n_ensemble == 64:
-        ph.plot_metrics_vs_ensembles([
-            score_samples(in_dir / "netcdf" / f"output_0_{label}{suffix}.nc", n_ens)[0]
-            for n_ens in (1, 4, 16)
-        ] + [metrics], output_path)
+        metrics_by_n = score_samples_multi_ensemble(
+            in_dir / "netcdf" / f"output_0_{label}{suffix}.nc",
+            n_ensembles=(1, 4, 16)
+        )
+        ph.plot_metrics_vs_ensembles(
+            [metrics_by_n[1], metrics_by_n[4], metrics_by_n[16]] + [metrics],
+            output_path,
+        )
 
     # Overview plots and tables
     save_tables_and_plots(metrics.mean(dim="time"),

@@ -1,61 +1,28 @@
 """
 Module for processing and scoring dataset samples using xarray and xskillscore.
 
-This module provides utilities to:
+Utilities included:
 - Open NetCDF dataset samples (truth and predictions).
-- Compute various evaluation metrics (RMSE, MAE, CRPS).
+- Compute evaluation metrics (RMSE, MAE, CORR, CRPS, STD_DEV).
 - Extract top-ranked samples based on selected metrics.
-- Flatten and filter NaN values for efficient processing.
-- Apply multiprocessing for performance optimization.
+- Flatten and filter NaN values for pointwise exports.
+- Multiprocessing helpers for running over time indices.
+
+Notes on performance:
+- `score_samples()` computes full outputs (metrics + error + flattened exports + top samples).
+- `score_samples_metrics_multi_ensemble()` is specialized for plotting metrics vs ensembles:
+  it computes *metrics only* for multiple ensemble sizes in a single pass, avoiding
+  flattening/error computation and avoiding re-running the whole pipeline per ensemble.
 
 Dependencies:
-    - multiprocessing (for parallel processing)
-    - numpy (for numerical operations)
-    - tqdm (for progress tracking)
-    - xarray (for working with NetCDF datasets)
-    - xskillscore (for computing skill scores)
-
-Constants:
-    VAR_MAPPING (Dict[str, str]): Mapping of long variable names to short variable names.
-
-Functions:
-    - open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
-        Opens NetCDF dataset samples, returning truth, prediction, and root datasets.
-
-    - compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-        Computes the Continuous Ranked Probability Score (CRPS) for ensemble predictions.
-
-    - compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-        Computes RMSE and MAE between truth and prediction datasets.
-
-    - flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
-        Flattens datasets and removes NaN values for all variables.
-
-    - compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-        Computes absolute differences between truth and prediction datasets.
-
-    - process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
-        Processes a single time step from the dataset, computing metrics and errors.
-
-    - extract_top_samples(truth: xr.Dataset, pred: xr.Dataset, combined_metrics: xr.Dataset,
-                          metric: str, top_num: int = 5) -> dict:
-        Extracts top N samples with the highest metric values.
-
-    - score_samples(filepath: str, n_ensemble: int = 1) ->
-                    Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
-        Computes evaluation metrics, applies multiprocessing, and extracts top-ranked samples.
-
-Usage Example:
-    >>> from dataset_scoring import score_samples
-    >>> metrics, spatial_error, truth_flat, pred_flat, top_samples = \
-    >>>   score_samples("data.nc", n_ensemble=10)
-    >>> print(metrics)
-
+    multiprocessing, warnings, numpy, tqdm, xarray, xskillscore
 """
+from __future__ import annotations
+
 import multiprocessing
 import warnings
 from functools import partial
-from typing import Dict, Tuple
+from typing import Iterable, Dict, List, Tuple, Callable
 
 import numpy as np
 import tqdm
@@ -68,6 +35,7 @@ try:
 except ImportError as exc:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`") from exc
 
+
 VAR_MAPPING: Dict[str, str] = {
     "precipitation": "prcp",
     "temperature_2m": "t2m",
@@ -75,6 +43,10 @@ VAR_MAPPING: Dict[str, str] = {
     "northward_wind_10m": "v10m",
 }
 
+
+# -----------------------------------------------------------------------------
+# IO
+# -----------------------------------------------------------------------------
 def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     """
     Open prediction and truth samples from a dataset file.
@@ -92,6 +64,9 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     return truth.set_coords(["lon", "lat"]), pred.set_coords(["lon", "lat"]), root
 
 
+# -----------------------------------------------------------------------------
+# Metrics / transforms
+# -----------------------------------------------------------------------------
 def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     Computes the CRPS while filtering out NaN values.
@@ -105,21 +80,16 @@ def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     dim = ["x", "y"]
 
-    # Valid where truth is finite AND at least one ensemble member is finite
     valid_mask = np.isfinite(truth) & pred.notnull().any(dim="ensemble")
-
-    # Apply the mask (remove NaNs)
     truth_valid = truth.where(valid_mask)
     pred_valid = pred.where(valid_mask)
 
-    # Compute CRPS only for valid values
-    crps = xs.crps_ensemble(truth_valid, pred_valid, member_dim="ensemble", dim=dim)
+    return xs.crps_ensemble(truth_valid, pred_valid, member_dim="ensemble", dim=dim)
 
-    return crps
 
 def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
-    Compute RMSE, CRPS, and standard deviation between truth and prediction datasets.
+    Compute RMSE, MAE, CORR, CRPS, and STD_DEV between truth and prediction ensembles.
 
     Parameters:
         truth (xr.Dataset): The truth dataset.
@@ -129,10 +99,11 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
         xr.Dataset: A dataset containing computed metrics.
     """
     dim = ["x", "y"]
+    pred_mean = pred.mean("ensemble")
 
-    rmse = xs.rmse(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    mae = xs.mae(truth, pred.mean("ensemble"), dim=dim, skipna=True)
-    corr = xs.pearson_r(truth, pred.mean("ensemble"), dim=dim, skipna=True)
+    rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
+    mae = xs.mae(truth, pred_mean, dim=dim, skipna=True)
+    corr = xs.pearson_r(truth, pred_mean, dim=dim, skipna=True)
 
     # Compute CRPS and STD_DEV (suppress expected NaN-related warnings)
     with warnings.catch_warnings():
@@ -158,30 +129,26 @@ def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Data
     Returns:
         tuple: Two xarray.Datasets, one for truth and one for prediction.
     """
-    truth_data = {}
-    pred_data = {}
+    truth_data: Dict[str, Tuple[str, np.ndarray]] = {}
+    pred_data: Dict[str, Tuple[str, np.ndarray]] = {}
 
     for var in truth.data_vars:
-        if var in pred:
-            truth_flat = truth[var].values.flatten()
-            pred_flat = pred[var].mean("ensemble").values.flatten() \
-                        if "ensemble" in pred.dims else pred[var].values.flatten()
+        if var not in pred:
+            continue
 
-            # Filter out NaNs and align truth and pred
-            valid_mask = np.isfinite(truth_flat) & np.isfinite(pred_flat)
-            truth_data[var] = ("points", truth_flat[valid_mask])
-            pred_data[var] = ("points", pred_flat[valid_mask])
+        truth_flat = truth[var].values.ravel()
+        pred_flat = pred[var].mean("ensemble").values.ravel() \
+                    if "ensemble" in pred[var].dims else pred[var].values.ravel()
 
-    combined_truth = xr.Dataset(
-        truth_data,
-        coords={"points": np.arange(len(next(iter(truth_data.values()))[1]))},
-    )
-    combined_pred = xr.Dataset(
-        pred_data,
-        coords={"points": np.arange(len(next(iter(pred_data.values()))[1]))},
-    )
+        # Filter out NaNs and align truth and pred
+        valid = np.isfinite(truth_flat) & np.isfinite(pred_flat)
+        truth_data[var] = ("points", truth_flat[valid])
+        pred_data[var] = ("points", pred_flat[valid])
 
-    return combined_truth, combined_pred
+    n_points = len(next(iter(truth_data.values()))[1])
+    coords = {"points": np.arange(n_points)}
+
+    return xr.Dataset(truth_data, coords=coords), xr.Dataset(pred_data, coords=coords)
 
 
 def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
@@ -196,17 +163,67 @@ def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     Returns:
         xr.Dataset: The absolute difference dataset with NaNs removed.
     """
-    # Compute mean across ensemble
-    pred_mean = pred.mean("ensemble").expand_dims("ensemble") if "ensemble" in pred.dims else pred
-
-    # Compute absolute difference
+    pred_mean = pred.mean("ensemble").expand_dims("ensemble") \
+                if "ensemble" in pred.dims else pred
     abs_diff = abs(pred_mean - truth)
 
-    # Filter out NaNs by setting them to NaN where either input is NaN
+    # Filter out NaNs by setting them to NaN where either truth or pred is NaN
     valid_mask = np.isfinite(truth) & np.isfinite(pred_mean)
-    abs_diff = abs_diff.where(valid_mask)
+    return abs_diff.where(valid_mask)
 
-    return abs_diff
+
+# -----------------------------------------------------------------------------
+# Multiprocessing helpers
+# -----------------------------------------------------------------------------
+def run_over_time(n_time: int, worker_fn: Callable[[int], dict],
+                  pool_size: int = 32) -> List[dict]:
+    """Run `worker_fn(time_idx)` over [0..n_time-1] in parallel and collect results."""
+    with multiprocessing.Pool(pool_size) as pool:
+        return list(
+            tqdm.tqdm(
+                pool.imap(worker_fn, range(n_time)),
+                total=n_time,
+            )
+        )
+
+
+def concat_from_results(results: List[dict], key: str, dim: str) -> xr.Dataset:
+    """Concat `results[i][key]` along `dim` and apply VAR_MAPPING rename."""
+    return xr.concat([res[key] for res in results], dim=dim).rename(VAR_MAPPING)
+
+
+# -----------------------------------------------------------------------------
+# Per-time processing
+# -----------------------------------------------------------------------------
+def select_time_and_ensemble(
+    filepath: str,
+    index: int,
+    n_ensemble: int
+) -> Tuple[xr.Dataset, xr.Dataset]:
+    """
+    Helper to open samples and select a single time step with optional ensemble slicing.
+    Returns (truth_t, pred_t) loaded into memory.
+
+    Parameters:
+        filepath (str): Path to the dataset file.
+        index (int): The time index to process.
+        n_ensemble (int): Number of ensemble members to consider.
+
+    Returns:
+        Dict[str, xr.Dataset]: A dictionary containing computed metrics, errors,
+        and flattened truth/prediction datasets.
+    """
+    truth, pred, _ = open_samples(filepath)
+
+    truth_t = truth.isel(time=index).load()
+
+    pred_t = pred.isel(time=index)
+    if n_ensemble > 0 and "ensemble" in pred_t.dims:
+        pred_t = pred_t.isel(ensemble=slice(0, n_ensemble))
+    pred_t = pred_t.load()
+
+    return truth_t, pred_t
+
 
 def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
     """
@@ -221,23 +238,21 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
         Dict[str, xr.Dataset]: A dictionary containing computed metrics, errors,
         and flattened truth/prediction datasets.
     """
-    truth, pred, _ = open_samples(filepath)
-    truth = truth.isel(time=index).load()
-    if n_ensemble > 0:
-        pred = pred.isel(time=index, ensemble=slice(0, n_ensemble))
-    pred = pred.load()
+    truth_t, pred_t = select_time_and_ensemble(filepath, index, n_ensemble)
 
-    truth_flat, pred_flat = flatten_and_filter_nan(truth, pred)
-    result = {
-        "metrics": compute_metrics(truth, pred),
-        "error": compute_abs_difference(truth, pred),
+    truth_flat, pred_flat = flatten_and_filter_nan(truth_t, pred_t)
+
+    return {
+        "metrics": compute_metrics(truth_t, pred_t),
+        "error": compute_abs_difference(truth_t, pred_t),
         "truth_flat": truth_flat,
-        "pred_flat": pred_flat
+        "pred_flat": pred_flat,
     }
 
-    return result
 
-
+# -----------------------------------------------------------------------------
+# Top samples
+# -----------------------------------------------------------------------------
 def extract_top_samples(
     truth: xr.Dataset,
     pred: xr.Dataset,
@@ -265,7 +280,7 @@ def extract_top_samples(
       * "metric_value": xarray.DataArray containing corresponding metric values
                         for each selected time.
     """
-    data_vars = {}
+    data_vars: dict = {}
 
     for var in truth.data_vars:
         if var not in combined_metrics:
@@ -275,14 +290,12 @@ def extract_top_samples(
         top_dates = combined_metrics.sel(metric=metric)[var].to_series().nlargest(top_num)
         selected_times = np.array(top_dates.index, dtype="datetime64[ns]")
 
-        # Extract data
         truth_selected = truth[var].sel(time=selected_times).load()
         pred_selected = pred[var].sel(time=selected_times).mean("ensemble").load()
 
         abs_error = compute_abs_difference(truth_selected, pred_selected)
         error = abs_error if metric == "MAE" else abs_error ** 2
 
-        # Store results in a dictionary
         data_vars[var] = {
             "sample": xr.concat([truth_selected, pred_selected, error], dim="type")
                       .assign_coords(type=["truth", "pred", "error"]),
@@ -292,8 +305,13 @@ def extract_top_samples(
 
     return data_vars
 
+
+# -----------------------------------------------------------------------------
+# Scoring entrypoints
+# -----------------------------------------------------------------------------
 def score_samples(
-    filepath: str, n_ensemble: int = 1
+    filepath: str,
+    n_ensemble: int = 1
 ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
     """
     Score the dataset by computing various metrics over all time steps.
@@ -314,37 +332,99 @@ def score_samples(
     print(f"[{get_timestamp()}] score_samples: filepath={filepath} n_ensemble={n_ensemble}")
 
     truth, pred, _ = open_samples(filepath)
+    results = run_over_time(truth.sizes["time"],
+                partial(process_sample, filepath=filepath, n_ensemble=n_ensemble))
 
-    with multiprocessing.Pool(32) as pool:
-        results = list(
-            tqdm.tqdm(
-                pool.imap(
-                    partial(process_sample, filepath=filepath, n_ensemble=n_ensemble),
-                    range(truth.sizes["time"]),
-                ),
-                total=truth.sizes["time"],
-            )
-        )
+    metrics = concat_from_results(results, "metrics", dim="time")
+    metrics.attrs["n_ensemble"] = n_ensemble
 
-    # Combine metrics
-    combined_metrics = \
-        xr.concat([res["metrics"] for res in results], dim="time").rename(VAR_MAPPING)
-    combined_metrics.attrs["n_ensemble"] = n_ensemble
+    error = concat_from_results(results, "error", dim="time")
+    truth_flat = concat_from_results(results, "truth_flat", dim="points")
+    pred_flat = concat_from_results(results, "pred_flat", dim="points")
 
-    # Combine spatial error and flattened data
-    combined_data = {
-        key: xr.concat([res[key] for res in results], dim=dim).rename(VAR_MAPPING)
-        for key, dim in zip(["error", "truth_flat", "pred_flat"], ["time", "points", "points"])
-    }
-
-    # Extract top N dates with the highest metric values for RMSE and MAE
-    top_samples = {
-        metric: extract_top_samples(
-            truth.rename(VAR_MAPPING), pred.rename(VAR_MAPPING), combined_metrics, metric
-        ) for metric in ["MAE", "RMSE"]
-    }
+    # Top samples
+    truth_m = truth.rename(VAR_MAPPING)
+    pred_m = pred.rename(VAR_MAPPING)
+    top_samples = {m: extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
 
     print(f"[{get_timestamp()}] score_samples completed")
 
-    return combined_metrics, combined_data["error"], \
-        combined_data["truth_flat"], combined_data["pred_flat"], top_samples
+    return metrics, error, truth_flat, pred_flat, top_samples
+
+
+def process_sample_multi_ensemble(
+    index: int,
+    filepath: str,
+    n_ensembles: Tuple[int, ...]
+) -> Dict[int, xr.Dataset]:
+    """
+    Compute metrics for multiple ensemble sizes at a single time index, efficiently.
+
+    Strategy:
+      - open samples once
+      - load truth at time=index once
+      - load prediction at time=index for ensemble[:max_n] once
+      - compute metrics for each n_ens by slicing the already-loaded pred
+
+    Parameters
+    ----------
+    index : int
+        Time index to process.
+    filepath : str
+        Path to NetCDF samples file.
+    n_ensembles : Tuple[int, ...]
+        Ensemble sizes to evaluate (e.g., (1, 4, 16)).
+
+    Returns
+    -------
+    Dict[int, xr.Dataset]
+        Mapping n_ens -> metrics dataset for this single time step.
+    """
+    # Load truth & pred with max ensemble
+    truth_t, pred_t = select_time_and_ensemble(filepath, index, max(n_ensembles))
+
+    # Compute per-ensemble metrics by slicing in-memory
+    out: Dict[int, xr.Dataset] = {}
+    for n_ens in n_ensembles:
+        pred_n = pred_t.isel(ensemble=slice(0, n_ens)) if "ensemble" in pred_t.dims else pred_t
+        out[n_ens] = compute_metrics(truth_t, pred_n)
+
+    return {"metrics_by_n": out}
+
+
+def score_samples_multi_ensemble(
+    filepath: str,
+    n_ensembles: Iterable[int]
+) -> Dict[int, xr.Dataset]:
+    """
+    Faster multi-ensemble scoring that avoids re-loading predictions for each n_ensemble.
+
+    Returns
+    -------
+    Dict[int, xr.Dataset]
+        Mapping n_ensemble -> combined metrics dataset (dim="time").
+    """
+    n_ensembles = tuple(n_ensembles)
+    if not n_ensembles:
+        raise ValueError("n_ensembles must be non-empty")
+
+    print(
+        f"[{get_timestamp()}] score_samples_multi_ensemble: "
+        f"filepath={filepath} n_ensembles={n_ensembles}"
+    )
+
+    truth, _, _ = open_samples(filepath)
+    results = run_over_time(truth.sizes["time"],
+                partial(process_sample_multi_ensemble, filepath=filepath, n_ensembles=n_ensembles))
+
+    combined: Dict[int, xr.Dataset] = {}
+    for n_ens in n_ensembles:
+        # Reuse concat_from_results without changing signature
+        wrapped = [{"metrics": res["metrics_by_n"][n_ens]} for res in results]
+        ds = concat_from_results(wrapped, "metrics", dim="time")
+        ds.attrs["n_ensemble"] = n_ens
+        combined[n_ens] = ds
+
+    print(f"[{get_timestamp()}] score_samples_multi_ensemble completed")
+
+    return combined
