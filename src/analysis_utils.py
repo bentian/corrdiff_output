@@ -20,7 +20,7 @@ import xarray as xr
 import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-import plot_helpers as ph
+import plot_helper as ph
 
 
 def ensure_directory_exists(directory: Path, subdir: Optional[str] = None) -> Path:
