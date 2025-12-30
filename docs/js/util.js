@@ -69,16 +69,19 @@ function generateFileGroups(exp1, exp2) {
         "cnt_mae.png", "top_samples_mae.png",
     ];
     const ensembleFile = "metrics_v_ensembles.png";
+    const p90File = "p90_by_nyear.png";
 
     // Prefixes & variables
     const prefixes = ["all", "reg"];
     const variables = ["prcp", "t2m", "u10m", "v10m"]
+    const p90Vars = new Set(["prcp", "t2m"]);
 
     // Create basic file groups
     const groupList = prefixes.map(prefix => {
         const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
+            ...(hasSSP && p90Vars.has(varName) ? [buildPath(varName, p90File)] : []),
             ...(prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
         ];
 

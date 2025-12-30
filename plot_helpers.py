@@ -376,6 +376,59 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
         plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
         plt.close()
 
+def plot_p90_by_nyear(
+    truth_p90: xr.Dataset,
+    pred_p90: xr.Dataset,
+    output_path: Path,
+    period_dim: str = "period",
+) -> None:
+    """
+    Plot p90 maps by period. For each variable, save one figure where each row is a period and
+    columns are: (1) truth p90, (2) pred p90, (3) |pred - truth|.
+
+    Parameters
+    ----------
+    truth_p90 : xr.Dataset
+        Dataset with dims (period_dim, y, x) and data_vars like prcp, t2m, ...
+    pred_p90 : xr.Dataset
+        Same structure as truth_p90.
+    output_path : Path
+        Base directory to save plots. Saved as: {output_path}/{var}/p90_by_nyear.png
+    period_dim : str
+        Name of the period coordinate/dimension (default "period").
+    """
+    if period_dim not in truth_p90.dims or period_dim not in pred_p90.dims:
+        raise ValueError(f"Both datasets must contain dim '{period_dim}'")
+
+    periods = truth_p90[period_dim].values
+    n_rows = len(periods)
+
+    for var_index, var in enumerate(['prcp', 't2m']):
+        fig, axes = plt.subplots(n_rows, 3, figsize=(12, 4 * n_rows))
+        if n_rows == 1:
+            axes = np.array([axes])  # shape -> (1, 3)
+
+        for i, p in enumerate(periods):
+            label = str(p)
+            t2d = truth_p90[var].sel({period_dim: p}).values
+            p2d = pred_p90[var].sel({period_dim: p}).values
+
+            # Generate plot for each period
+            plot_sample_images(
+                axes, i,
+                [t2d, p2d, np.abs(p2d - t2d)],  # images
+                [   # titles
+                    f"Truth p90 ({label})",
+                    f"Prediction p90 ({label})",
+                    f"|Prediction - Truth| ({label})",
+                ],
+                COLOR_MAPS[var_index]
+            )
+
+        plt.tight_layout()
+        plt.savefig(output_path / f"{var}" / "p90_by_nyear.png")
+        plt.close(fig)
+
 
 def plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
     """

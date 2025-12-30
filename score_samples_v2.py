@@ -24,8 +24,9 @@ import warnings
 from functools import partial
 from typing import Iterable, Dict, List, Tuple, Callable
 
-import numpy as np
 import tqdm
+import numpy as np
+import pandas as pd
 import xarray as xr
 
 from mask_samples import get_timestamp
@@ -42,7 +43,7 @@ VAR_MAPPING: Dict[str, str] = {
     "eastward_wind_10m": "u10m",
     "northward_wind_10m": "v10m",
 }
-
+N_YEARS = 10
 
 # -----------------------------------------------------------------------------
 # IO
@@ -307,6 +308,134 @@ def extract_top_samples(
 
 
 # -----------------------------------------------------------------------------
+# p90 grids
+# -----------------------------------------------------------------------------
+def window_p90(
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    q01: float,
+) -> Tuple[xr.Dataset, xr.Dataset]:
+    """
+    Compute per-variable time-quantile (e.g., p90) 2D fields over a fixed time window.
+
+    For the interval [start, end), this function:
+      1) selects the corresponding time slice from `truth` and `pred`
+      2) reduces `pred` by ensemble mean if an ``ensemble`` dimension is present
+      3) computes the q01-th quantile over the ``time`` dimension for each variable
+
+    The result for each variable is a 2D field (y, x).
+
+    Notes
+    -----
+    - The slice end is treated as exclusive by using ``end - 1ns``, because
+      label-based slicing in xarray is inclusive.
+    - ``skipna=True`` ensures NaNs are ignored; grid points with all-NaN
+      values over the window will remain NaN.
+
+    Parameters
+    ----------
+    truth : xr.Dataset
+        Dataset with variables shaped (time, y, x).
+    pred : xr.Dataset
+        Dataset with variables shaped (ensemble, time, y, x) or (time, y, x).
+    start : pd.Timestamp
+        Inclusive start of the time window.
+    end : pd.Timestamp
+        Exclusive end of the time window.
+    q01 : float
+        Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
+
+    Returns
+    -------
+    (truth_q, pred_q) : Tuple[xr.Dataset, xr.Dataset]
+        Two datasets containing per-variable quantile fields with dims (y, x).
+        Variable names match those in `truth`.
+    """
+    # Use end - 1ns to mimic [start, end) given slice end is
+    # inclusive in label-based selection.
+    sel_end = end - pd.Timedelta("1ns")
+
+    var_names = ['prcp', 't2m'] # list(truth.data_vars)
+    truth_w = truth[var_names].sel(time=slice(start, sel_end))
+    pred_w = pred[var_names].sel(time=slice(start, sel_end)).mean("ensemble", skipna=True)
+
+    return (
+        truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
+        pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True)
+    )
+
+def p90_by_nyear_period(
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    n_years: int = N_YEARS,
+    q: float = 90.0,
+) -> Tuple[xr.Dataset, xr.Dataset]:
+    """
+    Compute two 2D percentile datasets (y, x):
+      1) truth_pXX: q-th percentile over time within a years-long window
+      2) pred_pXX : q-th percentile over time within the same window, using ensemble mean
+
+    Requirements enforced:
+      - returns TWO datasets: (truth_pXX_ds, pred_pXX_ds)
+      - uses a time window of `years` (default 10)
+
+    Assumes your layouts:
+      truth[var]: (time, y, x)
+      pred[var]:  (ensemble, time, y, x)  (or possibly (time, y, x))
+
+    Parameters
+    ----------
+    truth, pred : xr.Dataset
+    n_years : int
+        Window length in years (default 10).
+    q : float
+        Percentile in [0, 100] (default 90).
+
+    Returns
+    -------
+    (truth_p_ds, pred_p_ds) : Tuple[xr.Dataset, xr.Dataset]
+        Each dataset has variables for each requested var, dims (y, x).
+        Variable names are the same as input variable names.
+    """
+    if "time" not in truth.dims or "time" not in pred.dims:
+        raise ValueError("Both truth and pred must have a 'time' dimension")
+
+    truth_blocks, pred_blocks = [], []
+    labels = []
+
+    q01 = q / 100.0
+    start = pd.to_datetime(truth.time.min().item())
+    tmax = pd.to_datetime(truth.time.max().item())
+
+    while start <= tmax:
+        end = start + pd.DateOffset(years=n_years)
+
+        t_blk, p_blk = window_p90(truth, pred, start, end, q01)
+        truth_blocks.append(t_blk)
+        pred_blocks.append(p_blk)
+
+        labels.append(
+            f"{start.year:04d}-{min(start.year + n_years - 1, tmax.year):04d}"
+        )
+
+        start = end
+
+    truth_p90 = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
+    pred_p90 = xr.concat(pred_blocks, dim=xr.IndexVariable("period", labels))
+
+    # Optional NetCDF export
+    # encoding = {
+    #     v: {"zlib": True, "complevel": 4}
+    #     for v in truth_p90.data_vars
+    # }
+    # truth_p90.to_netcdf(f"truth_p{int(q)}.nc", encoding=encoding)
+    # pred_p90.to_netcdf(f"pred_p{int(q)}.nc", encoding=encoding)
+
+    return truth_p90, pred_p90
+
+# -----------------------------------------------------------------------------
 # Scoring entrypoints
 # -----------------------------------------------------------------------------
 def score_samples(
@@ -339,17 +468,20 @@ def score_samples(
     metrics.attrs["n_ensemble"] = n_ensemble
 
     error = concat_from_results(results, "error", dim="time")
-    truth_flat = concat_from_results(results, "truth_flat", dim="points")
-    pred_flat = concat_from_results(results, "pred_flat", dim="points")
+    flats = (
+        concat_from_results(results, "truth_flat", dim="points"),
+        concat_from_results(results, "pred_flat", dim="points"),
+    )
 
-    # Top samples
+    # Top samples & p90 grids
     truth_m = truth.rename(VAR_MAPPING)
     pred_m = pred.rename(VAR_MAPPING)
     top_samples = {m: extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
+    p90s = p90_by_nyear_period(truth_m, pred_m)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
-    return metrics, error, truth_flat, pred_flat, top_samples
+    return metrics, error, top_samples, flats, p90s
 
 
 def process_sample_multi_ensemble(
