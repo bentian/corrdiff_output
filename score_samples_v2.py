@@ -34,8 +34,10 @@ try:
 except ImportError as exc:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`") from exc
 
-DEBUG = False   # Enable to dump p90 netcdf
-N_YEARS = 10    # Number of years per period
+DEBUG = False       # Enable to dump p90 netcdf
+TOP_NUM = 5         # Number of top samples to extract
+N_YEARS = 10        # Number of years per period
+NTH_PERCENTILE = 90 # N-th percentile value to compute 2D grids per period
 VAR_MAPPING: Dict[str, str] = {
     "precipitation": "prcp",
     "temperature_2m": "t2m",
@@ -297,9 +299,8 @@ def _extract_top_samples(
     truth: xr.Dataset,
     pred: xr.Dataset,
     n_ensemble: int,
-    combined_metrics: xr.Dataset,
-    metric: str,
-    top_num: int = 5
+    metrics_ds: xr.Dataset,
+    metric: str
 ) -> dict:
     """
     Extracts truth and pred data for selected times based on a given metric,
@@ -308,9 +309,9 @@ def _extract_top_samples(
     Parameters:
     - truth (xarray.Dataset): The ground truth dataset.
     - pred (xarray.Dataset): The predicted dataset with an ensemble dimension.
-    - combined_metrics (xarray.Dataset): Dataset containing top date selections.
+    - n_ensemble (int): Number of ensemble members to use when computing prediction statistics.
+    - metrics_ds (xarray.Dataset): Dataset containing top date selections.
     - metric (str): The metric to use for selecting top dates (e.g., "RMSE").
-    - top_num (int): Number of top dates to select (default: 5).
 
     Returns:
     - dict: A dictionary where each variable contains:
@@ -323,9 +324,9 @@ def _extract_top_samples(
     """
     out: dict = {}
 
-    for var in (v for v in truth.data_vars if v in combined_metrics.data_vars):
+    for var in (v for v in truth.data_vars if v in metrics_ds.data_vars):
         # Select top N dates based on metric values
-        top = combined_metrics.sel(metric=metric)[var].to_series().nlargest(top_num)
+        top = metrics_ds.sel(metric=metric)[var].to_series().nlargest(TOP_NUM)
         times = np.array(top.index, dtype="datetime64[ns]")
 
         t = truth[var].sel(time=times).load()
@@ -355,8 +356,7 @@ def _window_time_quantile_2d(
     truth: xr.Dataset,
     pred: xr.Dataset,
     start: pd.Timestamp,
-    end: pd.Timestamp,
-    q01: float,
+    end: pd.Timestamp
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute per-variable time-quantile (e.g., p90) 2D fields over a fixed time window.
@@ -385,8 +385,6 @@ def _window_time_quantile_2d(
         Inclusive start of the time window.
     end : pd.Timestamp
         Exclusive end of the time window.
-    q01 : float
-        Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
 
     Returns
     -------
@@ -397,6 +395,7 @@ def _window_time_quantile_2d(
     # Use end - 1ns to mimic [start, end) given slice end is
     # inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
+    q01 = NTH_PERCENTILE / 100  # Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
     var_names = ['prcp', 't2m'] # list(truth.data_vars)
 
     truth_w = truth[var_names].sel(time=slice(start, sel_end))
@@ -412,9 +411,7 @@ def _window_time_quantile_2d(
 def p90_by_nyear_period(
     truth: xr.Dataset,
     pred: xr.Dataset,
-    n_ensemble: int,
-    n_years: int = N_YEARS,
-    q01: float = 0.9,
+    n_ensemble: int
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute two 2D percentile datasets (y, x):
@@ -432,10 +429,8 @@ def p90_by_nyear_period(
     Parameters
     ----------
     truth, pred : xr.Dataset
-    n_years : int
-        Window length in years (default 10).
-    q01 : float
-        Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
+    n_ensemble : int
+        Number of ensemble members to use when computing prediction statistics.
 
     Returns
     -------
@@ -455,15 +450,13 @@ def p90_by_nyear_period(
     truth_blocks, pred_blocks = [], []
     labels = []
     while start <= tmax:
-        end = start + pd.DateOffset(years=n_years)
+        end = start + pd.DateOffset(years=N_YEARS)
 
-        t_blk, p_blk = _window_time_quantile_2d(truth, pred_s, start, end, q01)
+        t_blk, p_blk = _window_time_quantile_2d(truth, pred_s, start, end)
         truth_blocks.append(t_blk)
         pred_blocks.append(p_blk)
 
-        labels.append(
-            f"{start.year:04d}-{min(start.year + n_years - 1, tmax.year):04d}"
-        )
+        labels.append(f"{start.year:04d}-{min(start.year + N_YEARS - 1, tmax.year):04d}")
 
         start = end
 
@@ -472,12 +465,9 @@ def p90_by_nyear_period(
 
     # Optional NetCDF export
     if DEBUG:
-        encoding = {
-            v: {"zlib": True, "complevel": 4}
-            for v in truth_p90.data_vars
-        }
-        truth_p90.to_netcdf(f"truth_p{int(q01 * 100)}.nc", encoding=encoding)
-        pred_p90.to_netcdf(f"pred_p{int(q01 * 100)}.nc", encoding=encoding)
+        encoding = { v: {"zlib": True, "complevel": 4} for v in truth_p90.data_vars }
+        truth_p90.to_netcdf(f"truth_p{NTH_PERCENTILE}.nc", encoding=encoding)
+        pred_p90.to_netcdf(f"pred_p{NTH_PERCENTILE}.nc", encoding=encoding)
 
     return truth_p90, pred_p90
 
