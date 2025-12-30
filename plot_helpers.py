@@ -8,46 +8,8 @@ This module provides functionality to:
 - Save evaluation results and metric tables in structured formats.
 - Process and visualize training loss data from TensorBoard logs.
 
-Dependencies:
-    - pathlib (for file path management)
-    - typing (for type annotations)
-    - numpy (for numerical operations)
-    - pandas (for handling structured tabular data)
-    - xarray (for working with NetCDF datasets)
-    - matplotlib (for generating plots)
-
 Constants:
     COLOR_MAPS (List[str]): A list of color maps used for different variables.
-
-Functions:
-    - plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
-        Generates a bar chart of mean metric values and saves the plot.
-
-    - plot_monthly_metrics(ds: xr.Dataset, metric: str, output_path: Path,
-                           number_format: str) -> None:
-        Generates and saves monthly mean plots for a specified metric.
-
-    - get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
-        Computes the number of bins for histogram plotting and generates a summary note.
-
-    - plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
-        Generates and saves PDFs for each variable, comparing truth vs. prediction.
-
-    - plot_metrics_pdf(ds: xr.Dataset, metric: str, output_path: Path) -> None:
-        Generates PDFs of the specified metric for all variables.
-
-    - plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None:
-        Generates plots of truth, prediction, and error for each time step, sorted by metric value.
-
-    - plot_monthly_error(ds: xr.Dataset, output_path: Path) -> None:
-        Computes monthly mean error and generates plots.
-
-    - plot_nyear_metrics(ds: xr.Dataset, metric: str, output_path: Path,
-                         number_format: str) -> None:
-        Computes N-year mean error and generates plots.
-
-    - plot_training_loss(wall_times: List[float], values: List[float], output_file: Path) -> None:
-        Generates and saves a training loss plot over time.
 """
 from pathlib import Path
 from typing import Tuple, List
@@ -376,12 +338,8 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
         plt.savefig(output_path / f"{var}" / f"top_samples_{metric.lower()}.png")
         plt.close()
 
-def plot_p90_by_nyear(
-    truth_p90: xr.Dataset,
-    pred_p90: xr.Dataset,
-    output_path: Path,
-    period_dim: str = "period",
-) -> None:
+def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
+                      output_path: Path, period_dim: str = "period") -> None:
     """
     Plot p90 maps by period. For each variable, save one figure where each row is a period and
     columns are: (1) truth p90, (2) pred p90, (3) |pred - truth|.
