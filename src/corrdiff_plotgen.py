@@ -17,14 +17,14 @@ from pathlib import Path
 import xarray as xr
 
 import plot_helpers as ph
-from mask_samples import save_masked_samples, get_timestamp
-from score_samples_v2 import score_samples, score_samples_multi_ensemble, N_YEARS
+from mask_n_score import (
+    get_timestamp, save_masked_samples,
+    score_samples, score_samples_multi_ensemble, N_YEARS
+)
 from analysis_utils import (
     ensure_directory_exists,
-    yaml_to_tsv,
-    read_training_loss_and_plot,
-    save_tables_and_plots,
-    group_by_nyear,
+    yaml_to_tsv, read_training_loss_and_plot,
+    save_tables_and_plots, group_by_nyear,
 )
 
 OVERVIEW_METRIC_FMT = ".2f"
@@ -145,7 +145,7 @@ def main():
 
     # Ensure masked NetCDF files exist
     if masked:
-        for filename in ["output_0_all"]:
+        for filename in ["output_0_all", "output_0_reg"]:
             src = args.in_dir / "netcdf" / f"{filename}.nc"
             dst = args.in_dir / "netcdf" / f"{filename}_masked.nc"
             if not dst.exists():
