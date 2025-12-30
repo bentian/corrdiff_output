@@ -17,7 +17,7 @@ from pathlib import Path
 import xarray as xr
 
 import plot_helper as ph
-from mask_n_score import (
+from samples_handler import (
     get_timestamp, save_masked_samples,
     score_samples, score_samples_multi_ensemble, N_YEARS
 )
