@@ -9,13 +9,11 @@ Utilities included:
 - Multiprocessing helpers for running over time indices.
 
 Notes on performance:
-- `score_samples()` computes full outputs (metrics + error + flattened exports + top samples).
-- `score_samples_metrics_multi_ensemble()` is specialized for plotting metrics vs ensembles:
+- `score_samples()` computes full outputs
+  (metrics + error + flattened exports + top samples + p90 grids).
+- `score_samples_multi_ensemble()` is specialized for plotting metrics vs ensembles:
   it computes *metrics only* for multiple ensemble sizes in a single pass, avoiding
   flattening/error computation and avoiding re-running the whole pipeline per ensemble.
-
-Dependencies:
-    multiprocessing, warnings, numpy, tqdm, xarray, xskillscore
 """
 from __future__ import annotations
 
@@ -36,19 +34,20 @@ try:
 except ImportError as exc:
     raise ImportError("xskillscore not installed. Try `pip install xskillscore`") from exc
 
-
+DEBUG = False   # Enable to dump p90 netcdf
+N_YEARS = 10    # Number of years per period
 VAR_MAPPING: Dict[str, str] = {
     "precipitation": "prcp",
     "temperature_2m": "t2m",
     "eastward_wind_10m": "u10m",
     "northward_wind_10m": "v10m",
 }
-N_YEARS = 10
+
 
 # -----------------------------------------------------------------------------
 # IO
 # -----------------------------------------------------------------------------
-def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
+def _open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     """
     Open prediction and truth samples from a dataset file.
 
@@ -68,7 +67,7 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
 # -----------------------------------------------------------------------------
 # Metrics / transforms
 # -----------------------------------------------------------------------------
-def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+def _compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     Computes the CRPS while filtering out NaN values.
 
@@ -88,7 +87,7 @@ def compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     return xs.crps_ensemble(truth_valid, pred_valid, member_dim="ensemble", dim=dim)
 
 
-def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     Compute RMSE, MAE, CORR, CRPS, and STD_DEV between truth and prediction ensembles.
 
@@ -110,7 +109,7 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         std_dev = pred.std("ensemble").mean(dim, skipna=True)
-        crps = compute_crps(truth, pred)
+        crps = _compute_crps(truth, pred)
 
     return (
         xr.concat([rmse, mae, corr, crps, std_dev], dim="metric")
@@ -119,7 +118,7 @@ def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     )
 
 
-def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+def _flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Extract flattened truth and prediction for all variables in the truth dataset.
 
@@ -152,7 +151,7 @@ def flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Data
     return xr.Dataset(truth_data, coords=coords), xr.Dataset(pred_data, coords=coords)
 
 
-def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+def _compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
     Computes the absolute difference between truth and prediction datasets
     while filtering NaN values.
@@ -176,7 +175,7 @@ def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 # -----------------------------------------------------------------------------
 # Multiprocessing helpers
 # -----------------------------------------------------------------------------
-def run_over_time(n_time: int, worker_fn: Callable[[int], dict],
+def _run_over_time(n_time: int, worker_fn: Callable[[int], dict],
                   pool_size: int = 32) -> List[dict]:
     """Run `worker_fn(time_idx)` over [0..n_time-1] in parallel and collect results."""
     with multiprocessing.Pool(pool_size) as pool:
@@ -188,7 +187,7 @@ def run_over_time(n_time: int, worker_fn: Callable[[int], dict],
         )
 
 
-def concat_from_results(results: List[dict], key: str, dim: str) -> xr.Dataset:
+def _concat_from_results(results: List[dict], key: str, dim: str) -> xr.Dataset:
     """Concat `results[i][key]` along `dim` and apply VAR_MAPPING rename."""
     return xr.concat([res[key] for res in results], dim=dim).rename(VAR_MAPPING)
 
@@ -196,7 +195,7 @@ def concat_from_results(results: List[dict], key: str, dim: str) -> xr.Dataset:
 # -----------------------------------------------------------------------------
 # Per-time processing
 # -----------------------------------------------------------------------------
-def select_time_and_ensemble(
+def _select_time_and_ensemble(
     filepath: str,
     index: int,
     n_ensemble: int
@@ -214,7 +213,7 @@ def select_time_and_ensemble(
         Dict[str, xr.Dataset]: A dictionary containing computed metrics, errors,
         and flattened truth/prediction datasets.
     """
-    truth, pred, _ = open_samples(filepath)
+    truth, pred, _ = _open_samples(filepath)
 
     truth_t = truth.isel(time=index).load()
 
@@ -226,7 +225,7 @@ def select_time_and_ensemble(
     return truth_t, pred_t
 
 
-def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
+def _process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.Dataset]:
     """
     Process a single time step from the dataset.
 
@@ -239,22 +238,62 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
         Dict[str, xr.Dataset]: A dictionary containing computed metrics, errors,
         and flattened truth/prediction datasets.
     """
-    truth_t, pred_t = select_time_and_ensemble(filepath, index, n_ensemble)
+    truth_t, pred_t = _select_time_and_ensemble(filepath, index, n_ensemble)
 
-    truth_flat, pred_flat = flatten_and_filter_nan(truth_t, pred_t)
+    truth_flat, pred_flat = _flatten_and_filter_nan(truth_t, pred_t)
 
     return {
-        "metrics": compute_metrics(truth_t, pred_t),
-        "error": compute_abs_difference(truth_t, pred_t),
+        "metrics": _compute_metrics(truth_t, pred_t),
+        "error": _compute_abs_difference(truth_t, pred_t),
         "truth_flat": truth_flat,
         "pred_flat": pred_flat,
     }
 
 
+def _process_sample_multi_ensemble(
+    index: int,
+    filepath: str,
+    n_ensembles: Tuple[int, ...]
+) -> Dict[int, xr.Dataset]:
+    """
+    Compute metrics for multiple ensemble sizes at a single time index, efficiently.
+
+    Strategy:
+      - open samples once
+      - load truth at time=index once
+      - load prediction at time=index for ensemble[:max_n] once
+      - compute metrics for each n_ens by slicing the already-loaded pred
+
+    Parameters
+    ----------
+    index : int
+        Time index to process.
+    filepath : str
+        Path to NetCDF samples file.
+    n_ensembles : Tuple[int, ...]
+        Ensemble sizes to evaluate (e.g., (1, 4, 16)).
+
+    Returns
+    -------
+    Dict[int, xr.Dataset]
+        Mapping n_ens -> metrics dataset for this single time step.
+    """
+    # Load truth & pred with max ensemble
+    truth_t, pred_t = _select_time_and_ensemble(filepath, index, max(n_ensembles))
+
+    # Compute per-ensemble metrics by slicing in-memory
+    out: Dict[int, xr.Dataset] = {}
+    for n_ens in n_ensembles:
+        pred_n = pred_t.isel(ensemble=slice(0, n_ens)) if "ensemble" in pred_t.dims else pred_t
+        out[n_ens] = _compute_metrics(truth_t, pred_n)
+
+    return {"metrics_by_n": out}
+
+
 # -----------------------------------------------------------------------------
 # Top samples
 # -----------------------------------------------------------------------------
-def extract_top_samples(
+def _extract_top_samples(
     truth: xr.Dataset,
     pred: xr.Dataset,
     combined_metrics: xr.Dataset,
@@ -294,7 +333,7 @@ def extract_top_samples(
         truth_selected = truth[var].sel(time=selected_times).load()
         pred_selected = pred[var].sel(time=selected_times).mean("ensemble").load()
 
-        abs_error = compute_abs_difference(truth_selected, pred_selected)
+        abs_error = _compute_abs_difference(truth_selected, pred_selected)
         error = abs_error if metric == "MAE" else abs_error ** 2
 
         data_vars[var] = {
@@ -310,7 +349,7 @@ def extract_top_samples(
 # -----------------------------------------------------------------------------
 # p90 grids
 # -----------------------------------------------------------------------------
-def window_p90(
+def _window_time_quantile_2d(
     truth: xr.Dataset,
     pred: xr.Dataset,
     start: pd.Timestamp,
@@ -412,7 +451,7 @@ def p90_by_nyear_period(
     while start <= tmax:
         end = start + pd.DateOffset(years=n_years)
 
-        t_blk, p_blk = window_p90(truth, pred, start, end, q01)
+        t_blk, p_blk = _window_time_quantile_2d(truth, pred, start, end, q01)
         truth_blocks.append(t_blk)
         pred_blocks.append(p_blk)
 
@@ -426,14 +465,16 @@ def p90_by_nyear_period(
     pred_p90 = xr.concat(pred_blocks, dim=xr.IndexVariable("period", labels))
 
     # Optional NetCDF export
-    # encoding = {
-    #     v: {"zlib": True, "complevel": 4}
-    #     for v in truth_p90.data_vars
-    # }
-    # truth_p90.to_netcdf(f"truth_p{int(q)}.nc", encoding=encoding)
-    # pred_p90.to_netcdf(f"pred_p{int(q)}.nc", encoding=encoding)
+    if DEBUG:
+        encoding = {
+            v: {"zlib": True, "complevel": 4}
+            for v in truth_p90.data_vars
+        }
+        truth_p90.to_netcdf(f"truth_p{int(q)}.nc", encoding=encoding)
+        pred_p90.to_netcdf(f"pred_p{int(q)}.nc", encoding=encoding)
 
     return truth_p90, pred_p90
+
 
 # -----------------------------------------------------------------------------
 # Scoring entrypoints
@@ -460,68 +501,28 @@ def score_samples(
     """
     print(f"[{get_timestamp()}] score_samples: filepath={filepath} n_ensemble={n_ensemble}")
 
-    truth, pred, _ = open_samples(filepath)
-    results = run_over_time(truth.sizes["time"],
-                partial(process_sample, filepath=filepath, n_ensemble=n_ensemble))
+    truth, pred, _ = _open_samples(filepath)
+    results = _run_over_time(truth.sizes["time"],
+                partial(_process_sample, filepath=filepath, n_ensemble=n_ensemble))
 
-    metrics = concat_from_results(results, "metrics", dim="time")
+    metrics = _concat_from_results(results, "metrics", dim="time")
     metrics.attrs["n_ensemble"] = n_ensemble
 
-    error = concat_from_results(results, "error", dim="time")
+    error = _concat_from_results(results, "error", dim="time")
     flats = (
-        concat_from_results(results, "truth_flat", dim="points"),
-        concat_from_results(results, "pred_flat", dim="points"),
+        _concat_from_results(results, "truth_flat", dim="points"),
+        _concat_from_results(results, "pred_flat", dim="points"),
     )
 
     # Top samples & p90 grids
     truth_m = truth.rename(VAR_MAPPING)
     pred_m = pred.rename(VAR_MAPPING)
-    top_samples = {m: extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
+    top_samples = {m: _extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
     p90s = p90_by_nyear_period(truth_m, pred_m)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
     return metrics, error, top_samples, flats, p90s
-
-
-def process_sample_multi_ensemble(
-    index: int,
-    filepath: str,
-    n_ensembles: Tuple[int, ...]
-) -> Dict[int, xr.Dataset]:
-    """
-    Compute metrics for multiple ensemble sizes at a single time index, efficiently.
-
-    Strategy:
-      - open samples once
-      - load truth at time=index once
-      - load prediction at time=index for ensemble[:max_n] once
-      - compute metrics for each n_ens by slicing the already-loaded pred
-
-    Parameters
-    ----------
-    index : int
-        Time index to process.
-    filepath : str
-        Path to NetCDF samples file.
-    n_ensembles : Tuple[int, ...]
-        Ensemble sizes to evaluate (e.g., (1, 4, 16)).
-
-    Returns
-    -------
-    Dict[int, xr.Dataset]
-        Mapping n_ens -> metrics dataset for this single time step.
-    """
-    # Load truth & pred with max ensemble
-    truth_t, pred_t = select_time_and_ensemble(filepath, index, max(n_ensembles))
-
-    # Compute per-ensemble metrics by slicing in-memory
-    out: Dict[int, xr.Dataset] = {}
-    for n_ens in n_ensembles:
-        pred_n = pred_t.isel(ensemble=slice(0, n_ens)) if "ensemble" in pred_t.dims else pred_t
-        out[n_ens] = compute_metrics(truth_t, pred_n)
-
-    return {"metrics_by_n": out}
 
 
 def score_samples_multi_ensemble(
@@ -545,15 +546,15 @@ def score_samples_multi_ensemble(
         f"filepath={filepath} n_ensembles={n_ensembles}"
     )
 
-    truth, _, _ = open_samples(filepath)
-    results = run_over_time(truth.sizes["time"],
-                partial(process_sample_multi_ensemble, filepath=filepath, n_ensembles=n_ensembles))
+    truth, _, _ = _open_samples(filepath)
+    results = _run_over_time(truth.sizes["time"],
+                partial(_process_sample_multi_ensemble, filepath=filepath, n_ensembles=n_ensembles))
 
     combined: Dict[int, xr.Dataset] = {}
     for n_ens in n_ensembles:
-        # Reuse concat_from_results without changing signature
+        # Reuse _concat_from_results without changing signature
         wrapped = [{"metrics": res["metrics_by_n"][n_ens]} for res in results]
-        ds = concat_from_results(wrapped, "metrics", dim="time")
+        ds = _concat_from_results(wrapped, "metrics", dim="time")
         ds.attrs["n_ensemble"] = n_ens
         combined[n_ens] = ds
 
