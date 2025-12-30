@@ -1,0 +1,8 @@
+# macOS metadata
+.DS_Store
+
+# Python bytecode caches
+__pycache__/
+
+# Ignore netcdf folders
+data/

@@ -6,6 +6,8 @@ This project provides a set of tools to generate CorrDiff experiment results by 
 - Generating visual plots for model evaluation
 - Exporting processed data into tables
 
+![image](graphic/infograph.png)
+
 # 📦 Installation
 
 Before using corrdiff_output, install the required dependencies:
