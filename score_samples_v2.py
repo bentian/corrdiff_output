@@ -296,6 +296,7 @@ def _process_sample_multi_ensemble(
 def _extract_top_samples(
     truth: xr.Dataset,
     pred: xr.Dataset,
+    n_ensemble: int,
     combined_metrics: xr.Dataset,
     metric: str,
     top_num: int = 5
@@ -320,30 +321,31 @@ def _extract_top_samples(
       * "metric_value": xarray.DataArray containing corresponding metric values
                         for each selected time.
     """
-    data_vars: dict = {}
+    out: dict = {}
 
-    for var in truth.data_vars:
-        if var not in combined_metrics:
-            continue
-
+    for var in (v for v in truth.data_vars if v in combined_metrics.data_vars):
         # Select top N dates based on metric values
-        top_dates = combined_metrics.sel(metric=metric)[var].to_series().nlargest(top_num)
-        selected_times = np.array(top_dates.index, dtype="datetime64[ns]")
+        top = combined_metrics.sel(metric=metric)[var].to_series().nlargest(top_num)
+        times = np.array(top.index, dtype="datetime64[ns]")
 
-        truth_selected = truth[var].sel(time=selected_times).load()
-        pred_selected = pred[var].sel(time=selected_times).mean("ensemble").load()
+        t = truth[var].sel(time=times).load()
+        p = (
+            pred[var].sel(time=times)
+            .isel(ensemble=slice(0, n_ensemble))
+            .mean("ensemble", skipna=True)
+            .load()
+        )
 
-        abs_error = _compute_abs_difference(truth_selected, pred_selected)
+        abs_error = _compute_abs_difference(t, p)
         error = abs_error if metric == "MAE" else abs_error ** 2
 
-        data_vars[var] = {
-            "sample": xr.concat([truth_selected, pred_selected, error], dim="type")
-                      .assign_coords(type=["truth", "pred", "error"]),
-            "metric_value": xr.DataArray(top_dates.values, dims=["time"],
-                                         coords={"time": selected_times})
+        out[var] = {
+            "metric_value": xr.DataArray(top.values, dims=["time"], coords={"time": times}),
+            "sample": xr.concat([t, p, error], dim="type")
+                      .assign_coords(type=["truth", "pred", "error"])
         }
 
-    return data_vars
+    return out
 
 
 # -----------------------------------------------------------------------------
@@ -395,10 +397,12 @@ def _window_time_quantile_2d(
     # Use end - 1ns to mimic [start, end) given slice end is
     # inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
-
     var_names = ['prcp', 't2m'] # list(truth.data_vars)
+
     truth_w = truth[var_names].sel(time=slice(start, sel_end))
-    pred_w = pred[var_names].sel(time=slice(start, sel_end)).mean("ensemble", skipna=True)
+    pred_w = pred[var_names].sel(time=slice(start, sel_end))
+    if "ensemble" in pred_w.dims:
+        pred_w = pred_w.mean("ensemble", skipna=True)
 
     return (
         truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
@@ -408,8 +412,9 @@ def _window_time_quantile_2d(
 def p90_by_nyear_period(
     truth: xr.Dataset,
     pred: xr.Dataset,
+    n_ensemble: int,
     n_years: int = N_YEARS,
-    q: float = 90.0,
+    q01: float = 0.9,
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute two 2D percentile datasets (y, x):
@@ -429,8 +434,8 @@ def p90_by_nyear_period(
     truth, pred : xr.Dataset
     n_years : int
         Window length in years (default 10).
-    q : float
-        Percentile in [0, 100] (default 90).
+    q01 : float
+        Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
 
     Returns
     -------
@@ -441,17 +446,18 @@ def p90_by_nyear_period(
     if "time" not in truth.dims or "time" not in pred.dims:
         raise ValueError("Both truth and pred must have a 'time' dimension")
 
-    truth_blocks, pred_blocks = [], []
-    labels = []
+    # Slice n_ensemble only
+    pred_s = pred.isel(ensemble=slice(0, n_ensemble)) if "ensemble" in pred.dims else pred
 
-    q01 = q / 100.0
     start = pd.to_datetime(truth.time.min().item())
     tmax = pd.to_datetime(truth.time.max().item())
 
+    truth_blocks, pred_blocks = [], []
+    labels = []
     while start <= tmax:
         end = start + pd.DateOffset(years=n_years)
 
-        t_blk, p_blk = _window_time_quantile_2d(truth, pred, start, end, q01)
+        t_blk, p_blk = _window_time_quantile_2d(truth, pred_s, start, end, q01)
         truth_blocks.append(t_blk)
         pred_blocks.append(p_blk)
 
@@ -470,8 +476,8 @@ def p90_by_nyear_period(
             v: {"zlib": True, "complevel": 4}
             for v in truth_p90.data_vars
         }
-        truth_p90.to_netcdf(f"truth_p{int(q)}.nc", encoding=encoding)
-        pred_p90.to_netcdf(f"pred_p{int(q)}.nc", encoding=encoding)
+        truth_p90.to_netcdf(f"truth_p{int(q01 * 100)}.nc", encoding=encoding)
+        pred_p90.to_netcdf(f"pred_p{int(q01 * 100)}.nc", encoding=encoding)
 
     return truth_p90, pred_p90
 
@@ -484,20 +490,43 @@ def score_samples(
     n_ensemble: int = 1
 ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
     """
-    Score the dataset by computing various metrics over all time steps.
+    Compute evaluation metrics and diagnostics for all time steps in a sample dataset.
 
-    Parameters:
-        filepath (str): Path to the dataset file.
-        n_ensemble (int, optional): Number of ensemble members. Defaults to 1.
+    This function:
+      - loads truth and prediction samples from `filepath`
+      - processes each time step (optionally in parallel) to compute skill metrics
+      - aggregates metrics and spatial errors across time
+      - extracts top-N worst cases for selected metrics (e.g., MAE, RMSE)
+      - computes decadal (N-year) p90 grids for selected variables
 
-    Returns:
-        Tuple:
-            - xr.Dataset: Computed metrics across all time steps.
-            - xr.Dataset: Spatial error dataset.
-            - xr.Dataset: Flattened truth dataset.
-            - xr.Dataset: Flattened prediction dataset.
-            - dict: Dictionary containing datasets for the top N samples
-                    with the highest values for selected metrics (e.g., RMSE and MAE).
+    Parameters
+    ----------
+    filepath : str
+        Path to the dataset file containing truth and prediction samples.
+    n_ensemble : int, optional
+        Number of ensemble members to use when computing prediction statistics.
+        Only the first `n_ensemble` members are used. Default is 1.
+
+    Returns
+    -------
+    metrics : xr.Dataset
+        Time-series dataset of computed evaluation metrics (e.g., RMSE, MAE, CRPS).
+    error : xr.Dataset
+        Spatial error fields for each time step.
+    top_samples : dict
+        Dictionary of top-N worst samples per metric and variable, including
+        truth, prediction, and error maps.
+    flats : tuple of xr.Dataset
+        Flattened truth and prediction values (points dimension), useful for
+        PDFs and scatter plots.
+    p90s : tuple of xr.Dataset
+        Tuple of (truth_p90, pred_p90) decadal p90 grids computed over N-year windows.
+
+    Notes
+    -----
+    - This function may be computationally expensive for long time series or
+      large ensemble sizes.
+    - For best performance, ensure datasets are properly chunked if using Dask.
     """
     print(f"[{get_timestamp()}] score_samples: filepath={filepath} n_ensemble={n_ensemble}")
 
@@ -505,9 +534,11 @@ def score_samples(
     results = _run_over_time(truth.sizes["time"],
                 partial(_process_sample, filepath=filepath, n_ensemble=n_ensemble))
 
+    # Metrics
     metrics = _concat_from_results(results, "metrics", dim="time")
     metrics.attrs["n_ensemble"] = n_ensemble
 
+    # Spatial error & flattened truth/pred
     error = _concat_from_results(results, "error", dim="time")
     flats = (
         _concat_from_results(results, "truth_flat", dim="points"),
@@ -517,8 +548,11 @@ def score_samples(
     # Top samples & p90 grids
     truth_m = truth.rename(VAR_MAPPING)
     pred_m = pred.rename(VAR_MAPPING)
-    top_samples = {m: _extract_top_samples(truth_m, pred_m, metrics, m) for m in ["MAE", "RMSE"]}
-    p90s = p90_by_nyear_period(truth_m, pred_m)
+    top_samples = {
+        m: _extract_top_samples(truth_m, pred_m, n_ensemble, metrics, m)
+        for m in ["MAE", "RMSE"]
+    }
+    p90s = p90_by_nyear_period(truth_m, pred_m, n_ensemble)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
