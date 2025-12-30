@@ -16,9 +16,13 @@ from pathlib import Path
 
 import xarray as xr
 
-import plot_helpers as ph
-from mask_samples import save_masked_samples, get_timestamp
-from score_samples_v2 import score_samples, score_samples_multi_ensemble, N_YEARS
+from samples_handler import (
+    get_timestamp,
+    save_masked_samples,
+    score_samples,
+    score_samples_multi_ensemble,
+    N_YEARS,
+)
 from analysis_utils import (
     ensure_directory_exists,
     yaml_to_tsv,
@@ -26,7 +30,14 @@ from analysis_utils import (
     save_tables_and_plots,
     group_by_nyear,
 )
-
+from plot_helper import (
+    plot_pdf,
+    plot_monthly_error,
+    plot_p90_by_nyear,
+    plot_metrics_cnt,
+    plot_top_samples,
+    plot_metrics_vs_ensembles,
+)
 OVERVIEW_METRIC_FMT = ".2f"
 DIFF_METRIC_FMT = ".3f"
 
@@ -57,17 +68,17 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
         ensure_directory_exists(output_path, var)
 
     # Plots per variable
-    ph.plot_pdf(*flats, output_path)
-    ph.plot_monthly_error(spatial_error, output_path)
-    ph.plot_p90_by_nyear(*p90s, output_path)
+    plot_pdf(*flats, output_path)
+    plot_monthly_error(spatial_error, output_path)
+    plot_p90_by_nyear(*p90s, output_path)
     for metric in ["MAE", "RMSE"]:
-        ph.plot_metrics_cnt(metrics, metric, output_path)
-        ph.plot_top_samples(top_samples, metric, output_path)
+        plot_metrics_cnt(metrics, metric, output_path)
+        plot_top_samples(top_samples, metric, output_path)
 
     # Plot metrics vs. # ensembles
     if label == "all" and n_ensemble == 64:
         metrics_by_n = score_samples_multi_ensemble(nc_path, n_ensembles=(1, 4, 16))
-        ph.plot_metrics_vs_ensembles(
+        plot_metrics_vs_ensembles(
             [metrics_by_n[1], metrics_by_n[4], metrics_by_n[16]] + [metrics],
             output_path,
         )

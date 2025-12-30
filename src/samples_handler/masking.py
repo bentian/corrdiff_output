@@ -35,13 +35,10 @@ import xarray as xr
 from netCDF4 import Dataset, Variable
 from tqdm.auto import tqdm
 
-LANDMASK_NC = "./data/ssp_208x208_grid_coords.nc"
+
+LANDMASK_NC = "../data/ssp_208x208_grid_coords.nc"
 TCHUNK_SIZE = 365
 
-
-def get_timestamp() -> str:
-    """Return a human-readable timestamp for logging."""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def _ensure_dim(group: Dataset, name: str, size: Optional[int]) -> None:
     """Create a netCDF dimension if missing."""
@@ -139,6 +136,11 @@ def _stream_mask_and_write(
 
         _write_vars_chunk(truth_out, truth_m, t0, t1)
         _write_vars_chunk(pred_out, pred_m, t0, t1)
+
+
+def get_timestamp() -> str:
+    """Return a human-readable timestamp for logging."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def save_masked_samples(input_file, output_file, tchunk: int = TCHUNK_SIZE) -> None:

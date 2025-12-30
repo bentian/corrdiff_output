@@ -61,8 +61,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from mask_samples import get_timestamp
-from process_sample import (
+from .masking import get_timestamp
+from .processing import (
     open_samples, compute_abs_difference,
     process_sample, process_sample_multi_ensemble,
 )
