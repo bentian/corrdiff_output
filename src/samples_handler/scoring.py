@@ -85,8 +85,7 @@ VAR_MAPPING: Dict[str, str] = {
 # -----------------------------------------------------------------------------
 def _extract_top_samples(
     truth: xr.Dataset,
-    pred: xr.Dataset,
-    n_ensemble: int,
+    pred_mean: xr.Dataset,
     metrics_ds: xr.Dataset,
     metric: str
 ) -> dict:
@@ -96,8 +95,7 @@ def _extract_top_samples(
 
     Parameters:
     - truth (xarray.Dataset): The ground truth dataset.
-    - pred (xarray.Dataset): The predicted dataset with an ensemble dimension.
-    - n_ensemble (int): Number of ensemble members to use when computing prediction statistics.
+    - pred_mean (xarray.Dataset): The dataset of prediction mean on ensembles
     - metrics_ds (xarray.Dataset): Dataset containing top date selections.
     - metric (str): The metric to use for selecting top dates (e.g., "RMSE").
 
@@ -118,12 +116,7 @@ def _extract_top_samples(
         times = np.array(top.index, dtype="datetime64[ns]")
 
         t = truth[var].sel(time=times).load()
-        p = (
-            pred[var].sel(time=times)
-            .isel(ensemble=slice(0, n_ensemble))
-            .mean("ensemble", skipna=True)
-            .load()
-        )
+        p = pred_mean[var].sel(time=times).load()
 
         abs_error = compute_abs_difference(t, p)
         error = abs_error if metric == "MAE" else abs_error ** 2
@@ -142,7 +135,7 @@ def _extract_top_samples(
 # -----------------------------------------------------------------------------
 def _window_time_quantile_2d(
     truth: xr.Dataset,
-    pred: xr.Dataset,
+    pred_mean: xr.Dataset,
     start: pd.Timestamp,
     end: pd.Timestamp
 ) -> Tuple[xr.Dataset, xr.Dataset]:
@@ -165,10 +158,8 @@ def _window_time_quantile_2d(
 
     Parameters
     ----------
-    truth : xr.Dataset
+    truth, pred_mean : xr.Dataset
         Dataset with variables shaped (time, y, x).
-    pred : xr.Dataset
-        Dataset with variables shaped (ensemble, time, y, x) or (time, y, x).
     start : pd.Timestamp
         Inclusive start of the time window.
     end : pd.Timestamp
@@ -180,27 +171,20 @@ def _window_time_quantile_2d(
         Two datasets containing per-variable quantile fields with dims (y, x).
         Variable names match those in `truth`.
     """
-    # Use end - 1ns to mimic [start, end) given slice end is
-    # inclusive in label-based selection.
-    sel_end = end - pd.Timedelta("1ns")
     q01 = NTH_PERCENTILE / 100  # Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
     var_names = ['prcp', 't2m'] # list(truth.data_vars)
 
+    # Use end - 1ns to mimic [start, end) given slice end is inclusive in label-based selection.
+    sel_end = end - pd.Timedelta("1ns")
     truth_w = truth[var_names].sel(time=slice(start, sel_end))
-    pred_w = pred[var_names].sel(time=slice(start, sel_end))
-    if "ensemble" in pred_w.dims:
-        pred_w = pred_w.mean("ensemble", skipna=True)
+    pred_w = pred_mean[var_names].sel(time=slice(start, sel_end))
 
     return (
         truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
         pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True)
     )
 
-def p90_by_nyear_period(
-    truth: xr.Dataset,
-    pred: xr.Dataset,
-    n_ensemble: int
-) -> Tuple[xr.Dataset, xr.Dataset]:
+def p90_by_nyear_period(truth: xr.Dataset, pred_mean: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute two 2D percentile datasets (y, x):
       1) truth_pXX: q-th percentile over time within a years-long window
@@ -212,13 +196,11 @@ def p90_by_nyear_period(
 
     Assumes your layouts:
       truth[var]: (time, y, x)
-      pred[var]:  (ensemble, time, y, x)  (or possibly (time, y, x))
+      pred_mean[var]: (time, y, x)
 
     Parameters
     ----------
-    truth, pred : xr.Dataset
-    n_ensemble : int
-        Number of ensemble members to use when computing prediction statistics.
+    truth, pred_mean : xr.Dataset
 
     Returns
     -------
@@ -226,11 +208,8 @@ def p90_by_nyear_period(
         Each dataset has variables for each requested var, dims (y, x).
         Variable names are the same as input variable names.
     """
-    if "time" not in truth.dims or "time" not in pred.dims:
+    if "time" not in truth.dims or "time" not in pred_mean.dims:
         raise ValueError("Both truth and pred must have a 'time' dimension")
-
-    # Slice n_ensemble only
-    pred_s = pred.isel(ensemble=slice(0, n_ensemble)) if "ensemble" in pred.dims else pred
 
     start = pd.to_datetime(truth.time.min().item())
     tmax = pd.to_datetime(truth.time.max().item())
@@ -240,12 +219,11 @@ def p90_by_nyear_period(
     while start <= tmax:
         end = start + pd.DateOffset(years=N_YEARS)
 
-        t_blk, p_blk = _window_time_quantile_2d(truth, pred_s, start, end)
+        t_blk, p_blk = _window_time_quantile_2d(truth, pred_mean, start, end)
         truth_blocks.append(t_blk)
         pred_blocks.append(p_blk)
 
         labels.append(f"{start.year:04d}-{min(start.year + N_YEARS - 1, tmax.year):04d}")
-
         start = end
 
     truth_p90 = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
@@ -344,12 +322,13 @@ def score_samples(
 
     # Top samples & p90 grids
     truth_m = truth.rename(VAR_MAPPING)
-    pred_m = pred.rename(VAR_MAPPING)
-    top_samples = {
-        m: _extract_top_samples(truth_m, pred_m, n_ensemble, metrics, m)
-        for m in ["MAE", "RMSE"]
-    }
-    p90s = p90_by_nyear_period(truth_m, pred_m, n_ensemble)
+    pred_mean = (
+        pred.isel(ensemble=slice(0, n_ensemble))
+        .mean("ensemble", skipna=True)
+        .rename(VAR_MAPPING)
+    )
+    top_samples = {m: _extract_top_samples(truth_m, pred_mean, metrics, m) for m in ["MAE", "RMSE"]}
+    p90s = p90_by_nyear_period(truth_m, pred_mean)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
