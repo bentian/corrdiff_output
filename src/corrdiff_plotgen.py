@@ -145,7 +145,7 @@ def main():
 
     # Ensure masked NetCDF files exist
     if masked:
-        for filename in ["output_0_all", "output_0_reg"]:
+        for filename in ["output_0_all"]:
             src = args.in_dir / "netcdf" / f"{filename}.nc"
             dst = args.in_dir / "netcdf" / f"{filename}_masked.nc"
             if not dst.exists():

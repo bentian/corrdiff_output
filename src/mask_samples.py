@@ -35,7 +35,7 @@ import xarray as xr
 from netCDF4 import Dataset, Variable
 from tqdm.auto import tqdm
 
-LANDMASK_NC = "./data/ssp_208x208_grid_coords.nc"
+LANDMASK_NC = "../data/ssp_208x208_grid_coords.nc"
 TCHUNK_SIZE = 365
 
 
