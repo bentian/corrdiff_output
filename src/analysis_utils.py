@@ -20,7 +20,12 @@ import xarray as xr
 import yaml
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-import plot_helper as ph
+from plot_helper import (
+    plot_training_loss,
+    plot_metrics,
+    plot_monthly_metrics,
+    plot_nyear_metrics,
+)
 
 
 def ensure_directory_exists(directory: Path, subdir: Optional[str] = None) -> Path:
@@ -64,7 +69,7 @@ def read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str,
     """Read `training_loss` from TensorBoard logs and save a plot."""
     log_dir = in_dir / f"tensorboard_{label}"
     wall_times, values = read_tensorboard_log(log_dir, max_duration=max_duration)
-    ph.plot_training_loss(wall_times, values, out_dir / f"training_loss_{label}.png")
+    plot_training_loss(wall_times, values, out_dir / f"training_loss_{label}.png")
 
 
 # -----------------------------------------------------------------------------
@@ -109,8 +114,8 @@ def save_metric_table_and_plot(
     filename = output_path / metric.lower()
     save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), number_format)
 
-    plot_fn = ph.plot_monthly_metrics if output_path.name.startswith("monthly") \
-                else ph.plot_nyear_metrics
+    plot_fn = plot_monthly_metrics if output_path.name.startswith("monthly") \
+                else plot_nyear_metrics
     plot_fn(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
 
@@ -124,7 +129,7 @@ def save_tables_and_plots(
     """Save summary TSVs and plots for mean / monthly / N-year grouped metrics."""
     filename = output_path / "metrics_mean"
     save_to_tsv(ds_mean, filename.with_suffix(".tsv"), number_format)
-    ph.plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
+    plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
     for metric in ["MAE", "RMSE", "CORR", "CRPS", "STD_DEV"]:
         save_metric_table_and_plot(
