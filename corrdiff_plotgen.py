@@ -46,7 +46,7 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     Returns:
         xr.Dataset: Computed metrics dataset.
     """
-    nc_path = in_dir / "netcdf" / f"output_0_{label}{"_masked" if masked else ""}.nc"
+    nc_path = in_dir / "netcdf" / f"output_0_{label}{'_masked' if masked else ''}.nc"
 
     # Score samples
     metrics, spatial_error, top_samples, flats, p90s = score_samples(nc_path, n_ensemble)
