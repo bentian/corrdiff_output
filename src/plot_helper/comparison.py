@@ -203,13 +203,12 @@ def _plot_metric_all_groups(
 
 
 def plot_metrics_cmp(df: pd.DataFrame, metrics: list[str],
-                     variables: list[str], folder_path: str) -> None:
-    """Create and save 2×2 mean-metric comparison figures (one per variable)."""
+                     variables: list[str], folder_path: Path) -> None:
+    """Create and save 2x2 mean-metric comparison figures (one per variable)."""
     if df.empty:
         print("No metrics found.")
         return
 
-    out_dir = Path(folder_path)
     grid = _metric_grid(metrics)
 
     for var in variables:
@@ -227,7 +226,7 @@ def plot_metrics_cmp(df: pd.DataFrame, metrics: list[str],
         fig.suptitle(f"Metric Mean Comparison ({var})", y=1.02)
         plt.tight_layout()
 
-        out_path = out_dir / f"{var}_mean_cmp.png"
+        out_path = folder_path / f"{var}_mean_cmp.png"
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
@@ -242,7 +241,7 @@ def _plot_nyear_metric(
     *,
     metric: str,
     variable: str,
-    label_mode: LabelMode = "all",
+    label_mode: LabelMode,
 ) -> None:
     """Plot year-bin metric curves for one metric/variable (optionally all/reg/both)."""
     sub_df = df.query("metric == @metric and variable == @variable")
@@ -258,35 +257,26 @@ def _plot_nyear_metric(
         .assign(exp_sort=lambda d: d["experiment"].map(experiment_sort_key))
         .sort_values(["group", "exp_sort"])
     )
-    exp_list = exp_df["experiment"].tolist()
 
     cmap = plt.get_cmap("tab10")
-    exp_color = {e: cmap(i % 10) for i, e in enumerate(exp_list)}
-    ls_map = {"all": "-", "reg": "--"}
+    exp_color = {e: cmap(i % 10) for i, e in enumerate(exp_df["experiment"].tolist())}
 
-    group_cols = ["experiment", "label"] if label_mode == "both" else ["experiment"]
-    for keys, part_df in sub_df.groupby(group_cols, sort=False):
-        if label_mode == "both":
-            exp_name, lab = keys
-            line_label = f"{exp_name} ({lab})"
-        else:
-            exp_name = keys if isinstance(keys, str) else keys[0]
-            lab = label_mode
-            line_label = exp_name
+    for keys, part_df in sub_df.groupby(["experiment", "label"], sort=False):
+        exp_name, lab = keys
 
         ordered = part_df.sort_values("year_bin")
         ax.plot(
             ordered["year_bin"].astype(str),
             ordered["value"].to_numpy(float),
-            linestyle=ls_map.get(lab, "-"),
-            label=line_label,
+            linestyle="--" if lab == "reg" else "-",
+            label=f"{exp_name} ({lab})",
             color=exp_color.get(exp_name),
             linewidth=1.8,
             marker="o",
             markersize=3.5,
         )
 
-    ax.set(title=metric, xlabel="year_bin", ylabel=metric)
+    ax.set(title=metric, xlabel="Decade", ylabel=metric)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
     _apply_ylim(ax, variable, metric)
 
@@ -295,15 +285,14 @@ def plot_nyear_metrics_cmp(
     df: pd.DataFrame,
     metrics: list[str],
     variables: list[str],
-    folder_path: str,
+    folder_path: Path,
     label_mode: LabelMode = "all",
 ) -> None:
-    """Create and save 2×2 year-bin comparison figures (one per variable)."""
+    """Create and save 2x2 year-bin comparison figures (one per variable)."""
     if df.empty:
         print("No nyear metrics found.")
         return
 
-    out_dir = Path(folder_path)
     grid = _metric_grid(metrics)
 
     for var in variables:
@@ -316,13 +305,13 @@ def plot_nyear_metrics_cmp(
 
         handles, labels = _first_legend(axes)
         if handles:
-            title = "Experiment (label)" if label_mode == "both" else "Experiment"
-            fig.legend(handles, labels, title=title, loc="center left", bbox_to_anchor=(1.01, 0.5))
+            fig.legend(handles, labels, title="Experiment (label)",
+                       loc="center left", bbox_to_anchor=(1.01, 0.5))
 
         fig.suptitle(f"Decadal Metric Comparison ({var})", y=1.02)
         plt.tight_layout()
 
-        out_path = out_dir / f"{var}_nyear_cmp.png"
+        out_path = folder_path / f"{var}_nyear_cmp.png"
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
