@@ -34,6 +34,7 @@ import pandas as pd
 from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sort_key
 
 # --- Config ---
+EXPERIMENTS_FOLDER = "../docs/experiments"
 VARS = ["prcp", "t2m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
 
@@ -235,6 +236,7 @@ def extract_nyear_metrics(folder_path: str,
 
 
 # Example usage
-exp_folder = "../docs/experiments"
-plot_metrics_cmp(extract_metrics(exp_folder), METRICS, VARS, exp_folder)
-plot_nyear_metrics_cmp(extract_nyear_metrics(exp_folder), METRICS, VARS, exp_folder)
+plot_metrics_cmp(extract_metrics(EXPERIMENTS_FOLDER),
+                 METRICS, VARS, EXPERIMENTS_FOLDER)
+plot_nyear_metrics_cmp(extract_nyear_metrics(EXPERIMENTS_FOLDER),
+                       METRICS, VARS, EXPERIMENTS_FOLDER)

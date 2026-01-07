@@ -92,6 +92,15 @@ def _metric_grid(metrics: list[str]) -> list[list[str]]:
     return [metrics[i:i + 2] for i in range(0, len(metrics), 2)]
 
 
+def _first_legend(axes: np.ndarray):
+    """Return the first non-empty (handles, labels) found in a grid of axes."""
+    for one_ax in axes.ravel():
+        axis_handles, axis_labels = one_ax.get_legend_handles_labels()
+        if axis_handles:
+            return axis_handles, axis_labels
+    return [], []
+
+
 def _apply_ylim(ax: plt.Axes, variable: str, metric: str) -> None:
     """
     Apply variable- and metric-specific y-axis limits to a subplot.
@@ -116,68 +125,77 @@ def _apply_ylim(ax: plt.Axes, variable: str, metric: str) -> None:
 # ----------------------------
 # mean
 # ----------------------------
-def _plot_metric_all_groups(ax: plt.Axes, df: pd.DataFrame, *,
-                            metric: str, variable: str, group_gap: float = 1.0) -> None:
+def _plot_metric_all_groups(
+    ax: plt.Axes,
+    df: pd.DataFrame,
+    *,
+    metric: str,
+    variable: str,
+    group_gap: float = 1.0,
+) -> None:
     """
     Plot mean metric values for all experiment groups in a single subplot.
-
-    The x-axis shows experiments ordered within each group, with visual gaps
-    separating groups. Bars compare ``all`` vs ``reg`` labels.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Target subplot axis.
-    df : pd.DataFrame
-        Long-form DataFrame produced by ``extract_metrics``.
-    metric : str
-        Metric to plot.
-    variable : str
-        Variable to plot.
-    group_gap : float, optional
-        Horizontal spacing between experiment groups (default: 1.0).
+    Bars compare ``all`` vs ``reg``; groups are separated by a visual gap.
     """
-    sub = df.query("metric == @metric and variable == @variable")
-    if sub.empty:
+    sub_df = df.query("metric == @metric and variable == @variable")
+    if sub_df.empty:
         ax.set_visible(False)
         return
 
-    wide = (
-        sub.pivot_table(index=["group", "experiment"], columns="label",
-                        values="value", aggfunc="mean")
-          .reset_index()
-          .assign(exp_sort=lambda d: d["experiment"].map(experiment_sort_key))
-          .sort_values(["group", "exp_sort"])
-          .drop(columns="exp_sort")
+    wide_df = (
+        sub_df.pivot_table(
+            index=["group", "experiment"],
+            columns="label",
+            values="value",
+            aggfunc="mean",
+        )
+        .reset_index()
+        .assign(exp_sort=lambda d: d["experiment"].map(experiment_sort_key))
+        .sort_values(["group", "exp_sort"])
+        .drop(columns="exp_sort")
     )
 
-    labels = [lab for lab in ("all", "reg") if lab in wide.columns]
-    if not labels:
+    label_list = [lab for lab in ("all", "reg") if lab in wide_df.columns]
+    if not label_list:
         ax.set_visible(False)
         return
 
-    sizes = wide.groupby("group", sort=False).size().to_numpy()
-    starts = np.r_[0.0, np.cumsum(sizes[:-1] + group_gap)]
-    x = np.concatenate([s + np.arange(n) for s, n in zip(starts, sizes)])
+    group_sizes = wide_df.groupby("group", sort=False).size().to_numpy()
+    group_starts = np.r_[0.0, np.cumsum(group_sizes[:-1] + group_gap)]
+    x_pos = np.concatenate([start + np.arange(n) for start, n in zip(group_starts, group_sizes)])
 
-    bar_w = 0.8 / len(labels)
-    colors = {"all": "tab:blue", "reg": "tab:olive"}
+    bar_w = 0.8 / len(label_list)
+    color_map = {"all": "tab:blue", "reg": "tab:olive"}
 
-    for i, lab in enumerate(labels):
-        ax.bar(x + i * bar_w, wide[lab].to_numpy(float), width=bar_w,
-               label=lab, color=colors.get(lab), edgecolor="black")
+    for i, lab in enumerate(label_list):
+        ax.bar(
+            x_pos + i * bar_w,
+            wide_df[lab].to_numpy(float),
+            width=bar_w,
+            label=lab,
+            color=color_map.get(lab),
+            edgecolor="black",
+        )
 
-    ax.set_xticks(x + bar_w * ((len(labels) / 2) - 0.5))
-    ax.set_xticklabels(wide["experiment"], rotation=45, ha="right")
+    ax.set_xticks(x_pos + bar_w * ((len(label_list) / 2) - 0.5))
+    ax.set_xticklabels(wide_df["experiment"], rotation=45, ha="right")
 
-    # separators + group labels
-    for b in (starts[1:] - group_gap / 2):
-        ax.axvline(b, linestyle="--", alpha=0.35)
+    for sep_x in (group_starts[1:] - group_gap / 2):
+        ax.axvline(sep_x, linestyle="--", alpha=0.35)
 
-    centers = starts + (sizes - 1) / 2
-    for grp, cx in zip(wide["group"].drop_duplicates().tolist(), centers):
-        ax.text(cx, 1.02, grp, transform=ax.get_xaxis_transform(),
-                ha="center", va="bottom", fontsize=11, fontweight="bold")
+    centers = group_starts + (group_sizes - 1) / 2
+    group_names = wide_df["group"].drop_duplicates().tolist()
+    for grp, cx in zip(group_names, centers):
+        ax.text(
+            cx,
+            1.02,
+            grp,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=11,
+            fontweight="bold",
+        )
 
     ax.set(title=metric, ylabel=metric)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
@@ -186,121 +204,83 @@ def _plot_metric_all_groups(ax: plt.Axes, df: pd.DataFrame, *,
 
 def plot_metrics_cmp(df: pd.DataFrame, metrics: list[str],
                      variables: list[str], folder_path: str) -> None:
-    """
-    Generate 2x2 mean-metric comparison plots for each variable.
-
-    For each variable, creates a figure with one subplot per metric and
-    saves it to disk. All experiment groups are shown in each subplot.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Output of ``extract_metrics``.
-    metrics : list[str]
-        Metrics to plot (expected length = 4).
-    variables : list[str]
-        Variables to plot (e.g. ``["prcp", "t2m"]``).
-    folder_path : str
-        Output directory for saved figures.
-    """
+    """Create and save 2×2 mean-metric comparison figures (one per variable)."""
     if df.empty:
         print("No metrics found.")
         return
 
-    folder = Path(folder_path)
+    out_dir = Path(folder_path)
+    grid = _metric_grid(metrics)
 
     for var in variables:
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
-        grid = _metric_grid(metrics)
 
         for r in range(2):
             for c in range(2):
-                _plot_metric_all_groups(
-                    axes[r, c],
-                    df,
-                    metric=grid[r][c],
-                    variable=var,
-                )
+                _plot_metric_all_groups(axes[r, c], df, metric=grid[r][c], variable=var)
 
-        # ---- shared legend (from first axis that has handles) ----
-        handles, labels = [], []
-        for ax in axes.ravel():
-            axis_handles, axis_labels = ax.get_legend_handles_labels()
-            if axis_handles:
-                handles, labels = axis_handles, axis_labels
-                break
-
+        handles, labels = _first_legend(axes)
         if handles:
-            fig.legend(
-                handles,
-                labels,
-                title="Label",
-                loc="center left",
-                bbox_to_anchor=(1.01, 0.5),
-            )
+            fig.legend(handles, labels, title="Label",
+                       loc="center left", bbox_to_anchor=(1.01, 0.5))
 
         fig.suptitle(f"Metric Mean Comparison ({var})", y=1.02)
         plt.tight_layout()
 
-        out = folder / f"{var}_mean_cmp.png"
-        plt.savefig(out, dpi=200, bbox_inches="tight")
+        out_path = out_dir / f"{var}_mean_cmp.png"
+        plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
-        print(f"Saved: {out}")
+        print(f"Saved: {out_path}")
 
 
 # ----------------------------
 # nyear
 # ----------------------------
-def _plot_nyear_metric(ax: plt.Axes, df: pd.DataFrame, *,
-                       metric: str, variable: str, label_mode: LabelMode = "all") -> None:
-    """
-    Plot decadal (year-bin) metric values for a single metric.
-
-    The x-axis shows ``year_bin`` and the y-axis shows metric values.
-    Lines compare experiments; ``all`` and ``reg`` may be distinguished
-    by linestyle depending on ``label_mode``.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Target subplot axis.
-    df : pd.DataFrame
-        Output of ``extract_nyear_metrics``.
-    metric : str
-        Metric to plot.
-    variable : str
-        Variable to plot.
-    label_mode : {"all", "reg", "both"}, optional
-        Which evaluation labels to include (default: ``"all"``).
-    """
-    sub = df.query("metric == @metric and variable == @variable")
+def _plot_nyear_metric(
+    ax: plt.Axes,
+    df: pd.DataFrame,
+    *,
+    metric: str,
+    variable: str,
+    label_mode: LabelMode = "all",
+) -> None:
+    """Plot year-bin metric curves for one metric/variable (optionally all/reg/both)."""
+    sub_df = df.query("metric == @metric and variable == @variable")
     if label_mode != "both":
-        sub = sub.query("label == @label_mode")
-    if sub.empty:
+        sub_df = sub_df.query("label == @label_mode")
+    if sub_df.empty:
         ax.set_visible(False)
         return
 
-    exps = (
-        sub[["group", "experiment"]]
+    exp_df = (
+        sub_df[["group", "experiment"]]
         .drop_duplicates()
         .assign(exp_sort=lambda d: d["experiment"].map(experiment_sort_key))
         .sort_values(["group", "exp_sort"])
-    )["experiment"].tolist()
+    )
+    exp_list = exp_df["experiment"].tolist()
 
     cmap = plt.get_cmap("tab10")
-    exp2color = {e: cmap(i % 10) for i, e in enumerate(exps)}
+    exp_color = {e: cmap(i % 10) for i, e in enumerate(exp_list)}
     ls_map = {"all": "-", "reg": "--"}
 
     group_cols = ["experiment", "label"] if label_mode == "both" else ["experiment"]
-    for keys, g in sub.groupby(group_cols, sort=False):
-        exp, lab = keys if label_mode == "both" else \
-            (keys if isinstance(keys, str) else keys[0], label_mode)
+    for keys, part_df in sub_df.groupby(group_cols, sort=False):
+        if label_mode == "both":
+            exp_name, lab = keys
+            line_label = f"{exp_name} ({lab})"
+        else:
+            exp_name = keys if isinstance(keys, str) else keys[0]
+            lab = label_mode
+            line_label = exp_name
+
+        ordered = part_df.sort_values("year_bin")
         ax.plot(
-            g.sort_values("year_bin")["year_bin"].astype(str),
-            g.sort_values("year_bin")["value"].to_numpy(float),
+            ordered["year_bin"].astype(str),
+            ordered["value"].to_numpy(float),
             linestyle=ls_map.get(lab, "-"),
-            label=f"{exp} ({lab})" if label_mode == "both" else exp,
-            color=exp2color.get(exp),
+            label=line_label,
+            color=exp_color.get(exp_name),
             linewidth=1.8,
             marker="o",
             markersize=3.5,
@@ -311,34 +291,22 @@ def _plot_nyear_metric(ax: plt.Axes, df: pd.DataFrame, *,
     _apply_ylim(ax, variable, metric)
 
 
-def plot_nyear_metrics_cmp(df: pd.DataFrame, metrics: list[str], variables: list[str],
-                           folder_path: str, label_mode: LabelMode = "all") -> None:
-    """
-    Generate 2x2 decadal-metric comparison plots for each variable.
-
-    For each variable, creates a figure with one subplot per metric,
-    plotting metric values across year bins and experiments.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Output of ``extract_nyear_metrics``.
-    metrics : list[str]
-        Metrics to plot (expected length = 4).
-    variables : list[str]
-        Variables to plot.
-    folder_path : str
-        Output directory for saved figures.
-    label_mode : {"all", "reg", "both"}, optional
-        Which evaluation labels to include in the plots.
-    """
+def plot_nyear_metrics_cmp(
+    df: pd.DataFrame,
+    metrics: list[str],
+    variables: list[str],
+    folder_path: str,
+    label_mode: LabelMode = "all",
+) -> None:
+    """Create and save 2×2 year-bin comparison figures (one per variable)."""
     if df.empty:
         print("No nyear metrics found.")
         return
 
-    folder = Path(folder_path)
+    out_dir = Path(folder_path)
+    grid = _metric_grid(metrics)
+
     for var in variables:
-        grid = _metric_grid(metrics)
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
 
         for r in range(2):
@@ -346,22 +314,15 @@ def plot_nyear_metrics_cmp(df: pd.DataFrame, metrics: list[str], variables: list
                 _plot_nyear_metric(axes[r, c], df, metric=grid[r][c],
                                    variable=var, label_mode=label_mode)
 
-        # one shared legend (pull from first visible axis)
-        handles, labels = [], []
-        for ax in axes.ravel():
-            axis_handles, axis_labels = ax.get_legend_handles_labels()
-            if axis_handles:
-                handles, labels = axis_handles, axis_labels
-                break
-
+        handles, labels = _first_legend(axes)
         if handles:
-            fig.legend(handles, labels,
-                       title="Experiment (label)" if label_mode == "both" else "Experiment",
-                       loc="center left", bbox_to_anchor=(1.01, 0.5))
+            title = "Experiment (label)" if label_mode == "both" else "Experiment"
+            fig.legend(handles, labels, title=title, loc="center left", bbox_to_anchor=(1.01, 0.5))
 
         fig.suptitle(f"Decadal Metric Comparison ({var})", y=1.02)
         plt.tight_layout()
-        out = folder / f"{var}_nyear_cmp.png"
-        plt.savefig(out, dpi=200, bbox_inches="tight")
+
+        out_path = out_dir / f"{var}_nyear_cmp.png"
+        plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
-        print(f"Saved: {out}")
+        print(f"Saved: {out_path}")
