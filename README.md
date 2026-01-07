@@ -6,7 +6,9 @@ This project provides a set of tools to generate CorrDiff experiment results by 
 - Generating visual plots for model evaluation
 - Exporting processed data into tables
 
-![image](graphic/infograph.png)
+![image](graphic/workflow.png)
+
+More information can be found in [intro deck](graphic/intro_deck.pdf).
 
 # 📦 Installation
 
