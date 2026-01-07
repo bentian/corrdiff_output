@@ -76,29 +76,55 @@ def experiment_sort_key(exp: str) -> tuple[int, int, int, str]:
 
 
 def _metric_grid(metrics: list[str]) -> list[list[str]]:
-    """
-    Arrange a flat list of metrics into a 2x2 grid layout.
-
-    Parameters
-    ----------
-    metrics : list[str]
-        List of metric names (expected length = 4).
-
-    Returns
-    -------
-    list[list[str]]
-        Metrics arranged row-wise for 2x2 subplot indexing.
-    """
+    """Arrange a flat list of metrics into a 2x2 grid layout."""
     return [metrics[i:i + 2] for i in range(0, len(metrics), 2)]
 
 
-def _first_legend(axes: np.ndarray):
-    """Return the first non-empty (handles, labels) found in a grid of axes."""
-    for one_ax in axes.ravel():
-        axis_handles, axis_labels = one_ax.get_legend_handles_labels()
-        if axis_handles:
-            return axis_handles, axis_labels
-    return [], []
+def _mean_wide(df: pd.DataFrame, metric: str, variable: str) -> pd.DataFrame:
+    """Filter long df and pivot to wide (group/experiment index, label columns)."""
+    sub = df.query("metric == @metric and variable == @variable")
+    if sub.empty:
+        return sub
+
+    return (
+        sub.pivot_table(index=["group", "experiment"], columns="label",
+                        values="value", aggfunc="mean")
+        .reset_index()
+        .assign(_s=lambda d: d["experiment"].map(experiment_sort_key))
+        .sort_values(["group", "_s"])
+        .drop(columns="_s")
+    )
+
+
+def _bar_positions(wide: pd.DataFrame, group_gap: float
+                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute x positions, group start positions, and group sizes (in row order)."""
+    sizes = wide.groupby("group", sort=False).size().to_numpy()
+    starts = np.r_[0.0, np.cumsum(sizes[:-1] + group_gap)]
+    x = np.concatenate([st + np.arange(n) for st, n in zip(starts, sizes)])
+    return x, starts, sizes
+
+
+def _draw_group_labels(ax: plt.Axes, wide: pd.DataFrame,
+                       starts: np.ndarray, sizes: np.ndarray) -> None:
+    """Draw vertical separators and group labels."""
+    centers = starts + (sizes - 1) / 2
+    groups = wide["group"].drop_duplicates().tolist()
+
+    for sep in starts[1:]:
+        ax.axvline(sep, linestyle="--", alpha=0.35)
+
+    for grp, cx in zip(groups, centers):
+        ax.text(
+            cx,
+            1.02,
+            grp,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=11,
+            fontweight="bold",
+        )
 
 
 def _apply_ylim(ax: plt.Axes, variable: str, metric: str) -> None:
@@ -122,6 +148,15 @@ def _apply_ylim(ax: plt.Axes, variable: str, metric: str) -> None:
         ax.set_ylim(bottom=ylim[0], top=ylim[1])
 
 
+def _first_legend(axes: np.ndarray):
+    """Return the first non-empty (handles, labels) found in a grid of axes."""
+    for one_ax in axes.ravel():
+        axis_handles, axis_labels = one_ax.get_legend_handles_labels()
+        if axis_handles:
+            return axis_handles, axis_labels
+    return [], []
+
+
 # ----------------------------
 # mean
 # ----------------------------
@@ -137,68 +172,43 @@ def _plot_metric_all_groups(
     Plot mean metric values for all experiment groups in a single subplot.
     Bars compare ``all`` vs ``reg``; groups are separated by a visual gap.
     """
-    sub_df = df.query("metric == @metric and variable == @variable")
-    if sub_df.empty:
+    mean_wide = _mean_wide(df, metric, variable)
+    if mean_wide.empty:
         ax.set_visible(False)
         return
 
-    wide_df = (
-        sub_df.pivot_table(
-            index=["group", "experiment"],
-            columns="label",
-            values="value",
-            aggfunc="mean",
-        )
-        .reset_index()
-        .assign(exp_sort=lambda d: d["experiment"].map(experiment_sort_key))
-        .sort_values(["group", "exp_sort"])
-        .drop(columns="exp_sort")
-    )
-
-    label_list = [lab for lab in ("all", "reg") if lab in wide_df.columns]
+    label_list = [lab for lab in ("all", "reg") if lab in mean_wide.columns]
     if not label_list:
         ax.set_visible(False)
         return
 
-    group_sizes = wide_df.groupby("group", sort=False).size().to_numpy()
-    group_starts = np.r_[0.0, np.cumsum(group_sizes[:-1] + group_gap)]
-    x_pos = np.concatenate([start + np.arange(n) for start, n in zip(group_starts, group_sizes)])
-
+    x_pos, group_starts, group_sizes = _bar_positions(mean_wide, group_gap)
     bar_w = 0.8 / len(label_list)
     color_map = {"all": "tab:blue", "reg": "tab:olive"}
 
+    # bars
     for i, lab in enumerate(label_list):
         ax.bar(
             x_pos + i * bar_w,
-            wide_df[lab].to_numpy(float),
+            mean_wide[lab].to_numpy(float),
             width=bar_w,
             label=lab,
             color=color_map.get(lab),
             edgecolor="black",
         )
 
+    # xtick labels (e.g., "W1-1a")
     ax.set_xticks(x_pos + bar_w * ((len(label_list) / 2) - 0.5))
-    ax.set_xticklabels(wide_df["experiment"], rotation=45, ha="right")
+    ax.set_xticklabels(mean_wide["experiment"], rotation=45, ha="right")
 
-    for sep_x in (group_starts[1:] - group_gap / 2):
-        ax.axvline(sep_x, linestyle="--", alpha=0.35)
+    # separators + group labels (e.g., "W1")
+    _draw_group_labels(ax, mean_wide, group_starts, group_sizes)
 
-    centers = group_starts + (group_sizes - 1) / 2
-    group_names = wide_df["group"].drop_duplicates().tolist()
-    for grp, cx in zip(group_names, centers):
-        ax.text(
-            cx,
-            1.02,
-            grp,
-            transform=ax.get_xaxis_transform(),
-            ha="center",
-            va="bottom",
-            fontsize=11,
-            fontweight="bold",
-        )
-
+    # title, labels, and grid
     ax.set(title=metric, ylabel=metric)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
+
+    # ylimits
     _apply_ylim(ax, variable, metric)
 
 
