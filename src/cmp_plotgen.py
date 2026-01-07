@@ -144,16 +144,14 @@ def extract_metrics(folder_path: str) -> pd.DataFrame:
             df = pd.read_csv(f, sep="\t", index_col=0)
             for metric in df.index.intersection(METRICS):
                 for var in df.columns.intersection(VARS):
-                    rows.append(
-                        dict(
-                            group=group,
-                            experiment=exp_base,
-                            label=label,
-                            metric=metric,
-                            variable=var,
-                            value=float(df.loc[metric, var]),
-                        )
-                    )
+                    rows.append({
+                        "group": group,
+                        "experiment": exp_base,
+                        "label": label,
+                        "metric": metric,
+                        "variable": var,
+                        "value": float(df.loc[metric, var])
+                    })
 
     return _finalize_sort(pd.DataFrame(rows), ["label"])
 
@@ -237,6 +235,6 @@ def extract_nyear_metrics(folder_path: str,
 
 
 # Example usage
-root = "../docs/experiments"
-plot_metrics_cmp(extract_metrics(root), METRICS, VARS, root)
-plot_nyear_metrics_cmp(extract_nyear_metrics(root), METRICS, VARS, root)
+exp_folder = "../docs/experiments"
+plot_metrics_cmp(extract_metrics(exp_folder), METRICS, VARS, exp_folder)
+plot_nyear_metrics_cmp(extract_nyear_metrics(exp_folder), METRICS, VARS, exp_folder)
