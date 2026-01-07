@@ -82,7 +82,7 @@ def _metric_grid(metrics: list[str]) -> list[list[str]]:
 
 def _mean_wide(df: pd.DataFrame, metric: str, variable: str) -> pd.DataFrame:
     """Filter long df and pivot to wide (group/experiment index, label columns)."""
-    sub = df.query("metric == @metric and variable == @variable")
+    sub = df[(df["metric"] == metric) & (df["variable"] == variable)]
     if sub.empty:
         return sub
 
@@ -128,21 +128,7 @@ def _draw_group_labels(ax: plt.Axes, wide: pd.DataFrame,
 
 
 def _apply_ylim(ax: plt.Axes, variable: str, metric: str) -> None:
-    """
-    Apply variable- and metric-specific y-axis limits to a subplot.
-
-    Limits are read from the global ``Y_LIMITS`` configuration.
-    If no limits are defined, the axis is left unchanged.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Target subplot axis.
-    variable : str
-        Variable name (e.g. ``"prcp"``, ``"t2m"``).
-    metric : str
-        Metric name (e.g. ``"RMSE"``, ``"CRPS"``).
-    """
+    """Apply variable- and metric-specific y-axis limits to a subplot."""
     ylim = Y_LIMITS.get(variable, {}).get(metric)
     if ylim:
         ax.set_ylim(bottom=ylim[0], top=ylim[1])
@@ -254,9 +240,9 @@ def _plot_nyear_metric(
     label_mode: LabelMode,
 ) -> None:
     """Plot year-bin metric curves for one metric/variable (optionally all/reg/both)."""
-    sub_df = df.query("metric == @metric and variable == @variable")
+    sub_df = df[(df["metric"] == metric) & (df["variable"] == variable)]
     if label_mode != "both":
-        sub_df = sub_df.query("label == @label_mode")
+        sub_df = sub_df[sub_df["label"] == label_mode]
     if sub_df.empty:
         ax.set_visible(False)
         return
