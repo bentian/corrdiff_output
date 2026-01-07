@@ -95,6 +95,6 @@ The script produces:
   - PDF distributions for variables.
   - Monthly and decadal error visualizations.
 `
-## 🔹 `cmp_plotgen.py` - Created Plot for Metrics Comparison among Experiments
+## 🔹 `cmp_plotgen.py` - Compares Metrics among Experiments
   - Bar charts for metrics among experiments.
   - Line charts for decadal metrics among experiments.
