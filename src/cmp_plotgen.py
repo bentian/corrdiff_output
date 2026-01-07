@@ -235,6 +235,16 @@ def extract_nyear_metrics(folder_path: str,
     return _finalize_sort(out, ["experiment", "label", "metric", "variable", "year_bin"])
 
 
-# Example usage
-plot_metrics_cmp(extract_metrics(EXP_FOLDER_PATH), METRICS, VARS, EXP_FOLDER_PATH)
-plot_nyear_metrics_cmp(extract_nyear_metrics(EXP_FOLDER_PATH), METRICS, VARS, EXP_FOLDER_PATH)
+def main():
+    """
+    Main function to extract metrics from experiment directories and generate comparison plots.
+    """
+    metrics_df = extract_metrics(EXP_FOLDER_PATH)
+    plot_metrics_cmp(metrics_df, METRICS, VARS, EXP_FOLDER_PATH)
+
+    nyear_metrics_df = extract_nyear_metrics(EXP_FOLDER_PATH)
+    plot_nyear_metrics_cmp(nyear_metrics_df, METRICS, VARS, EXP_FOLDER_PATH)
+
+
+if __name__ == "__main__":
+    main()
