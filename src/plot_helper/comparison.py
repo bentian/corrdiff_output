@@ -35,13 +35,13 @@ Y_LIMITS = {
         "RMSE": (10.0, None),  # e.g. (0.0, 8.0)
         "MAE":  (4.5, None),   # e.g. (0.0, 4.0)
         "CRPS": (4.5, None),   # e.g. (0.0, 4.0)
-        "CORR": (0.25, 0.5),   # correlations benefit most from tight limits
+        "CORR": (0.1, 0.5),    # correlations benefit most from tight limits
     },
     "t2m": {
         "RMSE": (0.8, None),
         "MAE":  (0.5, None),
         "CRPS": (0.5, None),
-        "CORR": (0.95, 1.0),
+        "CORR": (0.9, 1.0),
     }
 }
 LabelMode = Literal["all", "reg", "both"]  # both = plot all+reg
@@ -188,7 +188,7 @@ def _plot_metric_all_groups(
     ax.set_xticklabels(mean_wide["experiment"], rotation=45, ha="right")
 
     # separators + group labels (e.g., "W1")
-    _draw_group_labels(ax, mean_wide, group_starts, group_sizes)
+    # _draw_group_labels(ax, mean_wide, group_starts, group_sizes)
 
     # title, labels, and grid
     ax.set(title=metric, ylabel=metric)
@@ -282,7 +282,7 @@ def plot_nyear_metrics_cmp(
     metrics: list[str],
     variables: list[str],
     folder_path: Path,
-    label_mode: LabelMode = "all",
+    label_mode: LabelMode = "both",
 ) -> None:
     """Create and save 2x2 year-bin comparison figures (one per variable)."""
     if df.empty:

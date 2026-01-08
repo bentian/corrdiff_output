@@ -68,7 +68,7 @@ def _iter_experiments(folder_path: str):
         Path object for each valid experiment directory.
     """
     for exp_dir in Path(folder_path).iterdir():
-        if exp_dir.is_dir() and not exp_dir.name.startswith("BL"):
+        if exp_dir.is_dir() and not exp_dir.name.startswith(("BL", "_")):
             yield exp_dir
 
 
@@ -240,10 +240,10 @@ def main():
     Main function to extract metrics from experiment directories and generate comparison plots.
     """
     metrics_df = extract_metrics(EXP_FOLDER_PATH)
-    plot_metrics_cmp(metrics_df, METRICS, VARS, EXP_FOLDER_PATH)
+    plot_metrics_cmp(metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp")
 
     nyear_metrics_df = extract_nyear_metrics(EXP_FOLDER_PATH)
-    plot_nyear_metrics_cmp(nyear_metrics_df, METRICS, VARS, EXP_FOLDER_PATH)
+    plot_nyear_metrics_cmp(nyear_metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp")
 
 
 if __name__ == "__main__":
