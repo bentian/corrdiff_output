@@ -125,7 +125,7 @@ def _draw_group_labels(ax: plt.Axes, wide: pd.DataFrame,
             va="top",
             fontsize=11,
             fontweight="bold",
-            bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1.5),
+            bbox={"facecolor": 'white', "edgecolor": 'none', "alpha": 0.7, "pad": 1.5},
         )
 
 
