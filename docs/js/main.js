@@ -1,4 +1,4 @@
-import { fetchExperimentKeys } from "./util.js";
+import { fetchExperimentKeys, initializeLightbox } from "./util.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     await loadExperiments();
@@ -6,6 +6,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Handle form submissions
     document.getElementById("comparison-form")?.addEventListener("submit", handleComparisonSubmit);
     document.getElementById("summary-form")?.addEventListener("submit", handleSummarySubmit);
+
+    // Lightbox for aggregated plots
+    initializeLightbox();
 });
 
 /**

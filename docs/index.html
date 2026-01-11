@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CorrDiff Experiments</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/render.css">
 </head>
 <body>
     <div class="container">
@@ -35,6 +36,44 @@
                 <button type="submit" class="btn">Compare</button>
             </form>
         </div>
+
+        <!-- Aggregated comparison plots (generated under docs/experiments/_cmp) -->
+        <div id="cmp-container">
+            <h2>Aggregated Comparison Plots</h2>
+            <div id="cmp-output" class="render-row">
+                <img class="render-plot"
+                     src="experiments/_cmp/prcp_mean_cmp.png"
+                     alt="PRCP mean comparison plot"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.className='fallback-plot';
+                              this.src='./no_plot_table_available.png';">
+                <img class="render-plot"
+                     src="experiments/_cmp/t2m_mean_cmp.png"
+                     alt="T2M mean comparison plot"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.className='fallback-plot';
+                              this.src='./no_plot_table_available.png';">
+                <img class="render-plot"
+                     src="experiments/_cmp/prcp_nyear_cmp.png"
+                     alt="PRCP year-bin comparison plot"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.className='fallback-plot';
+                              this.src='./no_plot_table_available.png';">
+                <img class="render-plot"
+                     src="experiments/_cmp/t2m_nyear_cmp.png"
+                     alt="T2M year-bin comparison plot"
+                     loading="lazy"
+                     onerror="this.onerror=null; this.className='fallback-plot';
+                              this.src='./no_plot_table_available.png';">
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lightbox for Enlarged Images -->
+    <div id="lightbox" class="lightbox">
+        <span id="close-lightbox" class="close-lightbox">&times;</span>
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Enlarged Plot">
     </div>
 
     <script type="module" src="js/main.js"></script>
