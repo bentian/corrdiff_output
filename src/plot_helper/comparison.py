@@ -107,23 +107,25 @@ def _bar_positions(wide: pd.DataFrame, group_gap: float
 
 def _draw_group_labels(ax: plt.Axes, wide: pd.DataFrame,
                        starts: np.ndarray, sizes: np.ndarray) -> None:
-    """Draw vertical separators and group labels."""
+    """Draw vertical separators and group labels without overlapping the title."""
     centers = starts + (sizes - 1) / 2
     groups = wide["group"].drop_duplicates().tolist()
 
     for sep in starts[1:]:
         ax.axvline(sep, linestyle="--", alpha=0.35)
 
+    # Place group labels INSIDE the axes (avoids title overlap)
     for grp, cx in zip(groups, centers):
         ax.text(
             cx,
-            1.02,
+            0.97,  # inside axes; tweak 0.95~0.99 as needed
             grp,
             transform=ax.get_xaxis_transform(),
             ha="center",
-            va="bottom",
+            va="top",
             fontsize=11,
             fontweight="bold",
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1.5),
         )
 
 
@@ -188,7 +190,7 @@ def _plot_metric_all_groups(
     ax.set_xticklabels(mean_wide["experiment"], rotation=45, ha="right")
 
     # separators + group labels (e.g., "W1")
-    # _draw_group_labels(ax, mean_wide, group_starts, group_sizes)
+    _draw_group_labels(ax, mean_wide, group_starts, group_sizes)
 
     # title, labels, and grid
     ax.set(title=metric, ylabel=metric)
