@@ -170,7 +170,7 @@ def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
                     f"Prediction p90 ({label})",
                     f"Prediction - Truth ({label})",
                 ],
-                COLOR_MAPS[var_index]
+                "plasma_r"  # error
             )
 
         plt.tight_layout()
