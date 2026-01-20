@@ -164,11 +164,11 @@ def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
             # Generate plot for each period
             _plot_sample_images(
                 axes, i,
-                [t2d, p2d, np.abs(p2d - t2d)],  # images
+                [t2d, p2d, p2d - t2d],  # images
                 [   # titles
                     f"Truth p90 ({label})",
                     f"Prediction p90 ({label})",
-                    f"|Prediction - Truth| ({label})",
+                    f"Prediction - Truth ({label})",
                 ],
                 COLOR_MAPS[var_index]
             )
