@@ -151,7 +151,7 @@ def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
     periods = truth_p90[period_dim].values
     n_rows = len(periods)
 
-    for var_index, var in enumerate(truth_p90.data_vars):
+    for _, var in enumerate(truth_p90.data_vars):
         fig, axes = plt.subplots(n_rows, 3, figsize=(12, 4 * n_rows))
         if n_rows == 1:
             axes = np.array([axes])  # shape -> (1, 3)
