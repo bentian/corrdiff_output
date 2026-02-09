@@ -51,7 +51,7 @@ def _plot_sample_images(
         - Three side-by-side plots for:
             1. **Truth** - Ground truth values.
             2. **Prediction** - Model predictions.
-            3. **Error** - Absolute or squared error, depending on the metric.
+            3. **Error** - Error between truth and prediction, depending on the metric.
 
     Notes:
         - Uses "viridis_r" colormap for truth and prediction.
@@ -66,6 +66,7 @@ def _plot_sample_images(
         im = axes[index, j].imshow(images[j], cmap="viridis_r", aspect="auto", origin="lower",
                                    vmin=vmin, vmax=vmax) if j < 2 else \
              axes[index, j].imshow(images[j], cmap=error_cmap, aspect="auto", origin="lower")
+
         axes[index, j].set_title(title)
         axes[index, j].axis("off")
         plt.colorbar(im, ax=axes[index, j])
@@ -91,7 +92,7 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
 
     Output:
     - Saves images for each variable in the format:
-        {output_path}/{variable}/top_samples_{metric}.png
+        {output_path}/{var}/top_samples_{metric}.png
     - Each row in the plot represents a different time step, with three columns:
         1. **Truth** - Ground truth values.
         2. **Prediction** - Model predictions.
@@ -132,7 +133,7 @@ def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
                       output_path: Path, period_dim: str = "period") -> None:
     """
     Plot p90 maps by period. For each variable, save one figure where each row is a period and
-    columns are: (1) truth p90, (2) pred p90, (3) |pred - truth|.
+    columns are: (1) truth p90, (2) pred p90, (3) pred p90 - truth p90.
 
     Parameters
     ----------
