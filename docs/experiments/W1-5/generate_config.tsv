@@ -1,6 +1,6 @@
 	0
 dataset.type	cwb
-dataset.data_path	/raid/bentian/tutorial/corrdiff_cwa/../datasets/merged_historical_ssp585_80.zarr
+dataset.data_path	/raid/bentian/ssp/corrdiff_cwa/../datasets/merged_ssp585_15-80.zarr
 dataset.in_channels	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 dataset.out_channels	[0, 1, 2, 3]
 dataset.img_shape_x	208
@@ -31,5 +31,5 @@ generation.times
 generation.perf.force_fp16	False
 generation.perf.use_torch_compile	False
 generation.perf.num_writer_workers	1
-generation.io.res_ckpt_filename	/raid/bentian/tutorial/corrdiff_cwa/outputs_W1/reg_1n_w8_amp/checkpoints_diffusion/EDMPrecondSR.0.14000128.mdlus
-generation.io.reg_ckpt_filename	/raid/bentian/tutorial/corrdiff_cwa/outputs_W1/reg_1n_w8_amp/checkpoints_regression/UNet.0.14000128.mdlus
+generation.io.res_ckpt_filename	/raid/bentian/ssp/corrdiff_cwa/outputs_W1/reg_1n_w8_amp/checkpoints_diffusion/EDMPrecondSR.0.14000128.mdlus
+generation.io.reg_ckpt_filename	/raid/bentian/ssp/corrdiff_cwa/outputs_W1/reg_1n_w8_amp/checkpoints_regression/UNet.0.14000128.mdlus
