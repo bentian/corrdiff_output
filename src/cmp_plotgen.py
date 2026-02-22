@@ -25,6 +25,7 @@ Typical usage:
 This module does not perform plotting itself; it focuses on data extraction
 and ordering.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -37,6 +38,7 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sor
 EXP_FOLDER_PATH = Path("../docs/experiments")
 VARS = ["prcp", "t2m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
+
 
 # ----------------------------
 # helpers
@@ -68,7 +70,11 @@ def _iter_experiments(folder_path: str):
         Path object for each valid experiment directory.
     """
     for exp_dir in Path(folder_path).iterdir():
-        if exp_dir.is_dir() and not exp_dir.name.startswith(("BL", "_")):
+        if (
+            exp_dir.is_dir()
+            and exp_dir.name.endswith("_ens16")
+            and not exp_dir.name.startswith(("BL", "_"))
+        ):
             yield exp_dir
 
 
@@ -145,20 +151,23 @@ def extract_metrics(folder_path: str) -> pd.DataFrame:
             df = pd.read_csv(f, sep="\t", index_col=0)
             for metric in df.index.intersection(METRICS):
                 for var in df.columns.intersection(VARS):
-                    rows.append({
-                        "group": group,
-                        "experiment": exp_base,
-                        "label": label,
-                        "metric": metric,
-                        "variable": var,
-                        "value": float(df.loc[metric, var])
-                    })
+                    rows.append(
+                        {
+                            "group": group,
+                            "experiment": exp_base,
+                            "label": label,
+                            "metric": metric,
+                            "variable": var,
+                            "value": float(df.loc[metric, var]),
+                        }
+                    )
 
     return _finalize_sort(pd.DataFrame(rows), ["label"])
 
 
-def extract_nyear_metrics(folder_path: str,
-                          labels: Sequence[str] = ("all", "reg")) -> pd.DataFrame:
+def extract_nyear_metrics(
+    folder_path: str, labels: Sequence[str] = ("all", "reg")
+) -> pd.DataFrame:
     """
     Extract per-year-bin (decadal) metrics from experiment folders.
 
@@ -219,9 +228,17 @@ def extract_nyear_metrics(folder_path: str,
                 long["value"] = long["value"].astype(float)
 
                 rows.extend(
-                    long[["group", "experiment", "label", "metric",
-                          "year_bin", "variable", "value"]]
-                    .to_dict("records")
+                    long[
+                        [
+                            "group",
+                            "experiment",
+                            "label",
+                            "metric",
+                            "year_bin",
+                            "variable",
+                            "value",
+                        ]
+                    ].to_dict("records")
                 )
 
     out = pd.DataFrame(rows)
@@ -230,9 +247,13 @@ def extract_nyear_metrics(folder_path: str,
 
     # keep year_bin in first-seen order
     year_order = pd.unique(out["year_bin"])
-    out["year_bin"] = pd.Categorical(out["year_bin"], categories=year_order, ordered=True)
+    out["year_bin"] = pd.Categorical(
+        out["year_bin"], categories=year_order, ordered=True
+    )
 
-    return _finalize_sort(out, ["experiment", "label", "metric", "variable", "year_bin"])
+    return _finalize_sort(
+        out, ["experiment", "label", "metric", "variable", "year_bin"]
+    )
 
 
 def main():
