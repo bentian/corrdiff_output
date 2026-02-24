@@ -238,8 +238,10 @@ def plot_metrics_cmp(
                 bbox_to_anchor=(1.01, 0.5),
             )
 
-        prefix = f"[{title_tag}]" if title_tag else ""
-        fig.suptitle(f"{prefix} Metric Mean Comparison ({var})", y=1.02)
+        fig.suptitle(
+            f"{[{title_tag}] if title_tag else ''} Metric Mean Comparison ({var})",
+            y=1.02,
+        )
         plt.tight_layout()
 
         out_path = folder_path / f"{var}_mean_cmp.png"
@@ -303,7 +305,6 @@ def plot_nyear_metrics_cmp(
     variables: list[str],
     folder_path: Path,
     title_tag: str = "",
-    label_mode: LabelMode = "both",
 ) -> None:
     """Create and save 2x2 year-bin comparison figures (one per variable)."""
     if df.empty:
@@ -322,21 +323,22 @@ def plot_nyear_metrics_cmp(
                     df,
                     metric=grid[r][c],
                     variable=var,
-                    label_mode=label_mode,
+                    label_mode="both",
                 )
 
-        handles, labels = _first_legend(axes)
-        if handles:
+        if (hl := _first_legend(axes))[0]:
             fig.legend(
-                handles,
-                labels,
+                *hl,
                 title="Experiment (label)",
                 loc="center left",
                 bbox_to_anchor=(1.01, 0.5),
             )
 
-        prefix = f"[{title_tag}]" if title_tag else ""
-        fig.suptitle(f"{prefix} Decadal Metric Comparison ({var})", y=1.02)
+        fig.suptitle(
+            f"{f'[{title_tag}] ' if title_tag else ''}"
+            f"Decadal Metric Comparison ({var})",
+            y=1.02,
+        )
         plt.tight_layout()
 
         out_path = folder_path / f"{var}_nyear_cmp.png"
