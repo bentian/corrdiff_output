@@ -228,18 +228,17 @@ def plot_metrics_cmp(
             for c in range(2):
                 _plot_metric_all_groups(axes[r, c], df, metric=grid[r][c], variable=var)
 
-        handles, labels = _first_legend(axes)
-        if handles:
+        if (hl := _first_legend(axes))[0]:
             fig.legend(
-                handles,
-                labels,
+                *hl,
                 title="Label",
                 loc="center left",
                 bbox_to_anchor=(1.01, 0.5),
             )
 
+        prefix = f"[{title_tag}] " if title_tag else ""
         fig.suptitle(
-            f"{[{title_tag}] if title_tag else ''} Metric Mean Comparison ({var})",
+            f"{prefix} Metric Mean Comparison ({var})",
             y=1.02,
         )
         plt.tight_layout()
@@ -334,9 +333,9 @@ def plot_nyear_metrics_cmp(
                 bbox_to_anchor=(1.01, 0.5),
             )
 
+        prefix = f"[{title_tag}] " if title_tag else ""
         fig.suptitle(
-            f"{f'[{title_tag}] ' if title_tag else ''}"
-            f"Decadal Metric Comparison ({var})",
+            f"{prefix} Decadal Metric Comparison ({var})",
             y=1.02,
         )
         plt.tight_layout()
