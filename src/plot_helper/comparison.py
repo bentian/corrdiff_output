@@ -208,7 +208,11 @@ def _plot_metric_all_groups(
 
 
 def plot_metrics_cmp(
-    df: pd.DataFrame, metrics: list[str], variables: list[str], folder_path: Path
+    df: pd.DataFrame,
+    metrics: list[str],
+    variables: list[str],
+    folder_path: Path,
+    title_tag: str = "",
 ) -> None:
     """Create and save 2x2 mean-metric comparison figures (one per variable)."""
     if df.empty:
@@ -234,7 +238,8 @@ def plot_metrics_cmp(
                 bbox_to_anchor=(1.01, 0.5),
             )
 
-        fig.suptitle(f"[ensemble=16] Metric Mean Comparison ({var})", y=1.02)
+        prefix = f"[{title_tag}]" if title_tag else ""
+        fig.suptitle(f"{prefix} Metric Mean Comparison ({var})", y=1.02)
         plt.tight_layout()
 
         out_path = folder_path / f"{var}_mean_cmp.png"
@@ -297,6 +302,7 @@ def plot_nyear_metrics_cmp(
     metrics: list[str],
     variables: list[str],
     folder_path: Path,
+    title_tag: str = "",
     label_mode: LabelMode = "both",
 ) -> None:
     """Create and save 2x2 year-bin comparison figures (one per variable)."""
@@ -329,7 +335,8 @@ def plot_nyear_metrics_cmp(
                 bbox_to_anchor=(1.01, 0.5),
             )
 
-        fig.suptitle(f"[ensemble=16] Decadal Metric Comparison ({var})", y=1.02)
+        prefix = f"[{title_tag}]" if title_tag else ""
+        fig.suptitle(f"{prefix} Decadal Metric Comparison ({var})", y=1.02)
         plt.tight_layout()
 
         out_path = folder_path / f"{var}_nyear_cmp.png"

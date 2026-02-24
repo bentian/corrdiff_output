@@ -35,7 +35,8 @@ import pandas as pd
 from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sort_key
 
 # --- Config ---
-EXP_FOLDER_PATH = Path("../docs/experiments")
+EXP_FOLDER_PATH = Path("../docs/experiments/ens8_75-80")
+TITLE_TAG = "W1-1a_2075-2080_ensemble=8"
 VARS = ["prcp", "t2m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
 
@@ -70,11 +71,7 @@ def _iter_experiments(folder_path: str):
         Path object for each valid experiment directory.
     """
     for exp_dir in Path(folder_path).iterdir():
-        if (
-            exp_dir.is_dir()
-            and exp_dir.name.endswith("_ens16")
-            and not exp_dir.name.startswith(("BL", "_"))
-        ):
+        if exp_dir.is_dir() and not exp_dir.name.startswith(("BL", "_")):
             yield exp_dir
 
 
@@ -261,10 +258,12 @@ def main():
     Main function to extract metrics from experiment directories and generate comparison plots.
     """
     metrics_df = extract_metrics(EXP_FOLDER_PATH)
-    plot_metrics_cmp(metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp")
+    plot_metrics_cmp(metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp", TITLE_TAG)
 
     nyear_metrics_df = extract_nyear_metrics(EXP_FOLDER_PATH)
-    plot_nyear_metrics_cmp(nyear_metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp")
+    plot_nyear_metrics_cmp(
+        nyear_metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp", TITLE_TAG
+    )
 
 
 if __name__ == "__main__":
