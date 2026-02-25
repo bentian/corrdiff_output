@@ -9,6 +9,7 @@ This module contains reusable helpers used by the CLI/runner code, including:
 - metric table export + plotting wrappers
 - grouping time-indexed metric datasets into fixed N-year bins
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -38,8 +39,9 @@ def ensure_directory_exists(directory: Path, subdir: Optional[str] = None) -> Pa
 # -----------------------------------------------------------------------------
 # TensorBoard utilities
 # -----------------------------------------------------------------------------
-def read_tensorboard_log(log_dir: Path, scalar_name: str = "training_loss",
-                         max_duration: float = None) -> Tuple[List[datetime], List[float]]:
+def read_tensorboard_log(
+    log_dir: Path, scalar_name: str = "training_loss", max_duration: float = None
+) -> Tuple[List[datetime], List[float]]:
     """
     Read TensorBoard event files in `log_dir` and extract (wall_time, value) pairs
     for `scalar_name`. Optionally filter by `step <= max_duration`.
@@ -58,14 +60,16 @@ def read_tensorboard_log(log_dir: Path, scalar_name: str = "training_loss",
 
     # Apply filtering based on max_duration
     if max_duration is not None:
-        wall_times, values = zip(*[(t, v) for t, v, s in zip(wall_times, values, steps)
-                                   if s <= max_duration])
+        wall_times, values = zip(
+            *[(t, v) for t, v, s in zip(wall_times, values, steps) if s <= max_duration]
+        )
 
     return wall_times, values
 
 
-def read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str,
-                                max_duration: float = None) -> None:
+def read_training_loss_and_plot(
+    in_dir: Path, out_dir: Path, label: str, max_duration: float = None
+) -> None:
     """Read `training_loss` from TensorBoard logs and save a plot."""
     log_dir = in_dir / f"tensorboard_{label}"
     wall_times, values = read_tensorboard_log(log_dir, max_duration=max_duration)
@@ -75,7 +79,7 @@ def read_training_loss_and_plot(in_dir: Path, out_dir: Path, label: str,
 # -----------------------------------------------------------------------------
 # YAML / TSV utilities
 # -----------------------------------------------------------------------------
-def _flatten_dict(d, parent_key='', sep='.'):
+def _flatten_dict(d, parent_key="", sep="."):
     """Flatten a nested dict into a single-level dict using dot-separated keys."""
     out = {}
 
@@ -114,8 +118,11 @@ def save_metric_table_and_plot(
     filename = output_path / metric.lower()
     save_to_tsv(ds_filtered, filename.with_suffix(".tsv"), number_format)
 
-    plot_fn = plot_monthly_metrics if output_path.name.startswith("monthly") \
-                else plot_nyear_metrics
+    plot_fn = (
+        plot_monthly_metrics
+        if output_path.name.startswith("monthly")
+        else plot_nyear_metrics
+    )
     plot_fn(ds_filtered, metric, filename.with_suffix(".png"), number_format)
 
 
@@ -133,13 +140,17 @@ def save_tables_and_plots(
 
     for metric in ["MAE", "RMSE", "CORR", "CRPS", "STD_DEV"]:
         save_metric_table_and_plot(
-            ds_group_by_month, metric,
-            ensure_directory_exists(output_path, "monthly_metrics"), number_format
+            ds_group_by_month,
+            metric,
+            ensure_directory_exists(output_path, "monthly_metrics"),
+            number_format,
         )
         if ds_group_by_nyear is not None:
             save_metric_table_and_plot(
-                ds_group_by_nyear, metric,
-                ensure_directory_exists(output_path, "nyear_metrics"), number_format
+                ds_group_by_nyear,
+                metric,
+                ensure_directory_exists(output_path, "nyear_metrics"),
+                number_format,
             )
 
 
@@ -154,11 +165,13 @@ def group_by_nyear(metrics: xr.Dataset, n_years: int) -> Optional[xr.Dataset]:
     years = metrics["time"].dt.year
     base, max_year = int(years.min()), int(years.max())
     if base == max_year:
-        return None     # Skip grouping if only single year data
+        return None  # Skip grouping if only single year data
 
     bin_start = base + ((years - base) // n_years) * n_years
     bin_end = (bin_start + (n_years - 1)).clip(max=max_year)
     # Make string labels like "2015-2020"
+    return None
+
     year_bin = bin_start.astype(str) + "-" + bin_end.astype(str)
 
     return (
