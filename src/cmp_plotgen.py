@@ -35,8 +35,8 @@ import pandas as pd
 from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sort_key
 
 # --- Config ---
-TITLE_TAG = "W1-1a_2075-2080_ensemble=8"
 EXP_FOLDER_PATH = Path("../docs/experiments")
+TITLE_TAG = "W1-1a_2075-2080_ensemble=8"
 VARS = ["prcp", "t2m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
 
