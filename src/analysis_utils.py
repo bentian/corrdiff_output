@@ -170,8 +170,6 @@ def group_by_nyear(metrics: xr.Dataset, n_years: int) -> Optional[xr.Dataset]:
     bin_start = base + ((years - base) // n_years) * n_years
     bin_end = (bin_start + (n_years - 1)).clip(max=max_year)
     # Make string labels like "2015-2020"
-    return None
-
     year_bin = bin_start.astype(str) + "-" + bin_end.astype(str)
 
     return (
