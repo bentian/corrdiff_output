@@ -25,6 +25,7 @@ Assumptions:
 This design ensures compatibility with existing downstream analysis code while
 supporting efficient processing of very large NetCDF files.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -45,9 +46,11 @@ def _ensure_dim(group: Dataset, name: str, size: Optional[int]) -> None:
     if name not in group.dimensions:
         group.createDimension(name, size)
 
+
 def _get_or_create_group(nc: Dataset, name: str) -> Dataset:
     """Return an existing netCDF group, or create it if missing."""
     return nc.groups[name] if name in nc.groups else nc.createGroup(name)
+
 
 def _create_out_vars(src: xr.Dataset, group: Dataset) -> dict[str, Variable]:
     """
@@ -63,6 +66,7 @@ def _create_out_vars(src: xr.Dataset, group: Dataset) -> dict[str, Variable]:
         out[name] = group.variables[name]
     return out
 
+
 def _init_group_schema_as_input(group: Dataset, src: xr.Dataset) -> dict[str, Variable]:
     """
     Create only dimensions and data variables to match the input group format
@@ -72,8 +76,10 @@ def _init_group_schema_as_input(group: Dataset, src: xr.Dataset) -> dict[str, Va
         _ensure_dim(group, d, src.sizes[d])
     return _create_out_vars(src, group)
 
-def _mask_chunk(truth_t: xr.Dataset, pred_t: xr.Dataset,
-                landmask_t: xr.DataArray) -> tuple[xr.Dataset, xr.Dataset]:
+
+def _mask_chunk(
+    truth_t: xr.Dataset, pred_t: xr.Dataset, landmask_t: xr.DataArray
+) -> tuple[xr.Dataset, xr.Dataset]:
     """Apply landmask to chunk; expand mask for ensemble if needed."""
     truth_masked = truth_t.where(landmask_t == 1)
 
@@ -88,8 +94,10 @@ def _mask_chunk(truth_t: xr.Dataset, pred_t: xr.Dataset,
 
     return truth_masked, pred_masked
 
-def _write_vars_chunk(out_vars: dict[str, Variable], ds_chunk: xr.Dataset,
-                      t0: int, t1: int) -> None:
+
+def _write_vars_chunk(
+    out_vars: dict[str, Variable], ds_chunk: xr.Dataset, t0: int, t1: int
+) -> None:
     """
     Write a masked dataset chunk to netCDF variables, aligning dims and slicing on 'time'
     wherever it appears (time may not be the first dimension, e.g. (ensemble,time,y,x)).
@@ -103,6 +111,7 @@ def _write_vars_chunk(out_vars: dict[str, Variable], ds_chunk: xr.Dataset,
 
         ncvar[tuple(sl)] = arr
 
+
 def _copy_root_group(input_file, output_file) -> None:
     """Copy root group (time, lat, lon, attrs) unchanged to output file."""
     with xr.open_dataset(input_file, engine="netcdf4") as root_in:
@@ -112,14 +121,46 @@ def _copy_root_group(input_file, output_file) -> None:
             attrs=dict(root_in.attrs),
         ).to_netcdf(output_file, mode="w")
 
+
+def _center_crop(obj: xr.Dataset | xr.DataArray, *, dims: tuple[str, str], size: int):
+    ydim, xdim = dims
+    if (ydim not in obj.dims) or (xdim not in obj.dims):
+        return obj
+
+    ny, nx = obj.sizes[ydim], obj.sizes[xdim]
+    if size <= 0 or size > ny or size > nx:
+        return obj
+
+    y0 = (ny - size) // 2
+    x0 = (nx - size) // 2
+    return obj.isel({ydim: slice(y0, y0 + size), xdim: slice(x0, x0 + size)})
+
+
 def _stream_mask_and_write(
     nc: Dataset,
     truth: xr.Dataset,
     pred: xr.Dataset,
     landmask_xy: xr.DataArray,
     tchunk: int,
+    *,
+    crop_center: bool = False,
+    crop_size: int = 128,
 ) -> None:
     """Stream over time chunks, apply landmask, and write masked variables."""
+
+    # Crop once up-front so output schema matches what we write.
+    if crop_center:
+        if len(landmask_xy.dims) != 2:
+            raise ValueError(
+                f"landmask_xy must be 2D to center-crop; got dims={landmask_xy.dims}"
+            )
+
+        spatial_dims = (landmask_xy.dims[0], landmask_xy.dims[1])
+        landmask_xy = _center_crop(landmask_xy, dims=spatial_dims, size=crop_size)
+        truth = _center_crop(truth, dims=spatial_dims, size=crop_size)
+        pred = _center_crop(pred, dims=spatial_dims, size=crop_size)
+
+    # Apply landmask and write to netCDF file
     truth_out = _init_group_schema_as_input(_get_or_create_group(nc, "truth"), truth)
     pred_out = _init_group_schema_as_input(_get_or_create_group(nc, "prediction"), pred)
     ntime = truth.sizes["time"]
@@ -131,7 +172,7 @@ def _stream_mask_and_write(
         truth_m, pred_m = _mask_chunk(
             truth.isel(time=s).load(),
             pred.isel(time=s).load(),
-            landmask_xy.expand_dims(time=t1 - t0)
+            landmask_xy.expand_dims(time=t1 - t0),
         )
 
         _write_vars_chunk(truth_out, truth_m, t0, t1)
