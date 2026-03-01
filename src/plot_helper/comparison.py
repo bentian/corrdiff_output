@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 # --- Config ---
 Y_LIMITS = {
     "prcp": {
-        "RMSE": (10.0, None),  # e.g. (0.0, 8.0)
+        "RMSE": (8.0, None),  # e.g. (0.0, 8.0)
         "MAE": (4.5, None),  # e.g. (0.0, 4.0)
         "CRPS": (4.5, None),  # e.g. (0.0, 4.0)
         "CORR": (0.1, 0.5),  # correlations benefit most from tight limits

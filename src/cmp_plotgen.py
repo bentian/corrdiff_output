@@ -35,8 +35,8 @@ import pandas as pd
 from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sort_key
 
 # --- Config ---
-EXP_FOLDER_PATH = Path("../plots/ens8_cropped")
-TITLE_TAG = "W1-1a_75-80_ens8_cropped"
+EXP_FOLDER_PATH = Path("../docs/experiments/W1-5m")
+TITLE_TAG = "W1-5m_75-80_ens8"
 VARS = ["prcp", "t2m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
 
@@ -258,6 +258,15 @@ def main():
     Main function to extract metrics from experiment directories and generate comparison plots.
     """
     metrics_df = extract_metrics(EXP_FOLDER_PATH)
+
+    # print(
+    #     metrics_df[
+    #         (metrics_df["label"] == "all")
+    #         & (metrics_df["metric"].isin(["CORR"]))
+    #         & (metrics_df["variable"].isin(VARS))
+    #     ]
+    # )
+
     plot_metrics_cmp(metrics_df, METRICS, VARS, EXP_FOLDER_PATH / "_cmp", TITLE_TAG)
 
     nyear_metrics_df = extract_nyear_metrics(EXP_FOLDER_PATH)

@@ -310,7 +310,7 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     pred = xr.open_dataset(f, group="prediction").merge(root)
     truth = xr.open_dataset(f, group="truth").merge(root)
 
-    crop_center = True
+    crop_center = False
     if crop_center:
         truth, pred, root = map(_center_crop, (truth, pred, root))
 
