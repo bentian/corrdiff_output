@@ -57,7 +57,7 @@ function generateFileGroups(exp1, exp2) {
         "metrics_mean.png",
         ...periods.flatMap(period =>
             metrics.flatMap(metric =>
-            exts.map(ext => `${period}/${metric}.${ext}`)
+                exts.map(ext => `${period}/${metric}.${ext}`)
             )
         ),
     ];
@@ -82,7 +82,7 @@ function generateFileGroups(exp1, exp2) {
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
             ...(hasSSP && p90Vars.has(varName) ? [buildPath(varName, p90File)] : []),
-            ...(prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
+            ...(hasSSP && prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
         ];
 
         return {
