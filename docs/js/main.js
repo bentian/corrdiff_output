@@ -22,7 +22,11 @@ async function loadExperimentGroups() {
             return;
         }
 
-        populateDropdown(select, groups);
+        const fullNameMap = {
+            W: "W* (SSP scenarios)",
+            DM: "DM* (input domains)",
+        };
+        populateDropdown(select, groups.map(group => fullNameMap[group]));
 
         const first = select.querySelector("option");
         if (first) select.value = first.value;

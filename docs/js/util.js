@@ -43,7 +43,7 @@ function generateExperimentGroupFiles(group) {
     };
 
     return [{
-        title: `[${group}]`,
+        title: group,
         files: group === "DM"
             ? { ...base, u10m: ["u10m_mean_cmp.png"], v10m: ["v10m_mean_cmp.png"] }
             : {
