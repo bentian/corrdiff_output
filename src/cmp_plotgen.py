@@ -37,7 +37,7 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sor
 # --- Config ---
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
-EXP_GROUP = "W"
+EXP_GROUP = "DM"
 
 VARS = ["prcp", "t2m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
@@ -73,7 +73,7 @@ def _iter_experiments(folder_path: str):
         Path object for each valid experiment directory.
     """
     for exp_dir in Path(folder_path).iterdir():
-        if exp_dir.is_dir() and not exp_dir.name.startswith("_"):
+        if exp_dir.is_dir() and exp_dir.name.startswith(EXP_GROUP):
             yield exp_dir
 
 

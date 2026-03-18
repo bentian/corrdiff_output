@@ -32,12 +32,34 @@ async function fetchExperimentValue(key, isExperimentGroup = false) {
 }
 
 /**
- * Generates file groups to render.
+ * Generates experiment group files to render.
+ *
+ * @param {string} group - Experiment group name.
+ */
+function generateExperimentGroupFiles(group) {
+    const base = {
+        prcp: ["prcp_mean_cmp.png"],
+        t2m: ["t2m_mean_cmp.png"]
+    };
+
+    return [{
+        title: `[${group}]`,
+        files: group === "DM"
+            ? { ...base, u10m: ["u10m_mean_cmp.png"], v10m: ["v10m_mean_cmp.png"] }
+            : {
+                prcp: [...base.prcp, "prcp_nyear_cmp.png"],
+                t2m: [...base.t2m, "t2m_nyear_cmp.png"]
+            }
+    }];
+}
+
+/**
+ * Generates experiment files to render.
  *
  * @param {string} exp1 - Experiment 1 name.
  * @param {string} exp2 - Experiment 2 name (optional).
  */
-function generateFileGroups(exp1, exp2) {
+function generateExperimentFiles(exp1, exp2) {
     const hasSSP = exp1.startsWith("W") || exp2?.startsWith("W")
 
     // Overview files
@@ -217,6 +239,7 @@ function initializeLightbox() {
 // Export functions for use in render.js
 export {
     fetchExperimentKeys, fetchExperimentValue,
-    generateFileGroups, handleHashChange, activateSingleTab,
+    generateExperimentGroupFiles, generateExperimentFiles,
+    handleHashChange, activateSingleTab,
     addCollapsibleEventListeners, initializeLightbox
 };

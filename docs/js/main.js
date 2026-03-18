@@ -165,5 +165,5 @@ function handleSummarySubmit(event) {
     }
 
     const group_prefix = group.split("*")[0].trim();
-    window.location.href = `render.html?grp=${group_prefix}`;
+    window.location.href = `render.html?group=${group_prefix}#prcp_mean_cmp_png`;
 }

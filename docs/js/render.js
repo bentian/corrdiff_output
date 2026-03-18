@@ -1,6 +1,7 @@
 import {
     fetchExperimentValue,
-    generateFileGroups,
+    generateExperimentGroupFiles,
+    generateExperimentFiles,
     handleHashChange,
     activateSingleTab,
     addCollapsibleEventListeners,
@@ -11,25 +12,33 @@ const FALLBACK_PNG = "./no_plot_table_available.png";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
-    const group = params.get("grp");
-    console.log(group);
-
+    const group = params.get("group");
     const exp1 = params.get("exp1");
     const exp2 = params.get("exp2");
-    if (!exp1 && !exp2) {
+
+    if (!group && !exp1) {
         document.getElementById("render-output").innerHTML =
             "<p>Error: No experiments selected.</p>";
         return;
     }
 
-    // Render heading with links
-    await renderExperimentHeading(exp1, exp2);
+    // Render heading on top per experiment group / experiments
+    await renderHeading(group, exp1, exp2);
 
     // Render collapsible sections
-    generateFileGroups(exp1, exp2).forEach(
-        ({ title, files }) => renderCollapsibleSection(title, files, exp1, exp2)
+    const isGroup = !!group;
+    const id1 = group || exp1;
+    const id2 = isGroup ? null : exp2;
+    const folder = isGroup ? "comparisons" : "experiments";
+
+    (isGroup
+        ? generateExperimentGroupFiles(group)
+        : generateExperimentFiles(exp1, exp2)
+    ).forEach(({ title, files }) =>
+        renderCollapsibleSection(title, folder, files, id1, id2)
     );
 
+    // Initialize collapsible sections and lightbox
     addCollapsibleEventListeners();
     initializeLightbox();
 
@@ -43,10 +52,11 @@ document.addEventListener("DOMContentLoaded", async () => {
  * The experiment names (`exp1`, `exp2`) are displayed as hyperlinks whose
  * URLs are looked up from `experiments/list.json`. Links open in a new tab.
  *
- * @param {string|null} exp1 - Primary experiment key.
+ * @param {string|null} group - Experiment group name (optional).
+ * @param {string|null} exp1 - Primary experiment key (optional).
  * @param {string|null} exp2 - Secondary experiment key (optional).
  */
-async function renderExperimentHeading(exp1, exp2) {
+async function renderHeading(group, exp1, exp2) {
     const headingEl = document.getElementById("render-heading");
     if (!headingEl) return;
 
@@ -64,35 +74,38 @@ async function renderExperimentHeading(exp1, exp2) {
 
     headingEl.textContent = ""; // clear existing content
 
+    // Render heading for experiment group
+    if (group) {
+        const url = await fetchExperimentValue(group, /* isExperimentGroup */ true);
+        headingEl.append("Experiment Group: ", makeLink(group, url));
+        return;
+    }
+
+    // Render heading for experiments
     if (exp1 && exp2) {
         const [url1, url2] = await Promise.all([
             fetchExperimentValue(exp1),
             fetchExperimentValue(exp2),
         ]);
-
-        headingEl.append("Comparison: ");
-        headingEl.append(makeLink(exp1, url1));
-        headingEl.append(" vs. ");
-        headingEl.append(makeLink(exp2, url2));
+        headingEl.append("Comparison: ", makeLink(exp1, url1), " vs. ", makeLink(exp2, url2));
     } else {
         const exp = exp1 || exp2;
         if (!exp) return;
 
         const url = await fetchExperimentValue(exp);
-
-        headingEl.append("Experiment: ");
-        headingEl.append(makeLink(exp, url));
+        headingEl.append("Experiment: ", makeLink(exp, url));
     }
 }
 
 /**
  * Renders a collapsible section for a file group.
  * @param {string} title - The title of the section.
+ * @param {string} folder - The folder name.
  * @param {string[]} files - The list of files in the section.
  * @param {string} exp1 - Experiment 1 name.
  * @param {string} exp2 - Experiment 2 name (optional).
  */
-function renderCollapsibleSection(title, files, exp1, exp2) {
+function renderCollapsibleSection(title, folder, files, exp1, exp2) {
     const renderOutput = document.getElementById("render-output");
 
     const collapsible = document.createElement("div");
@@ -103,9 +116,9 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
     content.className = "content";
 
     if (Array.isArray(files)) {
-        files.forEach((file) => renderFileRow(file, content, exp1, exp2));
+        files.forEach((file) => renderFileRow(folder, file, content, exp1, exp2));
     } else {
-        renderTabs(content, files, exp1, exp2);
+        renderTabs(content, folder, files, exp1, exp2);
     }
 
     renderOutput.appendChild(collapsible);
@@ -116,11 +129,12 @@ function renderCollapsibleSection(title, files, exp1, exp2) {
  * Renders tabs and their associated content within a given container.
  *
  * @param {HTMLElement} content - The container element where tabs and content will be appended.
+ * @param {string} folder - The folder name.
  * @param {Object} files - An object where keys are tab names and values are arrays of files.
  * @param {string} exp1 - Experiment 1 name.
  * @param {string} exp2 - Experiment 2 name (optional).
  */
-function renderTabs(content, files, exp1, exp2) {
+function renderTabs(content, folder, files, exp1, exp2) {
     const tabs = document.createElement("div");
     tabs.className = "tabs";
     content.appendChild(tabs);
@@ -134,7 +148,7 @@ function renderTabs(content, files, exp1, exp2) {
         const tabContent = document.createElement("div");
         tabContent.className = "tab-content";
         tabContent.tab = tab;
-        value.forEach((file) => renderFileRow(file, tabContent, exp1, exp2));
+        value.forEach((file) => renderFileRow(folder, file, tabContent, exp1, exp2));
         content.appendChild(tabContent);
 
         // Make "overview" tab active by default
@@ -150,12 +164,13 @@ function renderTabs(content, files, exp1, exp2) {
 /**
  * Renders a file row inside a collapsible section.
  *
+ * @param {string} folder - The folder name.
  * @param {string} file - The file name.
  * @param {HTMLElement} content - The content container.
  * @param {string} exp1 - Experiment 1 name.
  * @param {string} exp2 - Experiment 2 name (optional).
  */
-function renderFileRow(file, content, exp1, exp2) {
+function renderFileRow(folder, file, content, exp1, exp2) {
     const fileExtension = file.split(".").pop();
     const rowId = file.replace(/[^a-zA-Z0-9]/g, "_");
 
@@ -177,9 +192,9 @@ function renderFileRow(file, content, exp1, exp2) {
     row.className = "render-row";
 
     if (fileExtension === "png") {
-        renderImageRow(row, file, exp1, exp2);
+        renderImageRow(row, folder, file, exp1, exp2);
     } else if (fileExtension === "tsv") {
-        renderTSVRow(row, file, exp1, exp2);
+        renderTSVRow(row, folder, file, exp1, exp2);
     }
 
     rowContainer.appendChild(row);
@@ -224,15 +239,16 @@ function createImage(src, alt) {
  * "no_plot_table_available.png" placeholder while preserving layout size.
  *
  * @param {HTMLElement} row  - Container element for the row.
+ * @param {string} folder    - Folder name.
  * @param {string} file      - Plot image file name.
  * @param {string} exp1      - Primary experiment name.
  * @param {string} [exp2]    - Optional secondary experiment name.
  */
-function renderImageRow(row, file, exp1, exp2) {
-    row.appendChild(createImage(`experiments/${exp1}/${file}`, `${exp1} - ${file}`));
+function renderImageRow(row, folder, file, exp1, exp2) {
+    row.appendChild(createImage(`${folder}/${exp1}/${file}`, `${exp1} - ${file}`));
 
     if (exp2) {
-        row.appendChild(createImage(`experiments/${exp2}/${file}`, `${exp2} - ${file}`));
+        row.appendChild(createImage(`${folder}/${exp2}/${file}`, `${exp2} - ${file}`));
     }
 }
 
@@ -245,14 +261,15 @@ function renderImageRow(row, file, exp1, exp2) {
  * visual alignment between table rows and image rows.
  *
  * @param {HTMLElement} row  - Container element for the row.
+ * @param {string} folder    - Folder name.
  * @param {string} file      - TSV file name.
  * @param {string} exp1      - Primary experiment name.
  * @param {string} [exp2]    - Optional secondary experiment name.
  * @returns {Promise<void>}
  */
-async function renderTSVRow(row, file, exp1, exp2) {
-    const urls = [`experiments/${exp1}/${file}`];
-    if (exp2) urls.push(`experiments/${exp2}/${file}`);
+async function renderTSVRow(row, folder, file, exp1, exp2) {
+    const urls = [`${folder}/${exp1}/${file}`];
+    if (exp2) urls.push(`${folder}/${exp2}/${file}`);
 
     const results = await Promise.all(urls.map(fetchTSV));
 
