@@ -48,11 +48,7 @@ async function loadExperiments() {
         [exp1, exp2].forEach(el => populateDropdownWithGroups(el, grouped));
 
         const opts1 = exp1.querySelectorAll("option");
-        const opts2 = exp2.querySelectorAll("option");
-
         if (opts1[0]) exp1.value = opts1[0].value;
-        if (opts2[1]) exp2.value = opts2[1].value;
-
     } catch (error) {
         console.error("Error loading experiments:", error);
         [exp1, exp2].forEach(setDropdownError);
@@ -87,7 +83,9 @@ function groupByPrefix(experiments) {
  *                               arrays of experiment names as values.
  */
 function populateDropdownWithGroups(selectElement, groupedData) {
+    const placeholder = selectElement.querySelector("option");
     selectElement.innerHTML = ""; // Clear existing options
+    if (placeholder) selectElement.appendChild(placeholder); // Restore placeholder
 
     for (const [prefix, exps] of Object.entries(groupedData)) {
         const group = document.createElement("optgroup");
@@ -141,12 +139,13 @@ function handleComparisonSubmit(event) {
     const exp1 = document.getElementById("exp1")?.value;
     const exp2 = document.getElementById("exp2")?.value;
 
-    if (!exp1 || !exp2) {
-        alert("Please select both experiments before comparing.");
+    if (!exp1) {
+        alert("Please select at least one experiment to show.");
         return;
     }
 
-    window.location.href = `render.html?exp1=${exp1}&exp2=${exp2}`;
+    const suffix = exp2 ? `&exp2=${exp2}` : "";
+    window.location.href = `render.html?exp1=${exp1}${suffix}`;
 }
 
 /**
