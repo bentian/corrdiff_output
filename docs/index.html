@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/render.css">
 </head>
+
 <body>
     <div class="container">
         <h1>CorrDiff Experiment Results</h1>
@@ -14,10 +16,10 @@
         <div class="form-container">
             <!-- Summary Form -->
             <form id="summary-form" class="form-box">
-                <h2>Summarize One Experiment</h2>
+                <h2>Summarize Experiment Group</h2>
                 <div class="form-group">
-                    <label for="summary-exp">Select Experiment:</label>
-                    <select id="summary-exp" class="dropdown"></select>
+                    <label for="summary-grp">Select Experiment Group:</label>
+                    <select id="summary-grp" class="dropdown"></select>
                 </div>
                 <button type="submit" class="btn">Summarize</button>
             </form>
@@ -36,46 +38,9 @@
                 <button type="submit" class="btn">Compare</button>
             </form>
         </div>
-
-        <!-- Aggregated comparison plots (generated under docs/experiments/_cmp) -->
-        <div id="cmp-container">
-            <h2>Aggregated Comparison Plots</h2>
-            <div id="cmp-output" class="render-row">
-                <img class="render-plot"
-                     src="experiments/_cmp/prcp_mean_cmp.png"
-                     alt="PRCP mean comparison plot"
-                     loading="lazy"
-                     onerror="this.onerror=null; this.className='fallback-plot';
-                              this.src='./no_plot_table_available.png';">
-                <img class="render-plot"
-                     src="experiments/_cmp/t2m_mean_cmp.png"
-                     alt="T2M mean comparison plot"
-                     loading="lazy"
-                     onerror="this.onerror=null; this.className='fallback-plot';
-                              this.src='./no_plot_table_available.png';">
-                <img class="render-plot"
-                     src="experiments/_cmp/prcp_nyear_cmp.png"
-                     alt="PRCP year-bin comparison plot"
-                     loading="lazy"
-                     onerror="this.onerror=null; this.className='fallback-plot';
-                              this.src='./no_plot_table_available.png';">
-                <img class="render-plot"
-                     src="experiments/_cmp/t2m_nyear_cmp.png"
-                     alt="T2M year-bin comparison plot"
-                     loading="lazy"
-                     onerror="this.onerror=null; this.className='fallback-plot';
-                              this.src='./no_plot_table_available.png';">
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Lightbox for Enlarged Images -->
-    <div id="lightbox" class="lightbox">
-        <span id="close-lightbox" class="close-lightbox">&times;</span>
-        <img id="lightbox-img" class="lightbox-img" src="" alt="Enlarged Plot">
     </div>
 
     <script type="module" src="js/main.js"></script>
 </body>
+
 </html>

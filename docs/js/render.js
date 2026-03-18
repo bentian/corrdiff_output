@@ -11,6 +11,9 @@ const FALLBACK_PNG = "./no_plot_table_available.png";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
+    const group = params.get("grp");
+    console.log(group);
+
     const exp1 = params.get("exp1");
     const exp2 = params.get("exp2");
     if (!exp1 && !exp2) {

@@ -1,49 +1,61 @@
-import { fetchExperimentKeys, initializeLightbox } from "./util.js";
+import { fetchExperimentKeys } from "./util.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     await loadExperiments();
+    await loadExperimentGroups();
 
     // Handle form submissions
     document.getElementById("comparison-form")?.addEventListener("submit", handleComparisonSubmit);
     document.getElementById("summary-form")?.addEventListener("submit", handleSummarySubmit);
-
-    // Lightbox for aggregated plots
-    initializeLightbox();
 });
 
 /**
- * Fetches the list of experiments and populates the dropdowns.
+ * Load experiment groups into dropdown.
  */
-async function loadExperiments() {
-    const exp1Select = document.getElementById("exp1");
-    const exp2Select = document.getElementById("exp2");
-    const summaryExpSelect = document.getElementById("summary-exp");
+async function loadExperimentGroups() {
+    const select = document.getElementById("summary-grp");
 
     try {
-        const experiments = await fetchExperimentKeys();
-        if (experiments.length === 0) {
-            console.error("No experiments found in the list.json file.");
+        const groups = await fetchExperimentKeys(/* isExperimentGroup= */ true);
+        if (groups.length === 0) {
+            console.error("No experiment groups found in the list.json file.");
             return;
         }
 
-        const grouped = groupByPrefix(experiments);
+        populateDropdown(select, groups);
 
-        populateDropdownWithGroups(exp1Select, grouped);
-        populateDropdownWithGroups(exp2Select, grouped);
-        populateDropdownWithGroups(summaryExpSelect, grouped);
-
-        // Set default selections if more than one experiment is available
-        const firstOption = exp1Select.querySelector("option");
-        const secondOption = exp2Select.querySelectorAll("option")[1];
-        if (firstOption) exp1Select.value = firstOption.value;
-        if (secondOption) exp2Select.value = secondOption.value;
-        if (firstOption) summaryExpSelect.value = firstOption.value;
+        const first = select.querySelector("option");
+        if (first) select.value = first.value;
 
     } catch (error) {
-        console.error("Error fetching experiments:", error);
-        setDropdownError(exp1Select);
-        setDropdownError(exp2Select);
-        setDropdownError(summaryExpSelect);
+        console.error("Error loading experiment groups:", error);
+        setDropdownError(select);
+    }
+}
+
+/**
+ * Load experiments into two dropdowns.
+ */
+async function loadExperiments() {
+    const exp1 = document.getElementById("exp1");
+    const exp2 = document.getElementById("exp2");
+
+    try {
+        const list = await fetchExperimentKeys();
+        if (!list.length) return console.error("No experiments found.");
+
+        const grouped = groupByPrefix(list);
+        [exp1, exp2].forEach(el => populateDropdownWithGroups(el, grouped));
+
+        const opts1 = exp1.querySelectorAll("option");
+        const opts2 = exp2.querySelectorAll("option");
+
+        if (opts1[0]) exp1.value = opts1[0].value;
+        if (opts2[1]) exp2.value = opts2[1].value;
+
+    } catch (error) {
+        console.error("Error loading experiments:", error);
+        [exp1, exp2].forEach(setDropdownError);
     }
 }
 
@@ -93,6 +105,22 @@ function populateDropdownWithGroups(selectElement, groupedData) {
 }
 
 /**
+ * Populate a dropdown with items.
+ * @param { HTMLSelectElement } selectElement - The dropdown element to populate.
+ * @param { string[] } items - List of items to populate the dropdown with.
+ */
+function populateDropdown(selectElement, items) {
+    selectElement.innerHTML = ""; // clear existing options
+
+    items.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item;
+        option.textContent = item;
+        selectElement.appendChild(option);
+    });
+}
+
+/**
  * Sets an error message for a dropdown when experiments fail to load.
  *
  * @param {HTMLSelectElement} selectElement - The dropdown element.
@@ -129,12 +157,13 @@ function handleComparisonSubmit(event) {
 function handleSummarySubmit(event) {
     event.preventDefault();
 
-    const exp = document.getElementById("summary-exp")?.value;
+    const group = document.getElementById("summary-grp")?.value;
 
-    if (!exp) {
-        alert("Please select an experiment to summarize.");
+    if (!group) {
+        alert("Please select an experiment group to summarize.");
         return;
     }
 
-    window.location.href = `render.html?exp1=${exp}`;
+    const group_prefix = group.split("*")[0].trim();
+    window.location.href = `render.html?grp=${group_prefix}`;
 }

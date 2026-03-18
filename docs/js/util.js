@@ -1,42 +1,34 @@
-let _experimentCache = null;
-
 /**
- * Loads and caches the experiment mapping from `experiments/list.json`.
- * Subsequent calls return the cached result to avoid repeated network requests.
- *
- * @returns {Promise<Record<string, string>>} A mapping of experiment names to URLs.
- * @throws {Error} If the fetch request fails.
+ * Load and cache experiment map from JSON.
+ * @param {boolean} isExperimentGroup - Whether to load comparison group data.
+ * @returns {Promise<Object>} Key-value map of experiments.
  */
-async function loadExperimentMap() {
-    if (_experimentCache) return _experimentCache;
+async function loadExperimentMap(isExperimentGroup = false) {
+    const url = isExperimentGroup ? "comparisons/list.json" : "experiments/list.json";
+    const res = await fetch(url);
 
-    const response = await fetch("experiments/list.json");
-    if (!response.ok) {
-        throw new Error(`Failed to fetch experiments: ${response.statusText}`);
-    }
+    if (!res.ok) throw new Error(`Fetch failed: ${res.statusText}`);
 
-    _experimentCache = await response.json();
-    return _experimentCache;
+    return await res.json();
 }
 
 /**
- * Fetches all experiment names.
- *
- * @returns {Promise<string[]>} An array of experiment keys defined in `list.json`.
+ * Fetch experiment keys from the loaded map.
+ * @param {boolean} isExperimentGroup - Whether to load comparison group data.
+ * @returns {Promise<string[]>} Array of experiment keys.
  */
-async function fetchExperimentKeys() {
-    return Object.keys(await loadExperimentMap());
+async function fetchExperimentKeys(isExperimentGroup = false) {
+    return Object.keys(await loadExperimentMap(isExperimentGroup));
 }
 
 /**
- * Fetches the value (e.g., URL) associated with a given experiment name.
- *
- * @param {string} key - The experiment identifier.
- * @returns {Promise<string | null>} The experiment value if found, otherwise null.
+ * Fetch experiment value by key from the loaded map.
+ * @param {string} key - The experiment key to fetch.
+ * @param {boolean} isExperimentGroup - Whether to load comparison group data.
+ * @returns {Promise<string|null>} The experiment value or null if not found.
  */
-async function fetchExperimentValue(key) {
-    const map = await loadExperimentMap();
-    return map[key] ?? null;
+async function fetchExperimentValue(key, isExperimentGroup = false) {
+    return (await loadExperimentMap(isExperimentGroup))[key] ?? null;
 }
 
 /**
