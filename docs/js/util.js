@@ -1,15 +1,27 @@
+let _experimentCache = null;
+let _groupCache = null;
+
 /**
- * Load and cache experiment map from JSON.
- * @param {boolean} isExperimentGroup - Whether to load comparison group data.
+ * Load and cache experiment or experiment-group map from JSON.
+ * @param {boolean} isExperimentGroup - Whether to load experiment-group data.
  * @returns {Promise<Object>} Key-value map of experiments.
  */
 async function loadExperimentMap(isExperimentGroup = false) {
+    const cache = isExperimentGroup ? _groupCache : _experimentCache;
+    if (cache) return cache;
+
     const url = isExperimentGroup ? "comparisons/list.json" : "experiments/list.json";
     const res = await fetch(url);
-
     if (!res.ok) throw new Error(`Fetch failed: ${res.statusText}`);
 
-    return await res.json();
+    const data = await res.json();
+    if (isExperimentGroup) {
+        _groupCache = data;
+    } else {
+        _experimentCache = data;
+    }
+
+    return data;
 }
 
 /**
