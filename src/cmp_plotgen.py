@@ -37,9 +37,9 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sor
 # --- Config ---
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
-EXP_GROUP = "DM"
+EXP_GROUP = "W"
 
-VARS = ["prcp", "t2m"]
+VARS = ["prcp", "t2m", "u10m", "v10m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]  # STD_DEV skipped
 
 
@@ -259,11 +259,16 @@ def main():
     """
     Main function to extract metrics from experiment directories and generate comparison plots.
     """
-    metrics_df = extract_metrics(EXP_FOLDER_PATH)
-    plot_metrics_cmp(metrics_df, METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP)
+    plot_metrics_cmp(
+        extract_metrics(EXP_FOLDER_PATH), METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP
+    )
 
-    nyear_metrics_df = extract_nyear_metrics(EXP_FOLDER_PATH)
-    plot_nyear_metrics_cmp(nyear_metrics_df, METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP)
+    plot_nyear_metrics_cmp(
+        extract_nyear_metrics(EXP_FOLDER_PATH),
+        METRICS,
+        VARS,
+        CMP_FOLDER_PATH / EXP_GROUP,
+    )
 
 
 if __name__ == "__main__":

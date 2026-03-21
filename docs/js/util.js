@@ -51,17 +51,19 @@ async function fetchExperimentValue(key, isExperimentGroup = false) {
 function generateExperimentGroupFiles(group) {
     const base = {
         prcp: ["prcp_mean_cmp.png"],
-        t2m: ["t2m_mean_cmp.png"]
+        t2m: ["t2m_mean_cmp.png"],
+        u10m: ["u10m_mean_cmp.png"],
+        v10m: ["v10m_mean_cmp.png"]
     };
 
     return [{
         title: group,
-        files: group === "DM"
-            ? { ...base, u10m: ["u10m_mean_cmp.png"], v10m: ["v10m_mean_cmp.png"] }
-            : {
-                prcp: [...base.prcp, "prcp_nyear_cmp.png"],
-                t2m: [...base.t2m, "t2m_nyear_cmp.png"]
-            }
+        files: Object.fromEntries(
+            Object.entries(base).map(([k, v]) => [
+                k,
+                group === "DM" ? v : [...v, `${k}_nyear_cmp.png`]
+            ])
+        )
     }];
 }
 

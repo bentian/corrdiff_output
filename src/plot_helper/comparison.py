@@ -20,6 +20,7 @@ Typical usage:
 
 Output figures are saved to disk under the specified folder path.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -32,17 +33,26 @@ import matplotlib.pyplot as plt
 # --- Config ---
 Y_LIMITS = {
     "prcp": {
-        "RMSE": (10.0, None),  # e.g. (0.0, 8.0)
-        "MAE":  (4.5, None),   # e.g. (0.0, 4.0)
-        "CRPS": (4.5, None),   # e.g. (0.0, 4.0)
-        "CORR": (0.1, 0.5),    # correlations benefit most from tight limits
+        "RMSE": (10.0, None),
+        "MAE": (4.5, None),
+        "CRPS": (4.5, None),
+        "CORR": (0.1, 0.5),
     },
     "t2m": {
         "RMSE": (0.8, None),
-        "MAE":  (0.5, None),
+        "MAE": (0.5, None),
         "CRPS": (0.5, None),
         "CORR": (0.9, 1.0),
-    }
+    },
+    **{
+        k: {
+            "RMSE": (0.4, None),
+            "MAE": (0.2, None),
+            "CRPS": (0.2, None),
+            "CORR": (0.4, 1.0),
+        }
+        for k in ["u10m", "v10m"]
+    },
 }
 LabelMode = Literal["all", "reg", "both"]  # both = plot all+reg
 
@@ -77,7 +87,7 @@ def experiment_sort_key(exp: str) -> tuple[int, int, int, str]:
 
 def _metric_grid(metrics: list[str]) -> list[list[str]]:
     """Arrange a flat list of metrics into a 2x2 grid layout."""
-    return [metrics[i:i + 2] for i in range(0, len(metrics), 2)]
+    return [metrics[i : i + 2] for i in range(0, len(metrics), 2)]
 
 
 def _mean_wide(df: pd.DataFrame, metric: str, variable: str) -> pd.DataFrame:
@@ -87,8 +97,12 @@ def _mean_wide(df: pd.DataFrame, metric: str, variable: str) -> pd.DataFrame:
         return sub
 
     return (
-        sub.pivot_table(index=["group", "experiment"], columns="label",
-                        values="value", aggfunc="mean")
+        sub.pivot_table(
+            index=["group", "experiment"],
+            columns="label",
+            values="value",
+            aggfunc="mean",
+        )
         .reset_index()
         .assign(_s=lambda d: d["experiment"].map(experiment_sort_key))
         .sort_values(["group", "_s"])
@@ -96,8 +110,9 @@ def _mean_wide(df: pd.DataFrame, metric: str, variable: str) -> pd.DataFrame:
     )
 
 
-def _bar_positions(wide: pd.DataFrame, group_gap: float
-                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def _bar_positions(
+    wide: pd.DataFrame, group_gap: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute x positions, group start positions, and group sizes (in row order)."""
     sizes = wide.groupby("group", sort=False).size().to_numpy()
     starts = np.r_[0.0, np.cumsum(sizes[:-1] + group_gap)]
@@ -105,8 +120,9 @@ def _bar_positions(wide: pd.DataFrame, group_gap: float
     return x, starts, sizes
 
 
-def _draw_group_labels(ax: plt.Axes, wide: pd.DataFrame,
-                       starts: np.ndarray, sizes: np.ndarray) -> None:
+def _draw_group_labels(
+    ax: plt.Axes, wide: pd.DataFrame, starts: np.ndarray, sizes: np.ndarray
+) -> None:
     """Draw vertical separators and group labels without overlapping the title."""
     centers = starts + (sizes - 1) / 2
     groups = wide["group"].drop_duplicates().tolist()
@@ -125,7 +141,7 @@ def _draw_group_labels(ax: plt.Axes, wide: pd.DataFrame,
             va="top",
             fontsize=11,
             fontweight="bold",
-            bbox={"facecolor": 'white', "edgecolor": 'none', "alpha": 0.7, "pad": 1.5},
+            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.7, "pad": 1.5},
         )
 
 
@@ -200,8 +216,9 @@ def _plot_metric_all_groups(
     _apply_ylim(ax, variable, metric)
 
 
-def plot_metrics_cmp(df: pd.DataFrame, metrics: list[str],
-                     variables: list[str], folder_path: Path) -> None:
+def plot_metrics_cmp(
+    df: pd.DataFrame, metrics: list[str], variables: list[str], folder_path: Path
+) -> None:
     """Create and save 2x2 mean-metric comparison figures (one per variable)."""
     if df.empty:
         print("No metrics found.")
@@ -218,8 +235,13 @@ def plot_metrics_cmp(df: pd.DataFrame, metrics: list[str],
 
         handles, labels = _first_legend(axes)
         if handles:
-            fig.legend(handles, labels, title="Label",
-                       loc="center left", bbox_to_anchor=(1.01, 0.5))
+            fig.legend(
+                handles,
+                labels,
+                title="Label",
+                loc="center left",
+                bbox_to_anchor=(1.01, 0.5),
+            )
 
         fig.suptitle(f"Metric Mean Comparison ({var})", y=1.02)
         plt.tight_layout()
@@ -298,13 +320,23 @@ def plot_nyear_metrics_cmp(
 
         for r in range(2):
             for c in range(2):
-                _plot_nyear_metric(axes[r, c], df, metric=grid[r][c],
-                                   variable=var, label_mode=label_mode)
+                _plot_nyear_metric(
+                    axes[r, c],
+                    df,
+                    metric=grid[r][c],
+                    variable=var,
+                    label_mode=label_mode,
+                )
 
         handles, labels = _first_legend(axes)
         if handles:
-            fig.legend(handles, labels, title="Experiment (label)",
-                       loc="center left", bbox_to_anchor=(1.01, 0.5))
+            fig.legend(
+                handles,
+                labels,
+                title="Experiment (label)",
+                loc="center left",
+                bbox_to_anchor=(1.01, 0.5),
+            )
 
         fig.suptitle(f"Decadal Metric Comparison ({var})", y=1.02)
         plt.tight_layout()
