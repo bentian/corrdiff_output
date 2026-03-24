@@ -30,27 +30,34 @@ Then, access `http://localhost:8000` in your browser.
 ```
 📂 docs/
 │── 📂 css/               # Stylesheets
-│   ├── render.css        # Styling for experiment results page
-│   ├── style.css         # Global styles
+│   ├── theme.css         # Common theme styles
+│   ├── style.css         # Styles for index.html
+│   └── render.css        # Styles for render.html
 │
 │── 📂 js/                # JavaScript logic
 │   ├── main.js           # Handles experiment selection forms
 │   ├── render.js         # Dynamically loads and displays experiment results
-│   ├── util.js           # Utilities for render.js
+│   └── util.js           # Utilities for render.js
 │
 │── 📂 experiments/       # Contains experiment results (JSON, images, TSV, etc.)
 │   ├── list.json         # List of available experiments
+│   ├── ...
 │
-│── index.html            # Homepage for selecting experiments
-│── render.html           # Displays selected experiment results
-│── README.md             # Project documentation
+│── 📂 comparisons/       # Contains comparison results (JSON, images, TSV, etc.)
+│   ├── list.json         # List of available experiment groups
+│   ├── ...
+│
+├── index.html                    # Homepage for selecting experiments
+├── render.html                   # Displays selected experiment results
+├── no_plot_table_available.png   # Placeholder image when no plot or table is available
+└── README.md                     # Project documentation
 ```
 
 # How It Works
 
 ## 🔹 Experiment Selection
 - The main page (`index.html`) allows users to:
-  - Select and summarize one experiment.
+  - Select and summarize single experiment group.
   - Compare two experiments.
 
 ## 🔹 Dynamic Rendering (`render.html`)
@@ -78,9 +85,16 @@ Then, access `http://localhost:8000` in your browser.
 
 ## 🖌 Modify Styling
 Edit the CSS files inside `css/`:
+- `theme.css`: Common theme styles.
+- `style.css`: Styles for `index.html` (dropdown, button, etc.).
 - `render.css`: Styles for `render.html` (tables, collapsibles, etc.).
-- `style.css`: General site-wide styles.
 
-## 📜 Update Experiment Data
+## 📜 Update Data
+
+### Experiment Results
 - Store experiment results in `experiments/` as `.png` or `.tsv`.
 - Update `experiments/list.json` to add new experiments.
+
+### Experiment Group Comparison
+- Store experiment group comparison in `comparisons/` as `.png` or `.tsv`.
+- Update `comparisons/list.json` to add new experiment groups.
