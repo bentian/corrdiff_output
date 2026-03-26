@@ -33,13 +33,13 @@ import matplotlib.pyplot as plt
 # --- Config ---
 Y_LIMITS = {
     "prcp": {
-        "RMSE": (10.0, None),
-        "MAE": (4.5, None),
-        "CRPS": (4.5, None),
+        "RMSE": (9.0, None),
+        "MAE": (4, None),
+        "CRPS": (4, None),
         "CORR": (0.1, 0.5),
     },
     "t2m": {
-        "RMSE": (0.8, None),
+        "RMSE": (0.7, None),
         "MAE": (0.5, None),
         "CRPS": (0.5, None),
         "CORR": (0.9, 1.0),

@@ -73,7 +73,10 @@ def _iter_experiments(folder_path: str):
         Path object for each valid experiment directory.
     """
     for exp_dir in Path(folder_path).iterdir():
-        if exp_dir.is_dir() and exp_dir.name.startswith(EXP_GROUP):
+        if (
+            exp_dir.is_dir() and exp_dir.name.startswith(EXP_GROUP)
+            # and not exp_dir.name.endswith("-3")
+        ):
             yield exp_dir
 
 
