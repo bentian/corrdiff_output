@@ -26,7 +26,10 @@ Figures are saved to disk in the specified output folder.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Callable
+
 from typing import Literal
 import re
 import numpy as np
@@ -64,6 +67,32 @@ LAB_STYLE = {
     "all": {"linestyle": "-", "marker": "o"},
     "reg": {"linestyle": "--", "marker": "^"},
 }
+
+
+@dataclass(frozen=True)
+class MetricGridSpec:
+    """
+    Configuration for generating and saving metric comparison figures.
+
+    Attributes
+    ----------
+    metrics : list[str]
+        Metrics to plot (max 4 used per 2x2 grid, in display order).
+    variables : list[str]
+        Variables to generate figures for (one figure per variable).
+    folder_path : Path
+        Output directory where figures will be saved.
+    filename_suffix : str
+        Suffix appended to output filenames (e.g. "mean_cmp", "nyear_cmp").
+    title_prefix : str
+        Prefix used in the figure title (e.g. "Metric Mean Comparison").
+    """
+
+    metrics: list[str]
+    variables: list[str]
+    folder_path: Path
+    filename_suffix: str
+    title_prefix: str
 
 
 def experiment_sort_key(exp: str) -> tuple[int, int, int]:
@@ -125,37 +154,32 @@ def _sorted_subset(df: pd.DataFrame, *, metric: str, variable: str) -> pd.DataFr
 
 def _save_metric_grid(
     df: pd.DataFrame,
-    *,
-    metrics: list[str],
-    variables: list[str],
-    folder_path: Path,
-    filename_suffix: str,
-    title_prefix: str,
-    plot_one,
+    spec: MetricGridSpec,
+    plot_one: Callable,
 ) -> None:
     """Save a 2x2 grid of plots for the given metrics and variables."""
     if df.empty:
-        print(f"No {filename_suffix} data found.")
+        print(f"No {spec.filename_suffix} data found.")
         return
 
-    for var in variables:
+    for var in spec.variables:
         fig, axes = plt.subplots(2, 2, figsize=(16, 10))
         axes = axes.ravel()
 
-        for ax, metric in zip(axes, metrics[:4]):
+        for ax, metric in zip(axes, spec.metrics[:4]):
             plot_one(ax, df, metric=metric, variable=var)
 
-        for ax in axes[len(metrics) :]:
+        for ax in axes[len(spec.metrics) :]:
             ax.set_visible(False)
 
         handles, labels = _first_legend(axes)
         if handles:
             fig.legend(handles, labels, loc="center left", bbox_to_anchor=(1.01, 0.5))
 
-        fig.suptitle(f"{title_prefix} ({var})", y=1.02)
+        fig.suptitle(f"{spec.title_prefix} ({var})", y=1.02)
         plt.tight_layout()
 
-        out_path = folder_path / f"{var}_{filename_suffix}.png"
+        out_path = spec.folder_path / f"{var}_{spec.filename_suffix}.png"
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
@@ -229,15 +253,14 @@ def plot_metrics_cmp(
     folder_path : Path
         Output directory for saved figures.
     """
-    _save_metric_grid(
-        df,
+    spec = MetricGridSpec(
         metrics=metrics,
         variables=variables,
         folder_path=folder_path,
         filename_suffix="mean_cmp",
         title_prefix="Metric Mean Comparison",
-        plot_one=_plot_metric_all_groups,
     )
+    _save_metric_grid(df, spec, _plot_metric_all_groups)
 
 
 def _plot_nyear_metric(
@@ -321,14 +344,18 @@ def plot_nyear_metrics_cmp(
     label_mode : {"all", "reg", "both"}, optional
         Which evaluation labels to include.
     """
-    _save_metric_grid(
-        df,
+    spec = MetricGridSpec(
         metrics=metrics,
         variables=variables,
         folder_path=folder_path,
         filename_suffix="nyear_cmp",
         title_prefix="Decadal Metric Comparison",
-        plot_one=lambda ax, data, metric, variable: _plot_nyear_metric(
+    )
+
+    _save_metric_grid(
+        df,
+        spec,
+        lambda ax, data, metric, variable: _plot_nyear_metric(
             ax, data, metric=metric, variable=variable, label_mode=label_mode
         ),
     )
