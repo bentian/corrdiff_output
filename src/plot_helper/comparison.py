@@ -228,6 +228,10 @@ def _plot_metric_all_groups(
             **LAB_STYLE[label],
         )
 
+    # Show "W*-1", "W*-2", ... on x-axis
+    ax.set_xticks(range(len(SUFFIX_ORDER)))
+    ax.set_xticklabels([f"W*{s}" for s in SUFFIX_ORDER])
+
     ax.set_title(metric)
     ax.set_ylabel(metric)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
