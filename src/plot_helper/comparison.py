@@ -45,8 +45,8 @@ Y_LIMITS = {
     },
     "t2m": {
         "RMSE": (0.7, None),
-        "MAE": (0.5, None),
-        "CRPS": (0.5, None),
+        "MAE": (0.4, None),
+        "CRPS": (0.4, None),
         "CORR": (0.9, 1.0),
     },
     **{
@@ -230,9 +230,10 @@ def _plot_metric_all_groups(
 
     # Show "W*-1", "W*-2", ... on x-axis
     ax.set_xticks(range(len(SUFFIX_ORDER)))
-    ax.set_xticklabels([f"W*{s}" for s in SUFFIX_ORDER])
+    ax.set_xticklabels([f"SSP{s[1:]}\n(W*{s})" for s in SUFFIX_ORDER])
 
     ax.set_title(metric)
+    ax.set_xlabel("Generation Dataset")
     ax.set_ylabel(metric)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
     _apply_ylim(ax, variable, metric)
