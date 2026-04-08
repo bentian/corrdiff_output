@@ -47,86 +47,68 @@ import xarray as xr
 import cftime
 
 
-def split_netcdf(input_nc: str, start_year: int, end_year: int, output_dir: Path):
-    """
-    Split a NetCDF file by year and separate truth/prediction (no groups).
-
-    Args:
-        input_nc: Path to the input NetCDF file.
-        start_year: Start year (e.g., 2075).
-        end_year: End year (e.g., 2080).
-        output_dir: Directory to save the output files.
-    """
-    # -----------------------------------------------------------------------------
-    # Open datasets
-    # -----------------------------------------------------------------------------
-    root = xr.open_dataset(input_nc, decode_times=False)
-    truth = xr.open_dataset(input_nc, group="truth", decode_times=False)
-    prediction = xr.open_dataset(input_nc, group="prediction", decode_times=False)
-
-    # -----------------------------------------------------------------------------
-    # Build CF-compatible noleap time
-    # -----------------------------------------------------------------------------
-    n_time = root.sizes["time"]
-    expected_n_time = (end_year - start_year + 1) * 365
-
-    if n_time != expected_n_time:
+def _build_time(n_time: int, start_year: int, end_year: int):
+    """Build CF-compliant noleap time."""
+    expected = (end_year - start_year + 1) * 365
+    if n_time != expected:
         raise ValueError(
-            f"time dimension is {n_time}, but expected {expected_n_time} "
+            f"time dimension is {n_time}, but expected {expected} "
             f"for {start_year}-{end_year} with a noleap calendar."
         )
 
+    units = f"days since {start_year}-01-01 00:00:00"
     time_values = cftime.num2date(
         np.arange(n_time),
-        units=f"days since {start_year}-01-01 00:00:00",
+        units=units,
         calendar="noleap",
     )
 
-    time_encoding = {
-        "units": f"days since {start_year}-01-01 00:00:00",
-        "calendar": "noleap",
-        "dtype": "int32",
-    }
+    encoding = {"units": units, "calendar": "noleap", "dtype": "int32"}
+    return time_values, encoding
 
-    # assign time
+
+def _open_and_prepare(input_nc: str, time_values):
+    """Open and prepare datasets."""
+    root = xr.open_dataset(input_nc, decode_times=False)
+    truth = xr.open_dataset(input_nc, group="truth", decode_times=False)
+    pred = xr.open_dataset(input_nc, group="prediction", decode_times=False)
+
     root = root.assign_coords(time=("time", time_values))
     truth = truth.assign_coords(time=("time", time_values))
-    prediction = prediction.assign_coords(time=("time", time_values))
+    pred = pred.assign_coords(time=("time", time_values))
 
-    # shared coords
-    shared_coords = root[["lat", "lon"]]
+    shared = root[["lat", "lon"]]
+    return xr.merge([truth, shared]), xr.merge([pred, shared]), root.sizes["time"]
 
-    truth_flat = xr.merge([truth, shared_coords])
-    prediction_flat = xr.merge([prediction, shared_coords])
 
-    # -----------------------------------------------------------------------------
-    # Split and write
-    # -----------------------------------------------------------------------------
+def _write_year(ds, year: int, output_dir: Path, prefix: str, encoding):
+    """Write a single year to a NetCDF file."""
+    t0 = cftime.DatetimeNoLeap(year, 1, 1)
+    t1 = cftime.DatetimeNoLeap(year, 12, 31)
+
+    out = output_dir / f"{prefix}_{year}.nc"
+    ds.sel(time=slice(t0, t1)).to_netcdf(
+        out,
+        mode="w",
+        encoding={"time": encoding},
+    )
+    print(f"Wrote: {out}")
+
+
+def split_netcdf(input_nc: str, start_year: int, end_year: int, output_dir: Path):
+    """Split a NetCDF file by year and separate truth/prediction (no groups)."""
+    # build time first (needs n_time → open root minimally)
+    root = xr.open_dataset(input_nc, decode_times=False)
+    time_values, encoding = _build_time(root.sizes["time"], start_year, end_year)
+    root.close()
+
+    truth_ds, pred_ds, _ = _open_and_prepare(input_nc, time_values)
+
     output_dir.mkdir(exist_ok=True)
+
     for year in range(start_year, end_year + 1):
-        t0 = cftime.DatetimeNoLeap(year, 1, 1)
-        t1 = cftime.DatetimeNoLeap(year, 12, 31)
-
-        truth_y = truth_flat.sel(time=slice(t0, t1))
-        pred_y = prediction_flat.sel(time=slice(t0, t1))
-
-        truth_out = output_dir / f"truth_{year}.nc"
-        pred_out = output_dir / f"prediction_{year}.nc"
-
-        truth_y.to_netcdf(
-            truth_out,
-            mode="w",
-            encoding={"time": time_encoding},
-        )
-
-        pred_y.to_netcdf(
-            pred_out,
-            mode="w",
-            encoding={"time": time_encoding},
-        )
-
-        print(f"Wrote: {truth_out}")
-        print(f"Wrote: {pred_out}")
+        _write_year(truth_ds, year, output_dir, "truth", encoding)
+        _write_year(pred_ds, year, output_dir, "prediction", encoding)
 
 
 def main():
