@@ -1,6 +1,14 @@
-import { fetchExperimentKeys } from "./util.js";
+import { fetchExperimentKeys, URL_EXP_SHEET } from "./util.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+    // Set experiment sheet URL
+    const expSheetLink = document.getElementById("exp-sheet-link");
+    if (expSheetLink) {
+        expSheetLink.href = URL_EXP_SHEET;
+        expSheetLink.target = "_blank" // open in new tab
+    }
+
+    // Load list of experiments and experiment groups
     await loadExperiments();
     await loadExperimentGroups();
 

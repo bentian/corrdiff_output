@@ -1,3 +1,5 @@
+const URL_EXP_SHEET = "https://docs.google.com/spreadsheets/d/1_wKKzvP1Jc5HOEFOuQXurRa4_oECnvS7EsKz2akQIK8/edit?gid=1634578103#gid=1634578103"
+
 let _experimentCache = null;
 let _groupCache = null;
 
@@ -34,13 +36,14 @@ async function fetchExperimentKeys(isExperimentGroup = false) {
 }
 
 /**
- * Fetch experiment value by key from the loaded map.
+ * Fetch experiment link by key from the loaded map.
  * @param {string} key - The experiment key to fetch.
  * @param {boolean} isExperimentGroup - Whether to load comparison group data.
- * @returns {Promise<string|null>} The experiment value or null if not found.
+ * @returns {Promise<string|null>} The experiment link or null if not found.
  */
-async function fetchExperimentValue(key, isExperimentGroup = false) {
-    return (await loadExperimentMap(isExperimentGroup))[key] ?? null;
+async function fetchExperimentLink(key, isExperimentGroup = false) {
+    const value = (await loadExperimentMap(isExperimentGroup))[key];
+    return value ? `${URL_EXP_SHEET}&range=${value}` : null;
 }
 
 /**
@@ -252,7 +255,8 @@ function initializeLightbox() {
 
 // Export functions for use in render.js
 export {
-    fetchExperimentKeys, fetchExperimentValue,
+    URL_EXP_SHEET,
+    fetchExperimentKeys, fetchExperimentLink,
     generateExperimentGroupFiles, generateExperimentFiles,
     handleHashChange, activateSingleTab,
     addCollapsibleEventListeners, initializeLightbox

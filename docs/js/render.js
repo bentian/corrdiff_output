@@ -1,5 +1,5 @@
 import {
-    fetchExperimentValue,
+    fetchExperimentLink,
     generateExperimentGroupFiles,
     generateExperimentFiles,
     handleHashChange,
@@ -76,7 +76,7 @@ async function renderHeading(group, exp1, exp2) {
 
     // Render heading for experiment group
     if (group) {
-        const url = await fetchExperimentValue(group, /* isExperimentGroup */ true);
+        const url = await fetchExperimentLink(group, /* isExperimentGroup */ true);
         headingEl.append("Experiment Group: ", makeLink(group, url));
         return;
     }
@@ -84,15 +84,15 @@ async function renderHeading(group, exp1, exp2) {
     // Render heading for experiments
     if (exp1 && exp2) {
         const [url1, url2] = await Promise.all([
-            fetchExperimentValue(exp1),
-            fetchExperimentValue(exp2),
+            fetchExperimentLink(exp1),
+            fetchExperimentLink(exp2),
         ]);
         headingEl.append("Comparison: ", makeLink(exp1, url1), " vs. ", makeLink(exp2, url2));
     } else {
         const exp = exp1 || exp2;
         if (!exp) return;
 
-        const url = await fetchExperimentValue(exp);
+        const url = await fetchExperimentLink(exp);
         headingEl.append("Experiment: ", makeLink(exp, url));
     }
 }
