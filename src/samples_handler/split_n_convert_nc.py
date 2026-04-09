@@ -167,6 +167,11 @@ def _prepare_year_group(
     year_ds = _add_height_coords(year_ds)
     year_ds = _set_coord_metadata(year_ds)
     year_ds = _set_variable_metadata(year_ds)
+
+    # Ensure time is the leading dimension for better tool compatibility
+    if "ensemble" in year_ds.dims:
+        year_ds = year_ds.transpose("time", "ensemble", "y", "x")
+
     return year_ds
 
 
