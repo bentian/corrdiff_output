@@ -3,22 +3,10 @@
 Split a multi-group NetCDF file into yearly files, flatten truth/prediction
 groups into separate outputs, and add more CF-compatible metadata.
 
-This script:
-1. Reads a NetCDF file containing root variables and "truth"/"prediction" groups.
-2. Replaces the original time coordinate with a CF-compliant noleap daily time axis.
-3. Splits the dataset into one file per year.
-4. Flattens groups into separate output files:
-   - truth_<year>.nc
-   - prediction_<year>.nc
-5. Renames variables and adds CF-style metadata.
-
-Notes:
-- Uses a noleap calendar: 365 days/year.
-- Assumes the input time dimension length equals (end_year - start_year + 1) * 365.
-- For precipitation, confirm the units before using standard_name="precipitation_flux".
-
-Usage:
-    python split_netcdf.py <input_nc> <start_year> <end_year> [--outdir DIR]
+This version reduces peak memory usage by:
+1. Splitting by year first
+2. Converting each yearly subset to CF-compatible form separately
+3. Writing each output immediately
 """
 
 from pathlib import Path
@@ -87,8 +75,8 @@ def _set_coord_metadata(ds: xr.Dataset) -> xr.Dataset:
 
 
 def _add_height_coords(ds: xr.Dataset) -> xr.Dataset:
-    """Add CF-compatible height coordinates."""
-    ds = ds.assign_coords(
+    """Add CF-compatible scalar height coordinates."""
+    return ds.assign_coords(
         height_2m=xr.DataArray(
             2.0,
             attrs={
@@ -110,14 +98,11 @@ def _add_height_coords(ds: xr.Dataset) -> xr.Dataset:
             },
         ),
     )
-    return ds
 
 
 def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
-    """Set CF-compatible variable metadata."""
-    # Rename variables first
-    rename_map = {old: new for old, new in VAR_RENAME.items() if old in ds.data_vars}
-    ds = ds.rename(rename_map)
+    """Rename variables and set CF-style metadata."""
+    ds = ds.rename({old: new for old, new in VAR_RENAME.items() if old in ds.data_vars})
 
     if "tas" in ds:
         ds["tas"].attrs.update(
@@ -150,7 +135,6 @@ def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
         )
 
     if "pr" in ds:
-        # Convert mm/day to kg m-2 s-1
         ds["pr"] = ds["pr"] / 86400.0
         ds["pr"].attrs.update(
             {
@@ -163,74 +147,53 @@ def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def _prepare_group(
-    group_name: str, shared: xr.Dataset, input_nc: str, time_values: np.ndarray
+def _prepare_year_group(
+    input_nc: str,
+    group_name: str,
+    shared_coords: xr.Dataset,
+    time_values: np.ndarray,
+    year: int,
 ) -> xr.Dataset:
-    """Prepare a single group."""
-    ds = xr.open_dataset(input_nc, group=group_name, decode_times=False)
-    ds = ds.assign_coords(time=("time", time_values))
-    ds = xr.merge([ds, shared])
-    ds = _add_height_coords(ds)
-    ds = _set_coord_metadata(ds)
-    ds = _set_variable_metadata(ds)
-    return ds
+    """Open one group, slice one year, then convert to CF-compatible form."""
+    with xr.open_dataset(input_nc, group=group_name, decode_times=False) as ds:
+        year_ds = ds.assign_coords(time=("time", time_values)).sel(
+            time=slice(
+                cftime.DatetimeNoLeap(year, 1, 1),
+                cftime.DatetimeNoLeap(year, 12, 31),
+            )
+        )
+        year_ds = xr.merge([year_ds, shared_coords])
+
+    year_ds = _add_height_coords(year_ds)
+    year_ds = _set_coord_metadata(year_ds)
+    year_ds = _set_variable_metadata(year_ds)
+    return year_ds
 
 
-def _open_and_prepare(
-    input_nc: str, time_values: np.ndarray
-) -> tuple[xr.Dataset, xr.Dataset, int]:
-    """Open and prepare the dataset."""
-    root = xr.open_dataset(input_nc, decode_times=False)
-    shared = _set_coord_metadata(
-        root.assign_coords(time=("time", time_values))[["lat", "lon"]]
-    )
-
-    return (
-        _prepare_group("truth", shared, input_nc, time_values),
-        _prepare_group("prediction", shared, input_nc, time_values),
-        root.sizes["time"],
-    )
-
-
-def _write_year(
-    ds: xr.Dataset, year: int, output_dir: Path, prefix: str, time_encoding: dict
-) -> None:
-    """Write a single year to a NetCDF file."""
-    t0 = cftime.DatetimeNoLeap(year, 1, 1)
-    t1 = cftime.DatetimeNoLeap(year, 12, 31)
-
-    out_file = output_dir / f"{prefix}_{year}.nc"
-    ds.sel(time=slice(t0, t1)).to_netcdf(
-        out_file,
-        mode="w",
-        encoding={"time": time_encoding},
-    )
-    print(f"Wrote: {out_file}")
-
-
-def convert_and_split_netcdf(
+def split_n_convert_nc(
     input_nc: str, start_year: int, end_year: int, output_dir: Path
 ) -> None:
     """
     Split a NetCDF file by year and separate truth/prediction into standalone files.
 
-    Args:
-        input_nc: Path to the input NetCDF file.
-        start_year: Start year.
-        end_year: End year.
-        output_dir: Output directory.
+    This implementation minimizes peak memory by processing one year and one group at a time.
     """
-    root = xr.open_dataset(input_nc, decode_times=False)
-    time_values, time_encoding = _build_time(root.sizes["time"], start_year, end_year)
-    root.close()
-
-    truth_ds, pred_ds, _ = _open_and_prepare(input_nc, time_values)
+    with xr.open_dataset(input_nc, decode_times=False) as root:
+        time_values, time_encoding = _build_time(
+            root.sizes["time"], start_year, end_year
+        )
+        shared_coords = _set_coord_metadata(root[["lat", "lon"]])
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for year in range(start_year, end_year + 1):
-        _write_year(truth_ds, year, output_dir, "truth", time_encoding)
-        _write_year(pred_ds, year, output_dir, "prediction", time_encoding)
+        for group_name in ["truth", "prediction"]:
+            ds = _prepare_year_group(
+                input_nc, group_name, shared_coords, time_values, year
+            )
+            out_file = output_dir / f"{group_name}_{year}.nc"
+            ds.to_netcdf(out_file, mode="w", encoding={"time": time_encoding})
+            print(f"Wrote: {out_file}")
 
 
 def main():
@@ -241,14 +204,10 @@ def main():
     parser.add_argument("input_nc", help="Input NetCDF file")
     parser.add_argument("start_year", type=int, help="Start year, e.g. 2015")
     parser.add_argument("end_year", type=int, help="End year, e.g. 2080")
-    parser.add_argument(
-        "--outdir",
-        default="split_by_year",
-        help="Output directory",
-    )
+    parser.add_argument("--outdir", default="split_by_year", help="Output directory")
     args = parser.parse_args()
 
-    convert_and_split_netcdf(
+    split_n_convert_nc(
         input_nc=args.input_nc,
         start_year=args.start_year,
         end_year=args.end_year,
