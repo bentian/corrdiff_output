@@ -33,17 +33,17 @@ If you haven't installed `xskillscore`, you may need:
      - Hydra configs (`hydra_train/` and `hydra_generate/`)
    - `<output_directory>`: Directory where outputs will be saved.
    - `--n-ensemble`: Number of ensemble members (default: 1).
-   - `--masked`: Apply landmask (yes or no. default: yes).
+   - `--no-mask`: Disable landmask (default: apply landmask).
 
 ## 📖 Example Run
 
-`python corrdiff_plotgen.py data/Baseline output/ --n-ensemble=1 --masked=no`
+`python corrdiff_plotgen.py data/Baseline output/ --n-ensemble=1 --no-mask`
 
 This will:
 - ✅ Process NetCDF datasets
 - ✅ Compute model evaluation metrics
 - ✅ Generate PNG plots & TSV tables
-- ✅ Apply landmask if specified
+- ✅ Disable landmask if specified
 
 # 📊 Generated Outputs
 

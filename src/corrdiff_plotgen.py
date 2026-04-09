@@ -163,10 +163,14 @@ def main():
         "--n-ensemble", type=int, default=1, help="Number of ensemble members."
     )
     parser.add_argument(
-        "--masked", action="store_true", help="Whether to apply landmask."
+        "--no-mask",
+        dest="masked",
+        action="store_false",
+        help="Disable landmask.",
     )
-    args = parser.parse_args()
+    parser.set_defaults(masked=True)
 
+    args = parser.parse_args()
     print(
         f"[{get_timestamp()}] corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
         f"n_ensemble={args.n_ensemble} masked={args.masked}"
