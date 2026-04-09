@@ -1,12 +1,47 @@
-#!/usr/bin/env python3
 """
-Split a multi-group NetCDF file into yearly files, flatten truth/prediction
-groups into separate outputs, and add more CF-compatible metadata.
+Split a multi-group NetCDF file into yearly, CF-compliant outputs.
 
-This version reduces peak memory usage by:
-1. Splitting by year first
-2. Converting each yearly subset to CF-compatible form separately
-3. Writing each output immediately
+This script:
+1. Reads a NetCDF file containing root variables and groups:
+   - "truth"
+   - "prediction"
+2. Reconstructs a CF-compliant time coordinate:
+   - daily frequency
+   - noleap calendar (365 days/year)
+   - from <start_year> to <end_year>
+3. Processes data **year-by-year and group-by-group** to minimize peak memory usage.
+4. Flattens groups into standalone NetCDF files organized into folders:
+   - truth/
+   - prediction_all/
+   - prediction_reg/ (regression mode only)
+5. Converts variables to more CF-compliant form:
+   - renames variables (e.g., precipitation → pr, temperature_2m → tas)
+   - adds standard_name, units, and height coordinates where applicable
+   - converts precipitation from mm/day → kg m-2 s-1
+6. Ensures dimension order compatibility:
+   - (time, ensemble, y, x) for prediction
+   - (time, y, x) for truth
+7. Supports regression mode:
+   - skips writing truth outputs
+   - keeps only the first ensemble member (ensemble=0)
+
+Output structure:
+    <output_dir>/
+        truth/
+            truth_<year>.nc
+        prediction_all/
+            prediction_<year>.nc
+        prediction_reg/   (only if --regression-mode)
+            prediction_<year>.nc
+
+Notes:
+- Assumes input time length = (end_year - start_year + 1) * 365
+- Uses cftime for CF-compliant time handling
+- Lat/lon are treated as static 2D coordinates (y, x)
+
+Usage:
+    python split_n_convert_nc.py <input_nc> <start_year> <end_year> \
+        [--outdir DIR] [--regression-mode]
 """
 
 from pathlib import Path
