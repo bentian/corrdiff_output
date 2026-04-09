@@ -9,6 +9,7 @@ This script orchestrates:
 - exporting Hydra configs to TSV
 - plotting training loss from TensorBoard
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,12 +39,15 @@ from plot_helper import (
     plot_top_samples,
     plot_metrics_vs_ensembles,
 )
+
 OVERVIEW_METRIC_FMT = ".2f"
 DIFF_METRIC_FMT = ".3f"
 
+
 # Model processing functions
-def process_model(in_dir: Path, out_dir: Path, label: str,
-                  n_ensemble: int, masked: bool) -> xr.Dataset:
+def process_model(
+    in_dir: Path, out_dir: Path, label: str, n_ensemble: int, masked: bool
+) -> xr.Dataset:
     """
     Process a model, generate plots, and save metrics.
 
@@ -60,7 +64,9 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     nc_path = in_dir / "netcdf" / f"output_0_{label}{'_masked' if masked else ''}.nc"
 
     # Score samples
-    metrics, spatial_error, top_samples, flats, p90s = score_samples(nc_path, n_ensemble)
+    metrics, spatial_error, top_samples, flats, p90s = score_samples(
+        nc_path, n_ensemble
+    )
 
     # Create output directory and sub directories for each variable
     output_path = ensure_directory_exists(out_dir, label)
@@ -86,16 +92,18 @@ def process_model(in_dir: Path, out_dir: Path, label: str,
     # Overview plots and tables
     save_tables_and_plots(
         metrics.mean(dim="time"),
-        metrics.groupby("time.month").mean(dim="time"),   # group by month
-        group_by_nyear(metrics, N_YEARS),                 # group by nyear
+        metrics.groupby("time.month").mean(dim="time"),  # group by month
+        group_by_nyear(metrics, N_YEARS),  # group by nyear
         ensure_directory_exists(output_path, "overview"),
-        number_format=OVERVIEW_METRIC_FMT
+        number_format=OVERVIEW_METRIC_FMT,
     )
 
     return metrics
 
 
-def compare_models(metrics_all: xr.Dataset, metrics_reg: xr.Dataset, output_path: Path) -> None:
+def compare_models(
+    metrics_all: xr.Dataset, metrics_reg: xr.Dataset, output_path: Path
+) -> None:
     """
     Compare models and save results.
 
@@ -105,16 +113,15 @@ def compare_models(metrics_all: xr.Dataset, metrics_reg: xr.Dataset, output_path
         output_path (Path): Output directory where comparison results should be saved.
     """
     metrics_mean_diff = metrics_all.mean(dim="time") - metrics_reg.mean(dim="time")
-    metrics_monthly_diff = (
-        metrics_all.groupby("time.month").mean(dim="time")
-        - metrics_reg.groupby("time.month").mean(dim="time")
-    )
+    metrics_monthly_diff = metrics_all.groupby("time.month").mean(
+        dim="time"
+    ) - metrics_reg.groupby("time.month").mean(dim="time")
     save_tables_and_plots(
         metrics_mean_diff,
         metrics_monthly_diff,
         group_by_nyear(metrics_all - metrics_reg, N_YEARS),
         output_path,
-        number_format=DIFF_METRIC_FMT
+        number_format=DIFF_METRIC_FMT,
     )
 
 
@@ -136,7 +143,9 @@ def process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -
     metrics_reg = process_model(in_dir, out_dir, "reg", n_ensemble, masked)
 
     # Compare models
-    compare_models(metrics_all, metrics_reg, ensure_directory_exists(out_dir, "minus_reg"))
+    compare_models(
+        metrics_all, metrics_reg, ensure_directory_exists(out_dir, "minus_reg")
+    )
 
 
 def main():
@@ -144,18 +153,27 @@ def main():
     Main function to process models and generate plots and tables.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("in_dir", type=Path, help="Folder to read the NetCDF files and config.")
-    parser.add_argument("out_dir", type=Path, help="Folder to save the plots and tables.")
-    parser.add_argument("--n-ensemble", type=int, default=1, help="Number of ensemble members.")
-    parser.add_argument("--masked", type=str, default="yes", help="Whether to apply landmask.")
+    parser.add_argument(
+        "in_dir", type=Path, help="Folder to read the NetCDF files and config."
+    )
+    parser.add_argument(
+        "out_dir", type=Path, help="Folder to save the plots and tables."
+    )
+    parser.add_argument(
+        "--n-ensemble", type=int, default=1, help="Number of ensemble members."
+    )
+    parser.add_argument(
+        "--masked", action="store_true", help="Whether to apply landmask."
+    )
     args = parser.parse_args()
 
-    masked = args.masked.lower() == "yes"
-    print(f"[{get_timestamp()}] corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
-          f"n_ensemble={args.n_ensemble} masked={masked}")
+    print(
+        f"[{get_timestamp()}] corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
+        f"n_ensemble={args.n_ensemble} masked={args.masked}"
+    )
 
     # Ensure masked NetCDF files exist
-    if masked:
+    if args.masked:
         for filename in ["output_0_all", "output_0_reg"]:
             src = args.in_dir / "netcdf" / f"{filename}.nc"
             dst = args.in_dir / "netcdf" / f"{filename}_masked.nc"
@@ -164,11 +182,13 @@ def main():
 
     # Process models
     ensure_directory_exists(args.out_dir)
-    process_models(args.in_dir, args.out_dir, args.n_ensemble, masked)
+    process_models(args.in_dir, args.out_dir, args.n_ensemble, args.masked)
 
     # Process Hydra config
-    for key, output_file in \
-        [("hydra_generate", "generate_config.tsv"), ("hydra_train", "train_config.tsv")]:
+    for key, output_file in [
+        ("hydra_generate", "generate_config.tsv"),
+        ("hydra_train", "train_config.tsv"),
+    ]:
         config_path = args.in_dir / key / "config.yaml"
         if config_path.exists():
             yaml_to_tsv(config_path, args.out_dir / output_file)
