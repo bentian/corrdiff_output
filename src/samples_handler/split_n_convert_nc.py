@@ -176,12 +176,23 @@ def _prepare_year_group(
 
 
 def split_n_convert_nc(
-    input_nc: str, start_year: int, end_year: int, output_dir: Path
+    input_nc: str,
+    start_year: int,
+    end_year: int,
+    output_dir: Path,
+    first_ensemble_only: bool = False,
 ) -> None:
     """
     Split a NetCDF file by year and separate truth/prediction into standalone files.
 
     This implementation minimizes peak memory by processing one year and one group at a time.
+
+    Args:
+        input_nc: Input NetCDF path.
+        start_year: Start year.
+        end_year: End year.
+        output_dir: Output directory.
+        first_ensemble_only: If True, write only ensemble index 0 for prediction.
     """
     with xr.open_dataset(input_nc, decode_times=False) as root:
         time_values, time_encoding = _build_time(
@@ -191,11 +202,16 @@ def split_n_convert_nc(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for year in range(start_year, end_year + 1):
-        for group_name in ["truth", "prediction"]:
+    for group_name in ["truth", "prediction"]:
+        for year in range(start_year, end_year + 1):
             ds = _prepare_year_group(
                 input_nc, group_name, shared_coords, time_values, year
             )
+
+            # Keep only the first ensemble member per need (e.g., for regression)
+            if first_ensemble_only and "ensemble" in ds.dims:
+                ds = ds.isel(ensemble=0, drop=True)
+
             out_file = output_dir / f"{group_name}_{year}.nc"
             ds.to_netcdf(out_file, mode="w", encoding={"time": time_encoding})
             print(f"Wrote: {out_file}")
@@ -210,6 +226,11 @@ def main():
     parser.add_argument("start_year", type=int, help="Start year, e.g. 2015")
     parser.add_argument("end_year", type=int, help="End year, e.g. 2080")
     parser.add_argument("--outdir", default="split_by_year", help="Output directory")
+    parser.add_argument(
+        "--first-ensemble-only",
+        action="store_true",
+        help="If set, write only the first ensemble member for prediction output.",
+    )
     args = parser.parse_args()
 
     split_n_convert_nc(
@@ -217,6 +238,7 @@ def main():
         start_year=args.start_year,
         end_year=args.end_year,
         output_dir=Path(args.outdir),
+        first_ensemble_only=args.first_ensemble_only,
     )
 
 
