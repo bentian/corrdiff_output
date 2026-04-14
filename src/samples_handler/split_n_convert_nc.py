@@ -145,7 +145,7 @@ def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
                 "standard_name": "air_temperature",
                 "long_name": "Near-surface air temperature",
                 "units": "K",
-                "coordinates": "height_2m",
+                "coordinates": "lon lat height_2m",
             }
         )
 
@@ -155,7 +155,7 @@ def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
                 "standard_name": "eastward_wind",
                 "long_name": "Eastward wind at 10 m",
                 "units": "m s-1",
-                "coordinates": "height_10m",
+                "coordinates": "lon lat height_10m",
             }
         )
 
@@ -165,7 +165,7 @@ def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
                 "standard_name": "northward_wind",
                 "long_name": "Northward wind at 10 m",
                 "units": "m s-1",
-                "coordinates": "height_10m",
+                "coordinates": "lon lat height_10m",
             }
         )
 
@@ -176,6 +176,7 @@ def _set_variable_metadata(ds: xr.Dataset) -> xr.Dataset:
                 "standard_name": "precipitation_flux",
                 "long_name": "Precipitation flux",
                 "units": "kg m-2 s-1",
+                "coordinates": "lon lat",
             }
         )
 
@@ -233,7 +234,9 @@ def split_n_convert_nc(
         time_values, time_encoding = _build_time(
             root.sizes["time"], start_year, end_year
         )
-        shared_coords = _set_coord_metadata(root[["lat", "lon"]])
+        shared_coords = _set_coord_metadata(root[["lat", "lon"]]).set_coords(
+            ["lat", "lon"]
+        )
 
     groups = ["prediction"] if regression_mode else ["truth", "prediction"]
     for group_name in groups:
