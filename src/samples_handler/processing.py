@@ -34,10 +34,12 @@ Dependencies
 This module does not perform any plotting or file writing; it focuses
 purely on computation and data transformation.
 """
+
 from __future__ import annotations
 
 import warnings
 from typing import Dict, Tuple
+from functools import partial
 
 import numpy as np
 import xarray as xr
@@ -45,7 +47,9 @@ import xarray as xr
 try:
     import xskillscore as xs
 except ImportError as exc:
-    raise ImportError("xskillscore not installed. Try `pip install xskillscore`") from exc
+    raise ImportError(
+        "xskillscore not installed. Try `pip install xskillscore`"
+    ) from exc
 
 
 # -----------------------------------------------------------------------------
@@ -102,7 +106,9 @@ def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     )
 
 
-def _flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+def _flatten_and_filter_nan(
+    truth: xr.Dataset, pred: xr.Dataset
+) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Extract flattened truth and prediction for all variables in the truth dataset.
 
@@ -121,8 +127,11 @@ def _flatten_and_filter_nan(truth: xr.Dataset, pred: xr.Dataset) -> Tuple[xr.Dat
             continue
 
         truth_flat = truth[var].values.ravel()
-        pred_flat = pred[var].mean("ensemble").values.ravel() \
-                    if "ensemble" in pred[var].dims else pred[var].values.ravel()
+        pred_flat = (
+            pred[var].mean("ensemble").values.ravel()
+            if "ensemble" in pred[var].dims
+            else pred[var].values.ravel()
+        )
 
         # Filter out NaNs and align truth and pred
         valid = np.isfinite(truth_flat) & np.isfinite(pred_flat)
@@ -147,8 +156,11 @@ def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     Returns:
         xr.Dataset: The absolute difference dataset with NaNs removed.
     """
-    pred_mean = pred.mean("ensemble").expand_dims("ensemble") \
-                if "ensemble" in pred.dims else pred
+    pred_mean = (
+        pred.mean("ensemble").expand_dims("ensemble")
+        if "ensemble" in pred.dims
+        else pred
+    )
     abs_diff = abs(pred_mean - truth)
 
     # Filter out NaNs by setting them to NaN where either truth or pred is NaN
@@ -160,9 +172,7 @@ def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 # Per-time processing
 # -----------------------------------------------------------------------------
 def _select_time_and_ensemble(
-    filepath: str,
-    index: int,
-    n_ensemble: int
+    filepath: str, index: int, n_ensemble: int
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Helper to open samples and select a single time step with optional ensemble slicing.
@@ -215,9 +225,7 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
 
 
 def process_sample_multi_ensemble(
-    index: int,
-    filepath: str,
-    n_ensembles: Tuple[int, ...]
+    index: int, filepath: str, n_ensembles: Tuple[int, ...]
 ) -> Dict[int, xr.Dataset]:
     """
     Compute metrics for multiple ensemble sizes at a single time index, efficiently.
@@ -248,14 +256,52 @@ def process_sample_multi_ensemble(
     # Compute per-ensemble metrics by slicing in-memory
     out: Dict[int, xr.Dataset] = {}
     for n_ens in n_ensembles:
-        pred_n = pred_t.isel(ensemble=slice(0, n_ens)) if "ensemble" in pred_t.dims else pred_t
+        pred_n = (
+            pred_t.isel(ensemble=slice(0, n_ens))
+            if "ensemble" in pred_t.dims
+            else pred_t
+        )
         out[n_ens] = _compute_metrics(truth_t, pred_n)
 
     return {"metrics_by_n": out}
 
+
 # -----------------------------------------------------------------------------
 # IO
 # -----------------------------------------------------------------------------
+def _center_crop(ds: xr.Dataset, size: tuple[int, int]) -> xr.Dataset:
+    """
+    Center crop the dataset to a specified (y, x) size.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The dataset to crop.
+    size : tuple[int, int]
+        (size_y, size_x) to crop.
+
+    Returns
+    -------
+    xr.Dataset
+        The center-cropped dataset.
+    """
+    if "y" not in ds.dims or "x" not in ds.dims:
+        return ds
+
+    size_y, size_x = size
+    ny, nx = ds.sizes["y"], ds.sizes["x"]
+    if size_y <= 0 or size_x <= 0 or size_y > ny or size_x > nx:
+        return ds
+
+    y0 = (ny - size_y) // 2
+    x0 = (nx - size_x) // 2
+
+    return ds.isel(
+        y=slice(y0, y0 + size_y),
+        x=slice(x0, x0 + size_x),
+    )
+
+
 def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     """
     Open prediction and truth samples from a dataset file.
@@ -269,5 +315,12 @@ def open_samples(f: str) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset]:
     root = xr.open_dataset(f)
     pred = xr.open_dataset(f, group="prediction").merge(root)
     truth = xr.open_dataset(f, group="truth").merge(root)
+
+    # Crop to (128, 96) if needed
+    crop_center = False
+    if crop_center:
+        truth, pred, root = map(
+            partial(_center_crop, size=(128, 96)), (truth, pred, root)
+        )
 
     return truth.set_coords(["lon", "lat"]), pred.set_coords(["lon", "lat"]), root
