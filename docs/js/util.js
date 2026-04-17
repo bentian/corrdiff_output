@@ -64,7 +64,11 @@ function generateExperimentGroupFiles(group) {
         files: Object.fromEntries(
             Object.entries(base).map(([k, v]) => [
                 k,
-                group === "DM" ? v : [...v, `${k}_nyear_cmp.png`]
+                [
+                    ...v,
+                    ...(group === "CropW" ? [`${k}_mean_w_cmp.png`] : []),
+                    ...(group === "DM" ? [] : [`${k}_nyear_cmp.png`])
+                ]
             ])
         )
     }];

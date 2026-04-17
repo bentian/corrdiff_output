@@ -62,7 +62,14 @@ Y_LIMITS = {
 LabelMode = Literal["all", "reg", "both"]
 
 SUFFIX_ORDER = ["-1", "-2", "-3", "-5"]
-GROUP_COLORS = {"W1a": "tab:olive", "W1": "tab:blue", "W2": "tab:orange"}
+GROUP_COLORS = {
+    "W1a": "tab:olive",
+    "W1": "tab:blue",
+    "W2": "tab:orange",
+    "CropW1a": "tab:grey",
+    "CropW1": "tab:green",
+    "CropW2": "tab:brown",
+}
 LAB_STYLE = {
     "all": {"linestyle": "-", "marker": "o"},
     "reg": {"linestyle": "--", "marker": "^"},
@@ -97,27 +104,44 @@ class MetricGridSpec:
 
 def experiment_sort_key(exp: str) -> tuple[int, int, int]:
     """
-    Generate a sortable key for experiment names.
-    Ensures ordering such as:
-        W1a-* before W1-*, then increasing experiment number
+    Sort order:
+        W1a-*, then W1-*
+        W2...
+        then CropW1a-*, CropW1-*, CropW2...
 
-    Parameters
-    ----------
-    exp : str
-        Experiment name (e.g. "W1a-1", "W1-2", "W2-1").
+    Within each:
+        1a, 1, 2, ...
 
-    Returns
-    -------
-    tuple[int, int, int]
-        Sorting key: (group_number, group_variant_priority, experiment_number)
+    Returns:
+        (prefix_priority, group_number, group_variant_priority,
+         exp_number, letter_priority, letter)
     """
-    m = re.match(r"W(\d+)(a?)-(\d+)([a-z]?)$", exp)
+    m = re.match(r"(Crop)?W(\d+)(a?)-(\d+)([a-z]?)", exp)
     if not m:
-        return (9999, 9999, 9999)
+        return (9999, 9999, 9999, 9999, 1, exp)
+
+    is_crop = m.group(1) is not None
+    group_num = int(m.group(2))
+    group_variant = m.group(3)  # '' or 'a'
+    exp_num = int(m.group(4))
+    letter = m.group(5)
+
+    # 🔥 main control: W before CropW
+    prefix_priority = 1 if is_crop else 0
+
+    # W1a before W1
+    group_variant_priority = 0 if group_variant == "a" else 1
+
+    # 1a before 1
+    letter_priority = 0 if letter == "a" else 1
+
     return (
-        int(m.group(1)),
-        0 if m.group(2) == "a" else 1,
-        int(m.group(3)),
+        prefix_priority,
+        group_num,
+        group_variant_priority,
+        exp_num,
+        letter_priority,
+        letter,
     )
 
 

@@ -34,7 +34,7 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sor
 
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
-EXP_GROUP = "W"
+EXP_GROUP = "CropW"
 
 VARS = ["prcp", "t2m", "u10m", "v10m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
