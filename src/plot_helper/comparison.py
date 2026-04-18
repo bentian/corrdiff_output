@@ -210,7 +210,12 @@ def _save_metric_grid(
 
 
 def _plot_metric_all_groups(
-    ax: plt.Axes, df: pd.DataFrame, *, metric: str, variable: str
+    ax: plt.Axes,
+    df: pd.DataFrame,
+    *,
+    metric: str,
+    variable: str,
+    label_mode: LabelMode,
 ) -> None:
     """
     Plot mean metric values across experiments in a single subplot.
@@ -231,8 +236,12 @@ def _plot_metric_all_groups(
         Metric to plot.
     variable : str
         Variable to plot.
+    label_mode : {"all", "reg", "both"}
+        Which evaluation labels to include.
     """
     sub = df[(df.metric == metric) & (df.variable == variable)]
+    if label_mode != "both":
+        sub = sub[sub["label"] == label_mode]
     if sub.empty:
         ax.set_visible(False)
         return
@@ -264,7 +273,11 @@ def _plot_metric_all_groups(
 
 
 def plot_metrics_cmp(
-    df: pd.DataFrame, metrics: list[str], variables: list[str], folder_path: Path
+    df: pd.DataFrame,
+    metrics: list[str],
+    variables: list[str],
+    folder_path: Path,
+    label_mode: LabelMode = "both",
 ) -> None:
     """
     Create and save 2x2 comparison plots for mean metrics.
@@ -281,6 +294,8 @@ def plot_metrics_cmp(
         Variables to plot (one figure per variable).
     folder_path : Path
         Output directory for saved figures.
+    label_mode : {"all", "reg", "both"}, optional
+        Which evaluation labels to include.
     """
     spec = MetricGridSpec(
         metrics=metrics,
@@ -289,7 +304,17 @@ def plot_metrics_cmp(
         filename_suffix="mean_cmp",
         title_prefix="Metric Mean Comparison",
     )
-    _save_metric_grid(df, spec, _plot_metric_all_groups)
+    _save_metric_grid(
+        df,
+        spec,
+        lambda ax, data, metric, variable: _plot_metric_all_groups(
+            ax,
+            data,
+            metric=metric,
+            variable=variable,
+            label_mode=label_mode,
+        ),
+    )
 
 
 def _plot_nyear_metric(

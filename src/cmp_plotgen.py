@@ -38,6 +38,7 @@ EXP_GROUP = "CropW"
 
 VARS = ["prcp", "t2m", "u10m", "v10m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
+LABEL_MODE = "both"
 
 
 def _parse_experiment_name(name: str) -> tuple[str, str]:
@@ -255,13 +256,18 @@ def main():
     - Generate and save comparison plots
     """
     plot_metrics_cmp(
-        extract_metrics(EXP_FOLDER_PATH), METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP
+        extract_metrics(EXP_FOLDER_PATH),
+        METRICS,
+        VARS,
+        CMP_FOLDER_PATH / EXP_GROUP,
+        LABEL_MODE,
     )
     plot_nyear_metrics_cmp(
         extract_nyear_metrics(EXP_FOLDER_PATH),
         METRICS,
         VARS,
         CMP_FOLDER_PATH / EXP_GROUP,
+        LABEL_MODE,
     )
 
 
