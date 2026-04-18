@@ -232,7 +232,7 @@ def _plot_metric_all_groups(
     variable : str
         Variable to plot.
     """
-    sub = _sorted_subset(df, metric=metric, variable=variable)
+    sub = df[(df.metric == metric) & (df.variable == variable)]
     if sub.empty:
         ax.set_visible(False)
         return
@@ -318,7 +318,7 @@ def _plot_nyear_metric(
     label_mode : {"all", "reg", "both"}
         Which evaluation labels to include.
     """
-    sub = _sorted_subset(df, metric=metric, variable=variable)
+    sub = df[(df.metric == metric) & (df.variable == variable)]
     if label_mode != "both":
         sub = sub[sub["label"] == label_mode]
     if sub.empty:
@@ -329,7 +329,9 @@ def _plot_nyear_metric(
     cmap = plt.get_cmap("tab10")
     exp_color = {exp: cmap(i % 10) for i, exp in enumerate(exps)}
 
-    for (exp_name, label), g in sub.groupby(["experiment", "label"], sort=False):
+    for (exp_name, label), g in sub.groupby(
+        ["experiment", "label"], sort=False, observed=True
+    ):
         g = g.sort_values("year_bin")
         ax.plot(
             g["year_bin"].astype(str),

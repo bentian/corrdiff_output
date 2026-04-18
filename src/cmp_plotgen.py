@@ -90,9 +90,12 @@ def _sort_df(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
     if df.empty:
         return df
     return (
-        df.assign(exp_sort=df["experiment"].map(experiment_sort_key))
-        .sort_values(["exp_sort", *cols])
-        .drop(columns="exp_sort")
+        df.assign(
+            exp_sort=df["experiment"].map(experiment_sort_key),
+            label_sort=df["label"].map({"all": 0, "reg": 1}),
+        )
+        .sort_values(["exp_sort", "label_sort", *cols])
+        .drop(columns=["exp_sort", "label_sort"])
         .reset_index(drop=True)
     )
 
