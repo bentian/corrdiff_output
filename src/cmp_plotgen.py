@@ -171,7 +171,7 @@ def extract_metrics(folder_path: str) -> pd.DataFrame:
             )
 
     out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-    return _sort_df(out, "label", "metric", "variable")
+    return _sort_df(out, "metric", "variable")
 
 
 def extract_nyear_metrics(
@@ -244,7 +244,7 @@ def extract_nyear_metrics(
     out["year_bin"] = pd.Categorical(
         out["year_bin"], categories=year_order, ordered=True
     )
-    return _sort_df(out, "label", "metric", "variable", "year_bin")
+    return _sort_df(out, "metric", "variable", "year_bin")
 
 
 def main():

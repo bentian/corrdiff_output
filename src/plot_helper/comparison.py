@@ -161,21 +161,6 @@ def _first_legend(axes: np.ndarray):
     return [], []
 
 
-def _sorted_subset(df: pd.DataFrame, *, metric: str, variable: str) -> pd.DataFrame:
-    """
-    Filter and sort a DataFrame for a given metric and variable.
-    Sorting is performed using `experiment_sort_key`.
-    """
-    sub = df[(df["metric"] == metric) & (df["variable"] == variable)].copy()
-    if sub.empty:
-        return sub
-    return (
-        sub.assign(exp_sort=sub["experiment"].map(experiment_sort_key))
-        .sort_values("exp_sort")
-        .drop(columns="exp_sort")
-    )
-
-
 def _save_metric_grid(
     df: pd.DataFrame,
     spec: MetricGridSpec,
