@@ -139,8 +139,8 @@ def process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -
     # Process regression + diffusion model
     metrics_all = process_model(in_dir, out_dir, "all", n_ensemble, masked)
 
-    # Process regression-only model
-    metrics_reg = process_model(in_dir, out_dir, "reg", n_ensemble, masked)
+    # Process regression-only model with n_ensemble=1
+    metrics_reg = process_model(in_dir, out_dir, "reg", 1, masked)
 
     # Compare models
     compare_models(
