@@ -53,21 +53,21 @@ async function fetchExperimentLink(key, isExperimentGroup = false) {
  */
 function generateExperimentGroupFiles(group) {
     const base = {
-        prcp: ["prcp_mean_cmp.png"],
-        t2m: ["t2m_mean_cmp.png"],
-        u10m: ["u10m_mean_cmp.png"],
-        v10m: ["v10m_mean_cmp.png"]
+        prcp: ["mean_cmp.png"],
+        t2m: ["mean_cmp.png"],
+        u10m: ["mean_cmp.png"],
+        v10m: ["mean_cmp.png"]
     };
 
     return [{
-        title: group,
+        title: "Mean & Decadal Trends",
         files: Object.fromEntries(
             Object.entries(base).map(([k, v]) => [
                 k,
                 [
-                    ...v,
-                    ...(group === "CropW" ? [`${k}_mean_w_cmp.png`] : []),
-                    ...(group === "DM" ? [] : [`${k}_nyear_cmp.png`])
+                    ...[`${k}/mean_cmp.png`],
+                    // ...(group === "CropW" ? [`${k}/mean_w_cmp.png`] : []),
+                    ...(group === "DM" ? [] : [`${k}/nyear_cmp.png`])
                 ]
             ])
         )

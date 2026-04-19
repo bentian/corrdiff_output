@@ -188,7 +188,7 @@ def _save_metric_grid(
         fig.suptitle(f"{spec.title_prefix} ({var})", y=1.02)
         plt.tight_layout()
 
-        out_path = spec.folder_path / f"{var}_{spec.filename_suffix}.png"
+        out_path = spec.folder_path / f"{var}/{spec.filename_suffix}.png"
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
