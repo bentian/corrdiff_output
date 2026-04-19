@@ -60,7 +60,7 @@ function generateExperimentGroupFiles(group) {
     };
 
     return [{
-        title: "Mean & Decadal Trends",
+        title: group === "DM" ? "Metrics Mean" : "Metrics Mean & Decadal Trends",
         files: Object.fromEntries(
             Object.entries(base).map(([k, v]) => [
                 k,

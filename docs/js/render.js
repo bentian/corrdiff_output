@@ -102,10 +102,10 @@ async function renderHeading(group, exp1, exp2) {
  * @param {string} title - The title of the section.
  * @param {string} folder - The folder name.
  * @param {string[]} files - The list of files in the section.
- * @param {string} exp1 - Experiment 1 name.
- * @param {string} exp2 - Experiment 2 name (optional).
+ * @param {string} id1 - Experiment 1 name.
+ * @param {string} id2 - Experiment 2 name (optional).
  */
-function renderCollapsibleSection(title, folder, files, exp1, exp2) {
+function renderCollapsibleSection(title, folder, files, id1, id2) {
     const renderOutput = document.getElementById("render-output");
 
     const collapsible = document.createElement("div");
@@ -116,9 +116,9 @@ function renderCollapsibleSection(title, folder, files, exp1, exp2) {
     content.className = "content";
 
     if (Array.isArray(files)) {
-        files.forEach((file) => renderFileRow(folder, file, content, exp1, exp2));
+        files.forEach((file) => renderFileRow(folder, file, content, id1, id2));
     } else {
-        renderTabs(content, folder, files, exp1, exp2);
+        renderTabs(content, folder, files, id1, id2);
     }
 
     renderOutput.appendChild(collapsible);
@@ -131,10 +131,10 @@ function renderCollapsibleSection(title, folder, files, exp1, exp2) {
  * @param {HTMLElement} content - The container element where tabs and content will be appended.
  * @param {string} folder - The folder name.
  * @param {Object} files - An object where keys are tab names and values are arrays of files.
- * @param {string} exp1 - Experiment 1 name.
- * @param {string} exp2 - Experiment 2 name (optional).
+ * @param {string} id1 - Experiment 1 name.
+ * @param {string} id2 - Experiment 2 name (optional).
  */
-function renderTabs(content, folder, files, exp1, exp2) {
+function renderTabs(content, folder, files, id1, id2) {
     const tabs = document.createElement("div");
     tabs.className = "tabs";
     content.appendChild(tabs);
@@ -148,7 +148,7 @@ function renderTabs(content, folder, files, exp1, exp2) {
         const tabContent = document.createElement("div");
         tabContent.className = "tab-content";
         tabContent.tab = tab;
-        value.forEach((file) => renderFileRow(folder, file, tabContent, exp1, exp2));
+        value.forEach((file) => renderFileRow(folder, file, tabContent, id1, id2));
         content.appendChild(tabContent);
 
         // Make "overview" tab active by default
@@ -167,10 +167,10 @@ function renderTabs(content, folder, files, exp1, exp2) {
  * @param {string} folder - The folder name.
  * @param {string} file - The file name.
  * @param {HTMLElement} content - The content container.
- * @param {string} exp1 - Experiment 1 name.
- * @param {string} exp2 - Experiment 2 name (optional).
+ * @param {string} id1 - Experiment 1 name.
+ * @param {string} id2 - Experiment 2 name (optional).
  */
-function renderFileRow(folder, file, content, exp1, exp2) {
+function renderFileRow(folder, file, content, id1, id2) {
     const fileExtension = file.split(".").pop();
     const rowId = file.replace(/[^a-zA-Z0-9]/g, "_");
 
@@ -192,9 +192,9 @@ function renderFileRow(folder, file, content, exp1, exp2) {
     row.className = "render-row";
 
     if (fileExtension === "png") {
-        renderImageRow(row, folder, file, exp1, exp2);
+        renderImageRow(row, folder, file, id1, id2);
     } else if (fileExtension === "tsv") {
-        renderTSVRow(row, folder, file, exp1, exp2);
+        renderTSVRow(row, folder, file, id1, id2);
     }
 
     rowContainer.appendChild(row);
@@ -241,14 +241,14 @@ function createImage(src, alt) {
  * @param {HTMLElement} row  - Container element for the row.
  * @param {string} folder    - Folder name.
  * @param {string} file      - Plot image file name.
- * @param {string} exp1      - Primary experiment name.
- * @param {string} [exp2]    - Optional secondary experiment name.
+ * @param {string} id1      - Primary experiment name.
+ * @param {string} [id2]    - Optional secondary experiment name.
  */
-function renderImageRow(row, folder, file, exp1, exp2) {
-    row.appendChild(createImage(`${folder}/${exp1}/${file}`, `${exp1} - ${file}`));
+function renderImageRow(row, folder, file, id1, id2) {
+    row.appendChild(createImage(`${folder}/${id1}/${file}`, `${id1} - ${file}`));
 
-    if (exp2) {
-        row.appendChild(createImage(`${folder}/${exp2}/${file}`, `${exp2} - ${file}`));
+    if (id2) {
+        row.appendChild(createImage(`${folder}/${id2}/${file}`, `${id2} - ${file}`));
     }
 }
 
@@ -263,13 +263,13 @@ function renderImageRow(row, folder, file, exp1, exp2) {
  * @param {HTMLElement} row  - Container element for the row.
  * @param {string} folder    - Folder name.
  * @param {string} file      - TSV file name.
- * @param {string} exp1      - Primary experiment name.
- * @param {string} [exp2]    - Optional secondary experiment name.
+ * @param {string} id1      - Primary experiment name.
+ * @param {string} [id2]    - Optional secondary experiment name.
  * @returns {Promise<void>}
  */
-async function renderTSVRow(row, folder, file, exp1, exp2) {
-    const urls = [`${folder}/${exp1}/${file}`];
-    if (exp2) urls.push(`${folder}/${exp2}/${file}`);
+async function renderTSVRow(row, folder, file, id1, id2) {
+    const urls = [`${folder}/${id1}/${file}`];
+    if (id2) urls.push(`${folder}/${id2}/${file}`);
 
     const results = await Promise.all(urls.map(fetchTSV));
 
