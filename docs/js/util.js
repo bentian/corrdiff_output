@@ -52,26 +52,38 @@ async function fetchExperimentLink(key, isExperimentGroup = false) {
  * @param {string} group - Experiment group name.
  */
 function generateExperimentGroupFiles(group) {
-    const base = {
-        prcp: ["mean_cmp.png"],
-        t2m: ["mean_cmp.png"],
-        u10m: ["mean_cmp.png"],
-        v10m: ["mean_cmp.png"]
-    };
+    const vars = ["prcp", "t2m", "u10m", "v10m"];
 
-    return [{
+    // Helper to build files for each variable
+    const makeFiles = (extra = []) =>
+        Object.fromEntries(
+            vars.map(k => [k, [`${k}/mean_cmp.png`, ...extra(k)]])
+        );
+
+    const filesList = [{
         title: group === "DM" ? "Metrics Mean" : "Metrics Mean & Decadal Trends",
-        files: Object.fromEntries(
-            Object.entries(base).map(([k, v]) => [
-                k,
-                [
-                    ...[`${k}/mean_cmp.png`],
-                    // ...(group === "CropW" ? [`${k}/mean_w_cmp.png`] : []),
-                    ...(group === "DM" ? [] : [`${k}/nyear_cmp.png`])
-                ]
-            ])
-        )
+        files: makeFiles(k => (group === "DM" ? [] : [`${k}/nyear_cmp.png`]))
     }];
+
+    if (group === "CropW") {
+        // Helper to build comparison files
+        const makeComparison = (label, suffix) => ({
+            title: `Comparison vs. ${label}`,
+            files: Object.fromEntries(
+                vars.map(k => [k, [
+                    `${k}/mean_${suffix}_cmp.png`,
+                    `${k}/nyear_${suffix}_cmp.png`
+                ]])
+            )
+        });
+
+        filesList.push(
+            makeComparison("W*", "w")
+            // makeComparison("B*", "b")
+        );
+    }
+
+    return filesList;
 }
 
 /**
@@ -112,7 +124,7 @@ function generateExperimentFiles(exp1, exp2) {
     const p90Vars = new Set(["prcp", "t2m"]);
 
     // Create basic file groups
-    const groupList = prefixes.map(prefix => {
+    const filesList = prefixes.map(prefix => {
         const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
@@ -130,7 +142,7 @@ function generateExperimentFiles(exp1, exp2) {
     });
 
     // Append file groups
-    groupList.push(
+    filesList.push(
         {
             title: "[all - reg] Metrics",
             files: overviewFiles.map(f => `minus_reg/${f}`)
@@ -145,7 +157,7 @@ function generateExperimentFiles(exp1, exp2) {
         }
     );
 
-    return groupList;
+    return filesList;
 }
 
 /**
