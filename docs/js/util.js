@@ -67,24 +67,29 @@ function generateExperimentGroupFiles(group) {
 
     if (group === "CropW") {
         // Helper to build comparison files
-        const makeComparison = (label, suffix) => ({
-            title: `[all] Comparison with ${label}`,
-            files: Object.fromEntries(
-                vars.map(k => [
-                    k,
-                    [
-                        `mean_${suffix}_cmp.png`,
-                        ...(suffix === "w"
-                            ? [`nyear_${suffix}1_cmp.png`, `nyear_${suffix}2_cmp.png`]
-                            : [`nyear_${suffix}_cmp.png`])
-                    ].map(f => `${k}/${f}`)
-                ])
-            )
-        });
+        const makeComparison = (label) => {
+            const suffix = label[0].toLowerCase();
+
+            return {
+                title: `[all] Comparison with ${label}`,
+                files: Object.fromEntries(
+                    vars
+                        .filter(k => suffix !== "b" || ["prcp", "t2m"].includes(k))
+                        .map(k => [
+                            k,
+                            [
+                                `${k}/mean_${suffix}_cmp.png`,
+                                `${k}/nyear_${suffix}1_cmp.png`,
+                                `${k}/nyear_${suffix}2_cmp.png`
+                            ]
+                        ])
+                )
+            };
+        };
 
         filesList.push(
-            makeComparison("W*", "w"),
-            // makeComparison("B*", "b")
+            // makeComparison("B*")
+            makeComparison("W*")
         );
     }
 
