@@ -66,9 +66,9 @@ GROUP_COLORS = {
     "W1a": "tab:olive",
     "W1": "tab:blue",
     "W2": "tab:orange",
-    "CropW1a": "tab:olive",  # grey
-    "CropW1": "tab:blue",  # green
-    "CropW2": "tab:orange",  # brown
+    "CropW1a": "tab:grey",
+    "CropW1": "tab:green",
+    "CropW2": "tab:red",
 }
 LAB_STYLE = {
     "all": {"linestyle": "-", "marker": "o"},
