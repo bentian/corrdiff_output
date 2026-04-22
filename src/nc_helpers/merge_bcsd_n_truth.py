@@ -15,19 +15,42 @@ Key features:
 - Uses raw data assignment to avoid xarray coordinate alignment issues.
 - Supports multiple SSP scenarios through configurable path building.
 
-This script depends on `regrid_bcsd.py` for generating the BCSD fields and
-`bcsd_config.py` for path configuration and shared constants.
+This script depends on `regrid_bcsd.py` for generating the BCSD fields.
 """
 
+from pathlib import Path
 from typing import Optional
 
 import xarray as xr
 
-from regrid_bcsd import regrid_bcsd
-from bcsd_config import build_paths, TIME_SLICE
-
+from regrid_bcsd import regrid_bcsd, TIME_SLICE
 
 DROP_WIND_VARS = ["eastward_wind_10m", "northward_wind_10m"]
+
+
+def is_local_testing() -> bool:
+    """Returns true if the current environment is for local testing or BIG."""
+    return not Path("/lfs/archive/Reanalysis/").exists()
+
+
+def build_paths(ssp: str, w1: str) -> tuple[list[str], str, str]:
+    """Build paths for BCSD input files, grouped input file, and output file."""
+    if is_local_testing():
+        bcsd_nc = [
+            "../../data/bcsd/ssp126/pr_QDM_TaiESM1.nc",
+            "../../data/bcsd/ssp126/tas_QDM_TaiESM1.nc",
+        ]
+        input_nc = "../../data/bcsd/W1-1/output_0_reg_masked.nc"
+        out_nc = "./bcsd_masked.nc"
+    else:
+        bcsd_nc = [
+            f"/lfs/archive/TCCIP_data/CMIP6_QDM/pr/{ssp}/TaiESM1/r1i1p1f1/pr_QDM_TaiESM1.nc",
+            f"/lfs/archive/TCCIP_data/CMIP6_QDM/tas/{ssp}/TaiESM1/r1i1p1f1/tas_QDM_TaiESM1.nc",
+        ]
+        input_nc = f"~/SSP_result/W1/{w1}/netcdf/output_0_reg_masked.nc"
+        out_nc = f"./B-{w1.split('-')[1]}/bcsd_masked.nc"
+
+    return bcsd_nc, input_nc, out_nc
 
 
 def center_crop_slices(
