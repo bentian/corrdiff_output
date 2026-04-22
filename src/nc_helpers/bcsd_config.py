@@ -1,8 +1,8 @@
 """
-Utility functions and constants for BCSD processing pipelines.
+Configuration for BCSD processing pipelines.
 
 This module provides helpers to:
-- Detect whether the code is running in a local testing environment or on the BIG cluster.
+- Detect whether the code is running in a local testing environment or on the BIG server.
 - Construct consistent file paths for BCSD inputs, model outputs, and processed results
   across different environments and SSP scenarios.
 

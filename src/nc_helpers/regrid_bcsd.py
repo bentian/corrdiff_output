@@ -2,7 +2,7 @@
 Regrid BCSD (Bias-Corrected Spatial Disaggregation) data onto a target grid.
 
 This module:
-- Loads BCSD variables (e.g., precipitation, temperature).
+- Loads BCSD variables precipitation and temperature.
 - Applies fill-value masking to remove invalid data.
 - Converts temperature units from Celsius to Kelvin.
 - Regrids data to a target grid using xESMF (bilinear interpolation).

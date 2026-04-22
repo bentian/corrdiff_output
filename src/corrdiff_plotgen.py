@@ -192,6 +192,8 @@ def main():
         process_model(args.in_dir, args.out_dir, "all", n_ensemble=1, masked=True)
         return
 
+    ### Non-BCSD input only
+
     # Ensure masked NetCDF files exist
     if args.masked:
         for filename in ["output_0_all", "output_0_reg"]:

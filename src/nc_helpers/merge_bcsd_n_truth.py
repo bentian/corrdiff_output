@@ -3,8 +3,8 @@ Merge regridded BCSD data with grouped model output datasets.
 
 This module performs the following steps:
 - Loads grouped NetCDF input containing root, truth, and prediction data.
-- Crops datasets to match the BCSD target grid.
-- Removes unwanted variables (e.g., wind components).
+- Crops datasets to match the 128x96 grid.
+- Removes wind variables u10m and v10m from truth and prediction.
 - Replaces prediction variables (precipitation, temperature) with BCSD values.
 - Ensures dimensional consistency across datasets.
 - Writes the final merged dataset back to NetCDF with grouped structure.
@@ -16,7 +16,7 @@ Key features:
 - Supports multiple SSP scenarios through configurable path building.
 
 This script depends on `regrid_bcsd.py` for generating the BCSD fields and
-`utils.py` for path configuration and shared constants.
+`bcsd_config.py` for path configuration and shared constants.
 """
 
 from typing import Optional

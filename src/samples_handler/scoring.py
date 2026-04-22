@@ -256,6 +256,15 @@ def _run_over_time(
 
 
 def _get_var_mapping(is_bcsd: bool = False) -> Dict[str, str]:
+    """
+    Get variable mapping for BCSD and non-BCSD data.
+
+    Args:
+        is_bcsd (bool): Whether the input data is BCSD data. Defaults to False.
+
+    Returns:
+        dict: Variable mapping dictionary.
+    """
     mapping = {
         "precipitation": "prcp",
         "temperature_2m": "t2m",
@@ -328,6 +337,8 @@ def score_samples(
     n_ensemble : int, optional
         Number of ensemble members to use when computing prediction statistics.
         Only the first `n_ensemble` members are used. Default is 1.
+    is_bcsd : bool, optional
+        Whether the input data is BCSD data. Default is False.
 
     Returns
     -------
