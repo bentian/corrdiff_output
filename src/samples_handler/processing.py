@@ -121,6 +121,7 @@ def _flatten_and_filter_nan(
     """
     truth_data: Dict[str, Tuple[str, np.ndarray]] = {}
     pred_data: Dict[str, Tuple[str, np.ndarray]] = {}
+    coords = {}
 
     for var in truth.data_vars:
         if var not in pred:
@@ -135,11 +136,12 @@ def _flatten_and_filter_nan(
 
         # Filter out NaNs and align truth and pred
         valid = np.isfinite(truth_flat) & np.isfinite(pred_flat)
-        truth_data[var] = ("points", truth_flat[valid])
-        pred_data[var] = ("points", pred_flat[valid])
 
-    n_points = len(next(iter(truth_data.values()))[1])
-    coords = {"points": np.arange(n_points)}
+        # Use per-variable dimension to avoid mismatched non-NaN sample sizes (e.g., BCSD data)
+        dim = f"points_{var}"
+        truth_data[var] = (dim, truth_flat[valid])
+        pred_data[var] = (dim, pred_flat[valid])
+        coords[dim] = np.arange(valid.sum())
 
     return xr.Dataset(truth_data, coords=coords), xr.Dataset(pred_data, coords=coords)
 

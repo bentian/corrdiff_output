@@ -44,6 +44,11 @@ OVERVIEW_METRIC_FMT = ".2f"
 DIFF_METRIC_FMT = ".3f"
 
 
+def is_bcsd(in_dir: Path) -> bool:
+    """Check if the input directory contains BCSD data."""
+    return (in_dir / "bcsd_masked.nc").exists()
+
+
 # Model processing functions
 def process_model(
     in_dir: Path, out_dir: Path, label: str, n_ensemble: int, masked: bool
@@ -61,11 +66,17 @@ def process_model(
     Returns:
         xr.Dataset: Computed metrics dataset.
     """
-    nc_path = in_dir / "netcdf" / f"output_0_{label}{'_masked' if masked else ''}.nc"
+    nc_path = (
+        in_dir / "bcsd_masked.nc"
+        if is_bcsd(in_dir)
+        else in_dir / "netcdf" / f"output_0_{label}{'_masked' if masked else ''}.nc"
+    )
 
     # Score samples
     metrics, spatial_error, top_samples, flats, p90s = score_samples(
-        nc_path, n_ensemble
+        nc_path,
+        n_ensemble,
+        is_bcsd=is_bcsd(in_dir),
     )
 
     # Create output directory and sub directories for each variable
@@ -175,6 +186,11 @@ def main():
         f"[{get_timestamp()}] corrdiff_plotgen: in_dir={args.in_dir} out_dir={args.out_dir} "
         f"n_ensemble={args.n_ensemble} masked={args.masked}"
     )
+
+    # Handle BCSD input
+    if is_bcsd(args.in_dir):
+        process_model(args.in_dir, args.out_dir, "all", n_ensemble=1, masked=True)
+        return
 
     # Ensure masked NetCDF files exist
     if args.masked:
