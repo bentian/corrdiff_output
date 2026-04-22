@@ -1,3 +1,20 @@
+"""
+Utility functions and constants for BCSD processing pipelines.
+
+This module provides helpers to:
+- Detect whether the code is running in a local testing environment or on the BIG cluster.
+- Construct consistent file paths for BCSD inputs, model outputs, and processed results
+  across different environments and SSP scenarios.
+
+Key components:
+- TIME_SLICE: Defines the time range used in processing (2015-01-01 to 2080-12-31).
+- is_local_testing(): Determines environment based on filesystem availability.
+- build_paths(): Generates input/output paths for BCSD and model datasets.
+
+The goal is to centralize environment-specific logic and path construction so that
+other modules (e.g., regridding, merging, scoring) can remain environment-agnostic.
+"""
+
 from pathlib import Path
 
 TIME_SLICE = slice(0, 24090)  # 2015-01-01 to 2080-12-31

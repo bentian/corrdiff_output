@@ -1,5 +1,22 @@
 """
-Merge BCSD reanalysis data with the grouped input data.
+Merge regridded BCSD data with grouped model output datasets.
+
+This module performs the following steps:
+- Loads grouped NetCDF input containing root, truth, and prediction data.
+- Crops datasets to match the BCSD target grid.
+- Removes unwanted variables (e.g., wind components).
+- Replaces prediction variables (precipitation, temperature) with BCSD values.
+- Ensures dimensional consistency across datasets.
+- Writes the final merged dataset back to NetCDF with grouped structure.
+
+Key features:
+- Handles mismatched calendars by discarding prediction time coordinates and
+  inheriting them from the root dataset.
+- Uses raw data assignment to avoid xarray coordinate alignment issues.
+- Supports multiple SSP scenarios through configurable path building.
+
+This script depends on `regrid_bcsd.py` for generating the BCSD fields and
+`utils.py` for path configuration and shared constants.
 """
 
 from typing import Optional
@@ -7,7 +24,7 @@ from typing import Optional
 import xarray as xr
 
 from regrid_bcsd import regrid_bcsd
-from utils import build_paths, TIME_SLICE
+from bcsd_utils import build_paths, TIME_SLICE
 
 
 DROP_WIND_VARS = ["eastward_wind_10m", "northward_wind_10m"]

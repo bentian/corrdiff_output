@@ -1,11 +1,30 @@
 """
-Regrid BCSD data to the target grid.
+Regrid BCSD (Bias-Corrected Spatial Disaggregation) data onto a target grid.
+
+This module:
+- Loads BCSD variables (e.g., precipitation, temperature).
+- Applies fill-value masking to remove invalid data.
+- Converts temperature units from Celsius to Kelvin.
+- Regrids data to a target grid using xESMF (bilinear interpolation).
+- Applies a landmask to filter out non-land grid cells.
+
+Key features:
+- Uses bilinear interpolation with safeguards for degenerate grid cells.
+- Handles variable-specific preprocessing (e.g., unit conversion).
+- Ensures output fields are spatially aligned and masked consistently.
+
+The output dataset is used downstream for merging with model predictions
+(e.g., in `merge_bcsd_n_truth.py`).
+
+Dependencies:
+- xarray for data handling
+- xESMF for regridding
 """
 
 import xarray as xr
 import xesmf as xe
 
-from utils import TIME_SLICE
+from bcsd_utils import TIME_SLICE
 
 GRID_NC = "./ssp_128x96_grid_coords.nc"
 
