@@ -24,7 +24,7 @@ from typing import Optional
 import xarray as xr
 
 from regrid_bcsd import regrid_bcsd
-from bcsd_utils import build_paths, TIME_SLICE
+from bcsd_config import build_paths, TIME_SLICE
 
 
 DROP_WIND_VARS = ["eastward_wind_10m", "northward_wind_10m"]

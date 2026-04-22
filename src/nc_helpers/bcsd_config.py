@@ -56,7 +56,7 @@ def build_paths(ssp: str, w1: str) -> tuple[list[str], str, str]:
             f"/lfs/archive/TCCIP_data/CMIP6_QDM/pr/{ssp}/TaiESM1/r1i1p1f1/pr_QDM_TaiESM1.nc",
             f"/lfs/archive/TCCIP_data/CMIP6_QDM/tas/{ssp}/TaiESM1/r1i1p1f1/tas_QDM_TaiESM1.nc",
         ]
-        input_nc = f"../SSP_result/W1/{w1}/netcdf/output_0_reg_masked.nc"
+        input_nc = f"~/SSP_result/W1/{w1}/netcdf/output_0_reg_masked.nc"
         out_nc = f"./B-{w1.split('-')[1]}/bcsd_masked.nc"
 
     return bcsd_nc, input_nc, out_nc

@@ -24,7 +24,7 @@ Dependencies:
 import xarray as xr
 import xesmf as xe
 
-from bcsd_utils import TIME_SLICE
+from bcsd_config import TIME_SLICE
 
 GRID_NC = "./ssp_128x96_grid_coords.nc"
 
