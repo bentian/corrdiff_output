@@ -33,9 +33,15 @@ def _print_minmax(da: xr.DataArray, label: str = "") -> None:
     """Print min and max of a DataArray."""
     vmin = float(da.min(skipna=True).values)
     vmax = float(da.max(skipna=True).values)
+
+    stacked = da.stack(points=da.dims)
+    imin = stacked.idxmin(dim="points", skipna=True).item()
+    imax = stacked.idxmax(dim="points", skipna=True).item()
+
     if label:
         print(label)
-    print(f"  (min, max) = ({vmin}, {vmax})")
+        print(f"  min = {vmin} at {imin}")
+        print(f"  max = {vmax} at {imax}")
 
 
 def _open_target_grid() -> tuple[xr.DataArray, xr.Dataset]:
