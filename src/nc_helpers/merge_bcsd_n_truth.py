@@ -124,9 +124,9 @@ def main() -> None:
     """Main function."""
     scenarios = {
         "ssp126": "W1-1",
-        # "ssp245": "W1-2",
-        # "ssp370": "W1-3",
-        # "ssp585": "W1-5",
+        "ssp245": "W1-2",
+        "ssp370": "W1-3",
+        "ssp585": "W1-5",
     }
 
     for ssp, w1 in scenarios.items():
@@ -144,7 +144,7 @@ def main() -> None:
         validate_shapes(ds_root_new, ds_truth_new, ds_pred_new, ds_bcsd)
         write_grouped_output(ds_root_new, ds_truth_new, ds_pred_new, out_nc)
         # DEBUG
-        ds_pred_new.to_netcdf(out_nc.replace(".nc", "_prediction.nc"))
+        # ds_pred_new.to_netcdf(out_nc.replace(".nc", "_prediction.nc"))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-TIME_SLICE = slice(0, 365)
+TIME_SLICE = slice(0, 24090)  # 2015-01-01 to 2080-12-31
 
 
 def is_local_testing() -> bool:
@@ -29,10 +29,10 @@ def build_paths(ssp: str, w1: str) -> tuple[list[str], str, str]:
     """
     if is_local_testing():
         bcsd_nc = [
-            "./ssp126/pr_QDM_TaiESM1.nc",
-            "./ssp126/tas_QDM_TaiESM1.nc",
+            "../../data/bcsd/ssp126/pr_QDM_TaiESM1.nc",
+            "../../data/bcsd/ssp126/tas_QDM_TaiESM1.nc",
         ]
-        input_nc = "./W1-1/output_0_reg_masked.nc"
+        input_nc = "../../data/bcsd/W1-1/output_0_reg_masked.nc"
         out_nc = "./bcsd_masked.nc"
     else:
         bcsd_nc = [
@@ -40,6 +40,6 @@ def build_paths(ssp: str, w1: str) -> tuple[list[str], str, str]:
             f"/lfs/archive/TCCIP_data/CMIP6_QDM/tas/{ssp}/TaiESM1/r1i1p1f1/tas_QDM_TaiESM1.nc",
         ]
         input_nc = f"../SSP_result/W1/{w1}/netcdf/output_0_reg_masked.nc"
-        out_nc = f"./B-{w1.split('-')[1]}/netcdf/bcsd_masked.nc"
+        out_nc = f"./B-{w1.split('-')[1]}/bcsd_masked.nc"
 
     return bcsd_nc, input_nc, out_nc
