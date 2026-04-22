@@ -28,7 +28,7 @@ Key design principles
 - Expensive operations (ensemble mean, file I/O) are minimized and reused
 - All reductions are NaN-aware and spatially consistent
 - Multiprocessing is used at the time-step level for scalability
-- Variable naming is normalized via `VAR_MAPPING` for downstream plotting
+- Variable naming is normalized via `_get_var_mapping()` for downstream plotting
 
 Primary entry points
 --------------------
@@ -50,11 +50,12 @@ Configuration constants
 This module performs no plotting; all outputs are returned as xarray objects
 for flexible downstream analysis and visualization.
 """
+
 from __future__ import annotations
 
 import multiprocessing
 from functools import partial
-from typing import Iterable, Dict, List, Tuple, Callable
+from typing import Iterable, Dict, List, Tuple, Callable, Optional
 
 import tqdm
 import numpy as np
@@ -63,31 +64,24 @@ import xarray as xr
 
 from .masking import get_timestamp
 from .processing import (
-    open_samples, compute_abs_difference,
-    process_sample, process_sample_multi_ensemble,
+    open_samples,
+    compute_abs_difference,
+    process_sample,
+    process_sample_multi_ensemble,
 )
 
 
-DEBUG = False       # Enable to dump p90 netcdf
-TOP_NUM = 5         # Number of top samples to extract
-N_YEARS = 10        # Number of years per period
-NTH_PERCENTILE = 90 # N-th percentile value to compute 2D grids per period
-VAR_MAPPING: Dict[str, str] = {
-    "precipitation": "prcp",
-    "temperature_2m": "t2m",
-    "eastward_wind_10m": "u10m",
-    "northward_wind_10m": "v10m",
-}
+DEBUG = False  # Enable to dump p90 netcdf
+TOP_NUM = 5  # Number of top samples to extract
+N_YEARS = 10  # Number of years per period
+NTH_PERCENTILE = 90  # N-th percentile value to compute 2D grids per period
 
 
 # -----------------------------------------------------------------------------
 # Top samples
 # -----------------------------------------------------------------------------
 def _extract_top_samples(
-    truth: xr.Dataset,
-    pred_mean: xr.Dataset,
-    metrics_ds: xr.Dataset,
-    metric: str
+    truth: xr.Dataset, pred_mean: xr.Dataset, metrics_ds: xr.Dataset, metric: str
 ) -> dict:
     """
     Extracts truth and pred data for selected times based on a given metric,
@@ -119,12 +113,15 @@ def _extract_top_samples(
         p = pred_mean[var].sel(time=times).load()
 
         abs_error = compute_abs_difference(t, p)
-        error = abs_error if metric == "MAE" else abs_error ** 2
+        error = abs_error if metric == "MAE" else abs_error**2
 
         out[var] = {
-            "metric_value": xr.DataArray(top.values, dims=["time"], coords={"time": times}),
-            "sample": xr.concat([t, p, error], dim="type")
-                      .assign_coords(type=["truth", "pred", "error"])
+            "metric_value": xr.DataArray(
+                top.values, dims=["time"], coords={"time": times}
+            ),
+            "sample": xr.concat([t, p, error], dim="type").assign_coords(
+                type=["truth", "pred", "error"]
+            ),
         }
 
     return out
@@ -134,10 +131,7 @@ def _extract_top_samples(
 # P90 grids
 # -----------------------------------------------------------------------------
 def _window_time_quantile_2d(
-    truth: xr.Dataset,
-    pred_mean: xr.Dataset,
-    start: pd.Timestamp,
-    end: pd.Timestamp
+    truth: xr.Dataset, pred_mean: xr.Dataset, start: pd.Timestamp, end: pd.Timestamp
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute per-variable time-quantile (e.g., p90) 2D fields over a fixed time window.
@@ -171,8 +165,10 @@ def _window_time_quantile_2d(
         Two datasets containing per-variable quantile fields with dims (y, x).
         Variable names match those in `truth`.
     """
-    q01 = NTH_PERCENTILE / 100  # Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
-    var_names = ['prcp', 't2m'] # list(truth.data_vars)
+    q01 = (
+        NTH_PERCENTILE / 100
+    )  # Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
+    var_names = ["prcp", "t2m"]  # list(truth.data_vars)
 
     # Use end - 1ns to mimic [start, end) given slice end is inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
@@ -181,10 +177,13 @@ def _window_time_quantile_2d(
 
     return (
         truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
-        pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True)
+        pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
     )
 
-def p90_by_nyear_period(truth: xr.Dataset, pred_mean: xr.Dataset) -> Tuple[xr.Dataset, xr.Dataset]:
+
+def p90_by_nyear_period(
+    truth: xr.Dataset, pred_mean: xr.Dataset
+) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute two 2D percentile datasets (y, x):
       1) truth_pXX: q-th percentile over time within a years-long window
@@ -223,7 +222,9 @@ def p90_by_nyear_period(truth: xr.Dataset, pred_mean: xr.Dataset) -> Tuple[xr.Da
         truth_blocks.append(t_blk)
         pred_blocks.append(p_blk)
 
-        labels.append(f"{start.year:04d}-{min(start.year + N_YEARS - 1, tmax.year):04d}")
+        labels.append(
+            f"{start.year:04d}-{min(start.year + N_YEARS - 1, tmax.year):04d}"
+        )
         start = end
 
     truth_p90 = xr.concat(truth_blocks, dim=xr.IndexVariable("period", labels))
@@ -231,7 +232,7 @@ def p90_by_nyear_period(truth: xr.Dataset, pred_mean: xr.Dataset) -> Tuple[xr.Da
 
     # Optional NetCDF export
     if DEBUG:
-        encoding = { v: {"zlib": True, "complevel": 4} for v in truth_p90.data_vars }
+        encoding = {v: {"zlib": True, "complevel": 4} for v in truth_p90.data_vars}
         truth_p90.to_netcdf(f"truth_p{NTH_PERCENTILE}.nc", encoding=encoding)
         pred_p90.to_netcdf(f"pred_p{NTH_PERCENTILE}.nc", encoding=encoding)
 
@@ -241,8 +242,9 @@ def p90_by_nyear_period(truth: xr.Dataset, pred_mean: xr.Dataset) -> Tuple[xr.Da
 # -----------------------------------------------------------------------------
 # Multiprocessing helpers
 # -----------------------------------------------------------------------------
-def _run_over_time(n_time: int, worker_fn: Callable[[int], dict],
-                  pool_size: int = 32) -> List[dict]:
+def _run_over_time(
+    n_time: int, worker_fn: Callable[[int], dict], pool_size: int = 32
+) -> List[dict]:
     """Run `worker_fn(time_idx)` over [0..n_time-1] in parallel and collect results."""
     with multiprocessing.Pool(pool_size) as pool:
         return list(
@@ -252,17 +254,62 @@ def _run_over_time(n_time: int, worker_fn: Callable[[int], dict],
             )
         )
 
-def _concat_from_results(results: List[dict], key: str, dim: str) -> xr.Dataset:
-    """Concat `results[i][key]` along `dim` and apply VAR_MAPPING rename."""
-    return xr.concat([res[key] for res in results], dim=dim).rename(VAR_MAPPING)
+
+def _get_var_mapping(is_bcsd: bool = False) -> Dict[str, str]:
+    mapping = {
+        "precipitation": "prcp",
+        "temperature_2m": "t2m",
+    }
+
+    # Add wind velocity variables if not BCSD data
+    if not is_bcsd:
+        mapping["eastward_wind_10m"] = "u10m"
+        mapping["northward_wind_10m"] = "v10m"
+
+    return mapping
+
+
+def _concat_from_results(
+    results: List[dict],
+    key: str,
+    var_mapping: dict[str, str],
+    dim: Optional[str] = None,
+) -> xr.Dataset:
+    """
+    Concat results[i][key] datasets and apply variable renaming.
+
+    - If `dim` is provided → use shared dimension
+    - If `dim` is None → concat per variable using its own dimension
+    """
+    datasets = [res[key] for res in results]
+
+    # --- Case 1: shared dim ---
+    if dim is not None:
+        return xr.concat(datasets, dim=dim).rename(var_mapping)
+
+    # --- Case 2: per-variable dims --
+    # Handle inconsistent # of points between prcp and t2m in raw BCSD data
+    out = {}
+
+    vars_all = set()
+    for ds in datasets:
+        vars_all.update(ds.data_vars)
+
+    for var in vars_all:
+        arrays = [ds[var] for ds in datasets if var in ds]
+
+        # Infer dimension from first array
+        var_dim = arrays[0].dims[0]
+        out[var] = xr.concat(arrays, dim=var_dim)
+
+    return xr.Dataset(out).rename(var_mapping)
 
 
 # -----------------------------------------------------------------------------
 # Scoring entrypoints
 # -----------------------------------------------------------------------------
 def score_samples(
-    filepath: str,
-    n_ensemble: int = 1
+    filepath: str, n_ensemble: int = 1, is_bcsd: bool = False
 ) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
     """
     Compute evaluation metrics and diagnostics for all time steps in a sample dataset.
@@ -303,31 +350,39 @@ def score_samples(
       large ensemble sizes.
     - For best performance, ensure datasets are properly chunked if using Dask.
     """
-    print(f"[{get_timestamp()}] score_samples: filepath={filepath} n_ensemble={n_ensemble}")
+    print(
+        f"[{get_timestamp()}] score_samples: filepath={filepath}, "
+        f"n_ensemble={n_ensemble}, is_bcsd={is_bcsd}"
+    )
 
     truth, pred, _ = open_samples(filepath)
-    results = _run_over_time(truth.sizes["time"],
-                partial(process_sample, filepath=filepath, n_ensemble=n_ensemble))
+    results = _run_over_time(
+        truth.sizes["time"],
+        partial(process_sample, filepath=filepath, n_ensemble=n_ensemble),
+    )
+    var_mapping = _get_var_mapping(is_bcsd)
 
     # Metrics
-    metrics = _concat_from_results(results, "metrics", dim="time")
+    metrics = _concat_from_results(results, "metrics", var_mapping, dim="time")
     metrics.attrs["n_ensemble"] = n_ensemble
 
     # Spatial error & flattened truth/pred
-    error = _concat_from_results(results, "error", dim="time")
+    error = _concat_from_results(results, "error", var_mapping, dim="time")
     flats = (
-        _concat_from_results(results, "truth_flat", dim="points"),
-        _concat_from_results(results, "pred_flat", dim="points"),
+        _concat_from_results(results, "truth_flat", var_mapping),
+        _concat_from_results(results, "pred_flat", var_mapping),
     )
 
     # Top samples & p90 grids
-    truth_m = truth.rename(VAR_MAPPING)
+    truth_m = truth.rename(var_mapping)
     pred_mean = (
         pred.isel(ensemble=slice(0, n_ensemble))
         .mean("ensemble", skipna=True)
-        .rename(VAR_MAPPING)
+        .rename(var_mapping)
     )
-    top_samples = {m: _extract_top_samples(truth_m, pred_mean, metrics, m) for m in ["MAE", "RMSE"]}
+    top_samples = {
+        m: _extract_top_samples(truth_m, pred_mean, metrics, m) for m in ["MAE", "RMSE"]
+    }
     p90s = p90_by_nyear_period(truth_m, pred_mean)
 
     print(f"[{get_timestamp()}] score_samples completed")
@@ -336,8 +391,7 @@ def score_samples(
 
 
 def score_samples_multi_ensemble(
-    filepath: str,
-    n_ensembles: Iterable[int]
+    filepath: str, n_ensembles: Iterable[int]
 ) -> Dict[int, xr.Dataset]:
     """
     Faster multi-ensemble scoring that avoids re-loading predictions for each n_ensemble.
@@ -357,14 +411,20 @@ def score_samples_multi_ensemble(
     )
 
     truth, _, _ = open_samples(filepath)
-    results = _run_over_time(truth.sizes["time"],
-                partial(process_sample_multi_ensemble, filepath=filepath, n_ensembles=n_ensembles))
+    results = _run_over_time(
+        truth.sizes["time"],
+        partial(
+            process_sample_multi_ensemble, filepath=filepath, n_ensembles=n_ensembles
+        ),
+    )
 
     combined: Dict[int, xr.Dataset] = {}
     for n_ens in n_ensembles:
         # Reuse _concat_from_results without changing signature
         wrapped = [{"metrics": res["metrics_by_n"][n_ens]} for res in results]
-        ds = _concat_from_results(wrapped, "metrics", dim="time")
+        ds = _concat_from_results(
+            wrapped, "metrics", _get_var_mapping(is_bcsd=False), dim="time"
+        )
         ds.attrs["n_ensemble"] = n_ens
         combined[n_ens] = ds
 
