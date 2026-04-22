@@ -86,7 +86,7 @@ def _apply_landmask(ds_out: xr.Dataset, landmask: xr.DataArray) -> xr.Dataset:
     """Apply landmask to dataset."""
     for var in ["pr", "tas"]:
         ds_out[var] = ds_out[var].where(landmask > 0.5)
-        _print_minmax(ds_out[var], f"\n[{var}] AFTER LANDMASK")
+        _print_minmax(ds_out[var], f"\n[{var}] AFTER landmasking")
     return ds_out
 
 
@@ -100,7 +100,7 @@ def _build_regridded_dataset(
 
         var = list(ds.data_vars)[0]
         da = ds[var].where(ds[var] != ds[var].attrs.get("_FillValue", -99.9))
-        _print_minmax(da, f"\n[{var}] BEFORE")
+        _print_minmax(da, f"\n[{var}] BEFORE regridding")
 
         # Convert Celsius to Kelvin
         if var == "tas":
@@ -109,7 +109,7 @@ def _build_regridded_dataset(
             _print_minmax(da, f"[{var}] Celsius -> Kelvin")
 
         da = regridder(da)
-        _print_minmax(da, f"[{var}] AFTER")
+        _print_minmax(da, f"[{var}] AFTER regridding")
         out[var] = da
 
     ds_out = xr.Dataset(out)
