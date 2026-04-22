@@ -422,9 +422,7 @@ def score_samples_multi_ensemble(
     for n_ens in n_ensembles:
         # Reuse _concat_from_results without changing signature
         wrapped = [{"metrics": res["metrics_by_n"][n_ens]} for res in results]
-        ds = _concat_from_results(
-            wrapped, "metrics", _get_var_mapping(is_bcsd=False), dim="time"
-        )
+        ds = _concat_from_results(wrapped, "metrics", _get_var_mapping(), dim="time")
         ds.attrs["n_ensemble"] = n_ens
         combined[n_ens] = ds
 
