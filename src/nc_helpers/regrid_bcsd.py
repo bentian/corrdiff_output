@@ -29,19 +29,26 @@ from bcsd_config import TIME_SLICE
 GRID_NC = "./ssp_128x96_grid_coords.nc"
 
 
+def _fmt_idx(idx) -> str:
+    """Format an index to a string."""
+    t, lat, lon = idx
+    t_str = f"{t.year:04d}-{t.month:02d}-{t.day:02d}"
+    return f"({t_str}, {lat:.2f}, {lon:.2f})"
+
+
 def _print_minmax(da: xr.DataArray, label: str = "") -> None:
     """Print min and max of a DataArray."""
     vmin = float(da.min(skipna=True).values)
     vmax = float(da.max(skipna=True).values)
 
     stacked = da.stack(points=da.dims)
-    imin = stacked.idxmin(dim="points", skipna=True).item()
-    imax = stacked.idxmax(dim="points", skipna=True).item()
+    imin = _fmt_idx(stacked.idxmin(dim="points", skipna=True).item())
+    imax = _fmt_idx(stacked.idxmax(dim="points", skipna=True).item())
 
     if label:
         print(label)
-        print(f"  min = {vmin} at {imin}")
-        print(f"  max = {vmax} at {imax}")
+        print(f"  min = {vmin:.2f} at {imin}")
+        print(f"  max = {vmax:.2f} at {imax}")
 
 
 def _open_target_grid() -> tuple[xr.DataArray, xr.Dataset]:
