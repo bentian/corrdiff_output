@@ -52,7 +52,7 @@ async function fetchExperimentLink(key, isExperimentGroup = false) {
  * @param {string} group - Experiment group name.
  */
 function generateExperimentGroupFiles(group) {
-    const vars = ["prcp", "t2m", "u10m", "v10m"];
+    const vars = group === "BCSD" ? ["prcp", "t2m"] : ["prcp", "t2m", "u10m", "v10m"];
 
     // Helper to build files for each variable
     const makeFiles = (extra = []) =>
@@ -103,11 +103,12 @@ function generateExperimentGroupFiles(group) {
  * @param {string} exp2 - Experiment 2 name (optional).
  */
 function generateExperimentFiles(exp1, exp2) {
-    const hasSSP = exp1.startsWith("W") || exp2?.startsWith("W")
+    const hasSSP = [exp1, exp2].some(e => e?.startsWith("W"));
+    const bothBCSD = [exp1, exp2].filter(Boolean).every(e => e.startsWith("BCSD"));
 
     // Overview files
     const metrics = ["rmse", "mae", "corr", "crps", "std_dev"];
-    const periods = hasSSP ? ["monthly_metrics", "nyear_metrics"] : ["monthly_metrics"];
+    const periods = ["monthly_metrics", "nyear_metrics"];
     const exts = ["tsv", "png"];
     const overviewFiles = [
         "metrics_mean.tsv",
@@ -129,8 +130,8 @@ function generateExperimentFiles(exp1, exp2) {
     const p90File = "p90_by_nyear.png";
 
     // Prefixes & variables
-    const prefixes = ["all", "reg"];
-    const variables = ["prcp", "t2m", "u10m", "v10m"]
+    const prefixes = bothBCSD ? ["all"] : ["all", "reg"];
+    const variables = bothBCSD ? ["prcp", "t2m"] : ["prcp", "t2m", "u10m", "v10m"]
     const p90Vars = new Set(["prcp", "t2m"]);
 
     // Create basic file groups
@@ -152,20 +153,22 @@ function generateExperimentFiles(exp1, exp2) {
     });
 
     // Append file groups
-    filesList.push(
-        {
-            title: "[all - reg] Metrics",
-            files: overviewFiles.map(f => `minus_reg/${f}`)
-        },
-        {
-            title: "Training Loss",
-            files: ["training_loss_regression.png", "training_loss_diffusion.png"]
-        },
-        {
-            title: "Config",
-            files: ["train_config.tsv", "generate_config.tsv"]
-        }
-    );
+    if (!bothBCSD) {
+        filesList.push(
+            {
+                title: "[all - reg] Metrics",
+                files: overviewFiles.map(f => `minus_reg/${f}`)
+            },
+            {
+                title: "Training Loss",
+                files: ["training_loss_regression.png", "training_loss_diffusion.png"]
+            },
+            {
+                title: "Config",
+                files: ["train_config.tsv", "generate_config.tsv"]
+            }
+        );
+    }
 
     return filesList;
 }
