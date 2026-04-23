@@ -36,7 +36,7 @@ EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
 EXP_GROUP = "CropW"
 
-VARS = ["prcp", "t2m", "u10m", "v10m"]
+VARS = ["prcp", "t2m"] if EXP_GROUP == "BCSD" else ["prcp", "t2m", "u10m", "v10m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
 LABEL_MODE = "both"
 

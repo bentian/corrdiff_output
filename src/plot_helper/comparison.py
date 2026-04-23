@@ -188,7 +188,11 @@ def _save_metric_grid(
         fig.suptitle(f"{spec.title_prefix} ({var})", y=1.02)
         plt.tight_layout()
 
-        out_path = spec.folder_path / f"{var}/{spec.filename_suffix}.png"
+        # Create output directory if not exist.
+        out_dir = spec.folder_path / var
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{spec.filename_suffix}.png"
+
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
@@ -242,7 +246,7 @@ def _plot_metric_all_groups(
             SUFFIX_ORDER,
             y,
             color=GROUP_COLORS.get(group),
-            label=f"{group} ({label})",
+            label=f"{group} ({label})" if group != "BCSD" else group,
             **LAB_STYLE[label],
         )
 
@@ -347,7 +351,9 @@ def _plot_nyear_metric(
             g["year_bin"].astype(str),
             g["value"].to_numpy(float),
             color=exp_color[exp_name],
-            label=f"{exp_name} ({label})",
+            label=f"{exp_name} ({label})"
+            if not exp_name.startswith("BCSD")
+            else exp_name,
             linewidth=1.8,
             markersize=3.5,
             **LAB_STYLE[label],
