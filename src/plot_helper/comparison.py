@@ -62,7 +62,14 @@ Y_LIMITS = {
 LabelMode = Literal["all", "reg", "both"]
 
 SUFFIX_ORDER = ["-1", "-2", "-3", "-5"]
-GROUP_COLORS = {"W1a": "tab:olive", "W1": "tab:blue", "W2": "tab:orange"}
+GROUP_COLORS = {
+    "W1a": "tab:olive",
+    "W1": "tab:blue",
+    "W2": "tab:orange",
+    "CropW1a": "tab:grey",
+    "CropW1": "tab:green",
+    "CropW2": "tab:red",
+}
 LAB_STYLE = {
     "all": {"linestyle": "-", "marker": "o"},
     "reg": {"linestyle": "--", "marker": "^"},
@@ -97,27 +104,44 @@ class MetricGridSpec:
 
 def experiment_sort_key(exp: str) -> tuple[int, int, int]:
     """
-    Generate a sortable key for experiment names.
-    Ensures ordering such as:
-        W1a-* before W1-*, then increasing experiment number
+    Sort order:
+        W1a-*, then W1-*
+        W2...
+        then CropW1a-*, CropW1-*, CropW2...
 
-    Parameters
-    ----------
-    exp : str
-        Experiment name (e.g. "W1a-1", "W1-2", "W2-1").
+    Within each:
+        1a, 1, 2, ...
 
-    Returns
-    -------
-    tuple[int, int, int]
-        Sorting key: (group_number, group_variant_priority, experiment_number)
+    Returns:
+        (prefix_priority, group_number, group_variant_priority,
+         exp_number, letter_priority, letter)
     """
-    m = re.match(r"W(\d+)(a?)-(\d+)([a-z]?)$", exp)
+    m = re.match(r"(Crop)?W(\d+)(a?)-(\d+)([a-z]?)", exp)
     if not m:
-        return (9999, 9999, 9999)
+        return (9999, 9999, 9999, 9999, 1, exp)
+
+    is_crop = m.group(1) is not None
+    group_num = int(m.group(2))
+    group_variant = m.group(3)  # '' or 'a'
+    exp_num = int(m.group(4))
+    letter = m.group(5)
+
+    # 🔥 main control: W before CropW
+    prefix_priority = 1 if is_crop else 0
+
+    # W1a before W1
+    group_variant_priority = 0 if group_variant == "a" else 1
+
+    # 1a before 1
+    letter_priority = 0 if letter == "a" else 1
+
     return (
-        int(m.group(1)),
-        0 if m.group(2) == "a" else 1,
-        int(m.group(3)),
+        prefix_priority,
+        group_num,
+        group_variant_priority,
+        exp_num,
+        letter_priority,
+        letter,
     )
 
 
@@ -135,21 +159,6 @@ def _first_legend(axes: np.ndarray):
         if handles:
             return handles, labels
     return [], []
-
-
-def _sorted_subset(df: pd.DataFrame, *, metric: str, variable: str) -> pd.DataFrame:
-    """
-    Filter and sort a DataFrame for a given metric and variable.
-    Sorting is performed using `experiment_sort_key`.
-    """
-    sub = df[(df["metric"] == metric) & (df["variable"] == variable)].copy()
-    if sub.empty:
-        return sub
-    return (
-        sub.assign(exp_sort=sub["experiment"].map(experiment_sort_key))
-        .sort_values("exp_sort")
-        .drop(columns="exp_sort")
-    )
 
 
 def _save_metric_grid(
@@ -179,14 +188,23 @@ def _save_metric_grid(
         fig.suptitle(f"{spec.title_prefix} ({var})", y=1.02)
         plt.tight_layout()
 
-        out_path = spec.folder_path / f"{var}_{spec.filename_suffix}.png"
+        # Create output directory if not exist.
+        out_dir = spec.folder_path / var
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{spec.filename_suffix}.png"
+
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
 
 
 def _plot_metric_all_groups(
-    ax: plt.Axes, df: pd.DataFrame, *, metric: str, variable: str
+    ax: plt.Axes,
+    df: pd.DataFrame,
+    *,
+    metric: str,
+    variable: str,
+    label_mode: LabelMode,
 ) -> None:
     """
     Plot mean metric values across experiments in a single subplot.
@@ -207,8 +225,12 @@ def _plot_metric_all_groups(
         Metric to plot.
     variable : str
         Variable to plot.
+    label_mode : {"all", "reg", "both"}
+        Which evaluation labels to include.
     """
-    sub = _sorted_subset(df, metric=metric, variable=variable)
+    sub = df[(df.metric == metric) & (df.variable == variable)]
+    if label_mode != "both":
+        sub = sub[sub["label"] == label_mode]
     if sub.empty:
         ax.set_visible(False)
         return
@@ -224,7 +246,7 @@ def _plot_metric_all_groups(
             SUFFIX_ORDER,
             y,
             color=GROUP_COLORS.get(group),
-            label=f"{group} ({label})",
+            label=f"{group} ({label})" if group != "BCSD" else group,
             **LAB_STYLE[label],
         )
 
@@ -240,7 +262,11 @@ def _plot_metric_all_groups(
 
 
 def plot_metrics_cmp(
-    df: pd.DataFrame, metrics: list[str], variables: list[str], folder_path: Path
+    df: pd.DataFrame,
+    metrics: list[str],
+    variables: list[str],
+    folder_path: Path,
+    label_mode: LabelMode = "both",
 ) -> None:
     """
     Create and save 2x2 comparison plots for mean metrics.
@@ -257,6 +283,8 @@ def plot_metrics_cmp(
         Variables to plot (one figure per variable).
     folder_path : Path
         Output directory for saved figures.
+    label_mode : {"all", "reg", "both"}, optional
+        Which evaluation labels to include.
     """
     spec = MetricGridSpec(
         metrics=metrics,
@@ -265,7 +293,17 @@ def plot_metrics_cmp(
         filename_suffix="mean_cmp",
         title_prefix="Metric Mean Comparison",
     )
-    _save_metric_grid(df, spec, _plot_metric_all_groups)
+    _save_metric_grid(
+        df,
+        spec,
+        lambda ax, data, metric, variable: _plot_metric_all_groups(
+            ax,
+            data,
+            metric=metric,
+            variable=variable,
+            label_mode=label_mode,
+        ),
+    )
 
 
 def _plot_nyear_metric(
@@ -294,7 +332,7 @@ def _plot_nyear_metric(
     label_mode : {"all", "reg", "both"}
         Which evaluation labels to include.
     """
-    sub = _sorted_subset(df, metric=metric, variable=variable)
+    sub = df[(df.metric == metric) & (df.variable == variable)]
     if label_mode != "both":
         sub = sub[sub["label"] == label_mode]
     if sub.empty:
@@ -305,13 +343,17 @@ def _plot_nyear_metric(
     cmap = plt.get_cmap("tab10")
     exp_color = {exp: cmap(i % 10) for i, exp in enumerate(exps)}
 
-    for (exp_name, label), g in sub.groupby(["experiment", "label"], sort=False):
+    for (exp_name, label), g in sub.groupby(
+        ["experiment", "label"], sort=False, observed=True
+    ):
         g = g.sort_values("year_bin")
         ax.plot(
             g["year_bin"].astype(str),
             g["value"].to_numpy(float),
             color=exp_color[exp_name],
-            label=f"{exp_name} ({label})",
+            label=f"{exp_name} ({label})"
+            if not exp_name.startswith("BCSD")
+            else exp_name,
             linewidth=1.8,
             markersize=3.5,
             **LAB_STYLE[label],

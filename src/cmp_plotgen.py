@@ -34,10 +34,11 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sor
 
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
-EXP_GROUP = "W"
+EXP_GROUP = "CropW"
 
-VARS = ["prcp", "t2m", "u10m", "v10m"]
+VARS = ["prcp", "t2m"] if EXP_GROUP == "BCSD" else ["prcp", "t2m", "u10m", "v10m"]
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
+LABEL_MODE = "both"
 
 
 def _parse_experiment_name(name: str) -> tuple[str, str]:
@@ -90,9 +91,12 @@ def _sort_df(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
     if df.empty:
         return df
     return (
-        df.assign(exp_sort=df["experiment"].map(experiment_sort_key))
-        .sort_values(["exp_sort", *cols])
-        .drop(columns="exp_sort")
+        df.assign(
+            exp_sort=df["experiment"].map(experiment_sort_key),
+            label_sort=df["label"].map({"all": 0, "reg": 1}),
+        )
+        .sort_values(["exp_sort", "label_sort", *cols])
+        .drop(columns=["exp_sort", "label_sort"])
         .reset_index(drop=True)
     )
 
@@ -167,7 +171,7 @@ def extract_metrics(folder_path: str) -> pd.DataFrame:
             )
 
     out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-    return _sort_df(out, "label", "metric", "variable")
+    return _sort_df(out, "metric", "variable")
 
 
 def extract_nyear_metrics(
@@ -240,7 +244,7 @@ def extract_nyear_metrics(
     out["year_bin"] = pd.Categorical(
         out["year_bin"], categories=year_order, ordered=True
     )
-    return _sort_df(out, "label", "metric", "variable", "year_bin")
+    return _sort_df(out, "metric", "variable", "year_bin")
 
 
 def main():
@@ -252,13 +256,18 @@ def main():
     - Generate and save comparison plots
     """
     plot_metrics_cmp(
-        extract_metrics(EXP_FOLDER_PATH), METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP
+        extract_metrics(EXP_FOLDER_PATH),
+        METRICS,
+        VARS,
+        CMP_FOLDER_PATH / EXP_GROUP,
+        LABEL_MODE,
     )
     plot_nyear_metrics_cmp(
         extract_nyear_metrics(EXP_FOLDER_PATH),
         METRICS,
         VARS,
         CMP_FOLDER_PATH / EXP_GROUP,
+        LABEL_MODE,
     )
 
 
