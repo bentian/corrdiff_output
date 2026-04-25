@@ -33,8 +33,8 @@ async function loadExperimentGroups() {
         const fullNameMap = {
             W: "W* (SSP scenarios)",
             CropW: "CropW* (SSP scenarios cropped)",
-            DM: "DM* (input domains)",
-            BCSD: "BCSD* (bias-corrected spatial disaggregation)",
+            DM: "DM-* (input domains)",
+            BCSD: "BCSD-* (bias-corrected spatial disaggregation)",
         };
         populateDropdown(select, groups.map(group => fullNameMap[group]));
 
@@ -177,6 +177,6 @@ function handleSummarySubmit(event) {
         return;
     }
 
-    const group_prefix = group.split("*")[0].trim();
+    const group_prefix = group.split(/[\*-]/)[0].trim();
     window.location.href = `render.html?group=${group_prefix}#prcp_mean_cmp_png`;
 }

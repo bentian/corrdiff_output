@@ -89,7 +89,7 @@ function generateExperimentGroupFiles(group) {
 
         filesList.push(
             makeComparison("W*"),
-            makeComparison("B*")
+            makeComparison("BCSD-*")
         );
     }
 
