@@ -1,0 +1,6 @@
+metric	prcp	t2m
+RMSE	13.56	3.42
+MAE	8.09	3.07
+CORR	0.23	0.95
+CRPS	8.09	3.07
+STD_DEV	0.00	0.00

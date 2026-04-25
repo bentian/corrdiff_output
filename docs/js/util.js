@@ -88,8 +88,8 @@ function generateExperimentGroupFiles(group) {
         };
 
         filesList.push(
-            // makeComparison("B*")
-            makeComparison("W*")
+            makeComparison("W*"),
+            makeComparison("B*")
         );
     }
 
