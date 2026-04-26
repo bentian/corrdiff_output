@@ -3,8 +3,8 @@ Experiment Viewer is a web-based tool for visualizing and comparing experiment r
 
 # Features
 - 📊 Compare two experiments with interactive tables and plots.
-- 📈 Summarize a single experiment with key performance metrics.
-- 📂 View various experiment results including MAE, RMSE, and PDFs for multiple variables.
+- 📈 Summarize single experiment group with metrics mean and decadal trends.
+- 📂 View various experiment results including MAE & RMSE, and PDFs for multiple variables.
 - 🌍 User-friendly interface with collapsible sections for efficient navigation.
 - 🔍 Lightbox feature for enlarged visualization of plots.
 
@@ -37,7 +37,7 @@ Then, access `http://localhost:8000` in your browser.
 │── 📂 js/                # JavaScript logic
 │   ├── main.js           # Handles experiment selection forms
 │   ├── render.js         # Dynamically loads and displays experiment results
-│   └── util.js           # Utilities for render.js
+│   └── util.js           # Utilities for main.js and render.js
 │
 │── 📂 experiments/       # Contains experiment results (JSON, images, TSV, etc.)
 │   ├── list.json         # List of available experiments

@@ -65,6 +65,7 @@ The script produces:
    ┣ 📜 render.html           # Web page to display experiment plots and tables
    ┗ 📜 index.html            # Portal web page to select experiment for display
  ┣ 📂 src/
+   ┣ 📂 nc_helpers/           # Helpers to process BCSD data & split NetCDF files
    ┣ 📂 plot_helper/          # Helpers to generate plots
    ┣ 📂 samples_handler/      # Helpers to landmask / score / process samples
    ┣ 📜 analysis_utils.py     # Utilities for analysis
@@ -84,10 +85,10 @@ The script produces:
   - Metric table export + plotting wrappers.
   - Grouping time-indexed metric datasets into fixed N-year bins.
   - TensorBoard scalar extraction and training-loss plotting.
-  - Hydra YAML flattening and YAML->TSV conversion.
+  - Hydra YAML flattening and YAML -> TSV conversion.
 
 ## 🔹 `samples_handler/*` - Compute Metrics
-  - Computes RMSE, CRPS, standard deviation.
+  - Computes `RMSE`, `MAE`, `CORR`, `CRPS`, and `STD_DEV`.
   - Processes truth vs. predicted values.
   - Saves error maps and flattened datasets.
   - Select overall top dates and create p90 grids per N-year bin.
@@ -96,7 +97,11 @@ The script produces:
   - Bar charts for metrics.
   - PDF distributions for variables.
   - Monthly and decadal error visualizations.
-`
+
+## 🔹 `nc_helpers/*` - Process NetCDF files
+  - Splits NetCDF files by year into folders `truth`, `prediction_all`, and `prediction_reg`.
+  - Regrids BCSD data to 128x96 grid (TaiESM 3.5km) and merges with truth for evaluation.
+
 ## 🔹 `cmp_plotgen.py` - Compares Metrics among Experiments
-  - Bar charts for metrics among experiments.
-  - Line charts for decadal metrics among experiments.
+  - Aggregates metrics mean and decadal trends across experiments.
+  - Visualizes as line charts for comparison among experiments.
