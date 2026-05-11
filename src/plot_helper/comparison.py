@@ -156,16 +156,27 @@ def _save_metric_grid(
 
 
 def _plot_metric_all_groups(
-    ax: plt.Axes, df: pd.DataFrame, *, metric: str, variable: str
+    ax: plt.Axes,
+    df: pd.DataFrame,
+    *,
+    metric: str,
+    variable: str,
+    kind: str = "bar",
 ) -> None:
     """
     Plot mean metric values across experiments in a single subplot.
 
-    Each line represents a (group, label) pair:
-        - color   → group (W1a, W1, W2)
-        - linestyle / marker → label (all, reg)
+    kind="line":
+        Each line represents a (group, label) pair:
+            - color → group (e.g. W1a, W1, W2)
+            - linestyle / marker → label (e.g. all, reg)
+        X-axis corresponds to experiment suffixes (e.g. -1, -2, -3, -5).
 
-    X-axis corresponds to experiment suffixes (e.g. -1, -2, -3, -5).
+    kind="bar":
+        Each bar group represents an experiment, and each bar corresponds to a (group, label) pair:
+            - blue coloer → all label
+            - olive color → reg label
+        X-axis corresponds to experiment names (e.g. LR-1, LR-2).
 
     Parameters
     ----------
@@ -183,27 +194,56 @@ def _plot_metric_all_groups(
         ax.set_visible(False)
         return
 
-    for (group, label), g in sub.groupby(["group", "label"], sort=False):
-        y = (
-            g.assign(suffix=g["experiment"].str.removeprefix(group))
-            .set_index("suffix")["value"]
-            .reindex(SUFFIX_ORDER)
-            .to_numpy()
-        )
-        ax.plot(
-            SUFFIX_ORDER,
-            y,
-            color=GROUP_COLORS.get(group),
-            label=f"{group} ({label})" if group != "BCSD" else group,
-            **LAB_STYLE[label],
-        )
+    if kind == "bar":
+        exp_names = sub["experiment"].drop_duplicates().tolist()
+        x = np.arange(len(exp_names))
 
-    # Show "W*-1", "W*-2", ... on x-axis
-    ax.set_xticks(range(len(SUFFIX_ORDER)))
-    ax.set_xticklabels([f"SSP{s[1:]}\n(W*{s})" for s in SUFFIX_ORDER])
+        series = []
+        for (group, label), g in sub.groupby(["group", "label"], sort=False):
+            y = g.set_index("experiment")["value"].reindex(exp_names).to_numpy()
+            series.append((group, label, y))
+
+        width = 0.8 / max(len(series), 1)
+        for i, (group, label, y) in enumerate(series):
+            offset = (i - (len(series) - 1) / 2) * width
+            ax.bar(
+                x + offset,
+                y,
+                width=width,
+                color="tab:olive" if label == "reg" else "tab:blue",
+                label=f"{group} ({label})" if group != "BCSD" else group,
+                edgecolor="black",
+                linewidth=0.5,
+            )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(exp_names, rotation=45, ha="right")
+        ax.set_xlabel("Experiment")
+
+    elif kind == "line":
+        for (group, label), g in sub.groupby(["group", "label"], sort=False):
+            y = (
+                g.assign(suffix=g["experiment"].str.removeprefix(group))
+                .set_index("suffix")["value"]
+                .reindex(SUFFIX_ORDER)
+                .to_numpy()
+            )
+            ax.plot(
+                SUFFIX_ORDER,
+                y,
+                color=GROUP_COLORS.get(group),
+                label=f"{group} ({label})" if group != "BCSD" else group,
+                **LAB_STYLE[label],
+            )
+
+        ax.set_xticks(range(len(SUFFIX_ORDER)))
+        ax.set_xticklabels([f"SSP{s[1:]}\n(W*{s})" for s in SUFFIX_ORDER])
+        ax.set_xlabel("Generation Dataset")
+
+    else:
+        raise ValueError(f"Unsupported plot kind: {kind!r}")
 
     ax.set_title(metric)
-    ax.set_xlabel("Generation Dataset")
     ax.set_ylabel(metric)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
     _apply_ylim(ax, variable, metric)

@@ -33,8 +33,9 @@ async function loadExperimentGroups() {
         const fullNameMap = {
             W: "W* (SSP scenarios)",
             CropW: "CropW* (SSP scenarios cropped)",
-            DM: "DM-* (input domains)",
             BCSD: "BCSD-* (bias-corrected spatial disaggregation)",
+            DM: "DM-* (input domains)",
+            LR: "LR-* (learning rates)",
         };
         populateDropdown(select, groups.map(group => fullNameMap[group]));
 
