@@ -34,11 +34,13 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sor
 
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
-EXP_GROUP = "CropW"
 
-VARS = ["prcp", "t2m"] if EXP_GROUP == "BCSD" else ["prcp", "t2m", "u10m", "v10m"]
+EXP_GROUP = "CropW"
+GROUPS = (EXP_GROUP,)  # (EXP_GROUP, "BCSD")
+
+VARS = ["prcp", "t2m"] if "BCSD" in GROUPS else ["prcp", "t2m", "u10m", "v10m"]
+LABEL_MODE = "both" if len(GROUPS) == 1 else "all"
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
-LABEL_MODE = "both"
 
 
 def _parse_experiment_name(name: str) -> tuple[str, str]:
@@ -68,7 +70,7 @@ def _parse_experiment_name(name: str) -> tuple[str, str]:
 def _iter_experiments(folder_path: str):
     """Iterate over valid experiment directories."""
     for exp_dir in Path(folder_path).iterdir():
-        if exp_dir.is_dir() and exp_dir.name.startswith(EXP_GROUP):
+        if exp_dir.is_dir() and exp_dir.name.startswith(GROUPS):
             yield exp_dir
 
 
