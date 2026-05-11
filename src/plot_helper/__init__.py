@@ -18,19 +18,29 @@ Submodules
 - training      : Training loss visualization
 - comparison    : Metrics comparison among experiments
 """
-from .metrics import plot_metrics, plot_monthly_metrics, \
-                     plot_nyear_metrics, plot_metrics_vs_ensembles
+
+from .metrics import (
+    plot_metrics,
+    plot_monthly_metrics,
+    plot_nyear_metrics,
+    plot_metrics_vs_ensembles,
+)
 from .distributions import plot_metrics_cnt, plot_pdf
 from .samples import plot_top_samples, plot_p90_by_nyear, plot_monthly_error
 from .training import plot_training_loss
-from .comparison import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sort_key
+from .comparison import plot_metrics_cmp, plot_nyear_metrics_cmp
 
 __all__ = [
-    "plot_metrics",         "plot_monthly_metrics",
-    "plot_nyear_metrics",   "plot_metrics_vs_ensembles",
-    "plot_metrics_cnt",     "plot_pdf",
-    "plot_top_samples",     "plot_p90_by_nyear",
-    "plot_monthly_error",   "plot_training_loss",
-    "plot_metrics_cmp",     "plot_nyear_metrics_cmp",
-    "experiment_sort_key",
+    "plot_metrics",
+    "plot_monthly_metrics",
+    "plot_nyear_metrics",
+    "plot_metrics_vs_ensembles",
+    "plot_metrics_cnt",
+    "plot_pdf",
+    "plot_top_samples",
+    "plot_p90_by_nyear",
+    "plot_monthly_error",
+    "plot_training_loss",
+    "plot_metrics_cmp",
+    "plot_nyear_metrics_cmp",
 ]

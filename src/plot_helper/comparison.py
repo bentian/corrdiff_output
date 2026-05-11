@@ -31,7 +31,6 @@ from pathlib import Path
 from collections.abc import Callable
 
 from typing import Literal
-import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -101,49 +100,6 @@ class MetricGridSpec:
     folder_path: Path
     filename_suffix: str
     title_prefix: str
-
-
-def experiment_sort_key(exp: str) -> tuple[int, int, int]:
-    """
-    Sort order:
-        W1a-*, then W1-*
-        W2...
-        then CropW1a-*, CropW1-*, CropW2...
-
-    Within each:
-        1a, 1, 2, ...
-
-    Returns:
-        (prefix_priority, group_number, group_variant_priority,
-         exp_number, letter_priority, letter)
-    """
-    m = re.match(r"(Crop)?W(\d+)(a?)-(\d+)([a-z]?)", exp)
-    if not m:
-        return (9999, 9999, 9999, 9999, 1, exp)
-
-    is_crop = m.group(1) is not None
-    group_num = int(m.group(2))
-    group_variant = m.group(3)  # '' or 'a'
-    exp_num = int(m.group(4))
-    letter = m.group(5)
-
-    # 🔥 main control: W before CropW
-    prefix_priority = 1 if is_crop else 0
-
-    # W1a before W1
-    group_variant_priority = 0 if group_variant == "a" else 1
-
-    # 1a before 1
-    letter_priority = 0 if letter == "a" else 1
-
-    return (
-        prefix_priority,
-        group_num,
-        group_variant_priority,
-        exp_num,
-        letter_priority,
-        letter,
-    )
 
 
 def _apply_ylim(ax: plt.Axes, variable: str, metric: str) -> None:

@@ -28,9 +28,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Sequence
+import re
 import pandas as pd
 
-from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp, experiment_sort_key
+from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp
 
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
@@ -74,6 +75,36 @@ def _iter_experiments(folder_path: str):
             yield exp_dir
 
 
+def _experiment_sort_key(exp: str) -> tuple[int, int, int]:
+    """
+    Sort order:
+        W1a-*, then W1-*
+        W2...
+        then CropW1a-*, CropW1-*, CropW2...
+
+    Within each:
+        1a, 1, 2, ...
+
+    Returns:
+        (prefix_priority, group_number, group_variant_priority,
+         exp_number, letter_priority, letter)
+    """
+    m = re.match(r"(Crop)?W(\d+)(a?)-(\d+)([a-z]?)", exp)
+    if not m:
+        return (9999, 9999, 9999, 9999, 1, exp)
+
+    is_crop, group_num, group_variant, exp_num, letter = m.groups()
+
+    return (
+        is_crop is not None,  # W before CropW
+        int(group_num),
+        group_variant != "a",  # W1a before W1
+        int(exp_num),
+        letter != "a",  # 1a before 1
+        letter,
+    )
+
+
 def _sort_df(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
     """
     Sort a DataFrame by experiment order and additional columns.
@@ -94,7 +125,7 @@ def _sort_df(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
         return df
     return (
         df.assign(
-            exp_sort=df["experiment"].map(experiment_sort_key),
+            exp_sort=df["experiment"].map(_experiment_sort_key),
             label_sort=df["label"].map({"all": 0, "reg": 1}),
         )
         .sort_values(["exp_sort", "label_sort", *cols])
