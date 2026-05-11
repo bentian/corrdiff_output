@@ -123,6 +123,10 @@ def _sort_df(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
     """
     if df.empty:
         return df
+
+    if LABEL_MODE != "both":
+        df = df[df["label"] == LABEL_MODE]
+
     return (
         df.assign(
             exp_sort=df["experiment"].map(_experiment_sort_key),
@@ -289,18 +293,13 @@ def main():
     - Generate and save comparison plots
     """
     plot_metrics_cmp(
-        extract_metrics(EXP_FOLDER_PATH),
-        METRICS,
-        VARS,
-        CMP_FOLDER_PATH / EXP_GROUP,
-        LABEL_MODE,
+        extract_metrics(EXP_FOLDER_PATH), METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP
     )
     plot_nyear_metrics_cmp(
         extract_nyear_metrics(EXP_FOLDER_PATH),
         METRICS,
         VARS,
         CMP_FOLDER_PATH / EXP_GROUP,
-        LABEL_MODE,
     )
 
 
