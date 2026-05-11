@@ -37,10 +37,11 @@ EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
 
 EXP_GROUP = "CropW"
-GROUPS = (EXP_GROUP,)  # (EXP_GROUP, "BCSD")
+GROUPS = (EXP_GROUP,)  # e.g., (EXP_GROUP, "BCSD")
+FILENAME_SUFFIX = ""  # e.g., "w1_" to differentiate
 
 VARS = ["prcp", "t2m"] if "BCSD" in GROUPS else ["prcp", "t2m", "u10m", "v10m"]
-LABEL_MODE = "both" if len(GROUPS) == 1 else "all"
+LABEL_MODE = "both" if len(GROUPS) == 1 else "all"  # Only plot "all" for single group
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
 
 
@@ -293,13 +294,18 @@ def main():
     - Generate and save comparison plots
     """
     plot_metrics_cmp(
-        extract_metrics(EXP_FOLDER_PATH), METRICS, VARS, CMP_FOLDER_PATH / EXP_GROUP
+        extract_metrics(EXP_FOLDER_PATH),
+        METRICS,
+        VARS,
+        CMP_FOLDER_PATH / EXP_GROUP,
+        FILENAME_SUFFIX,
     )
     plot_nyear_metrics_cmp(
         extract_nyear_metrics(EXP_FOLDER_PATH),
         METRICS,
         VARS,
         CMP_FOLDER_PATH / EXP_GROUP,
+        FILENAME_SUFFIX,
     )
 
 

@@ -210,7 +210,11 @@ def _plot_metric_all_groups(
 
 
 def plot_metrics_cmp(
-    df: pd.DataFrame, metrics: list[str], variables: list[str], folder_path: Path
+    df: pd.DataFrame,
+    metrics: list[str],
+    variables: list[str],
+    folder_path: Path,
+    suffix: str = "",
 ) -> None:
     """
     Create and save 2x2 comparison plots for mean metrics.
@@ -227,12 +231,14 @@ def plot_metrics_cmp(
         Variables to plot (one figure per variable).
     folder_path : Path
         Output directory for saved figures.
+    suffix : str
+        Suffix to insert into the filename.
     """
     spec = MetricGridSpec(
         metrics=metrics,
         variables=variables,
         folder_path=folder_path,
-        filename_suffix="mean_cmp",
+        filename_suffix=f"mean_{suffix}cmp",
         title_prefix="Metric Mean Comparison",
     )
     _save_metric_grid(
@@ -300,7 +306,11 @@ def _plot_nyear_metric(
 
 
 def plot_nyear_metrics_cmp(
-    df: pd.DataFrame, metrics: list[str], variables: list[str], folder_path: Path
+    df: pd.DataFrame,
+    metrics: list[str],
+    variables: list[str],
+    folder_path: Path,
+    suffix: str = "",
 ) -> None:
     """
     Create and save 2x2 comparison plots for decadal metrics.
@@ -317,12 +327,14 @@ def plot_nyear_metrics_cmp(
         Variables to plot.
     folder_path : Path
         Output directory.
+    suffix : str
+        Suffix to insert into the filename.
     """
     spec = MetricGridSpec(
         metrics=metrics,
         variables=variables,
         folder_path=folder_path,
-        filename_suffix="nyear_cmp",
+        filename_suffix=f"nyear_{suffix}cmp",
         title_prefix="Decadal Metric Comparison",
     )
 
