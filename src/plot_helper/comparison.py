@@ -205,9 +205,8 @@ def _plot_metric_all_groups(
 
         width = 0.8 / max(len(series), 1)
         for i, (group, label, y) in enumerate(series):
-            offset = (i - (len(series) - 1) / 2) * width
             ax.bar(
-                x + offset,
+                x + (i - (len(series) - 1) / 2) * width,
                 y,
                 width=width,
                 color="tab:olive" if label == "reg" else "tab:blue",
