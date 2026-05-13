@@ -31,5 +31,5 @@ generation.times
 generation.perf.force_fp16	False
 generation.perf.use_torch_compile	False
 generation.perf.num_writer_workers	1
-generation.io.res_ckpt_filename	/raid/bentian/ssp/corrdiff_cwa/outputs_LR-2/reg_1n_w8_amp/checkpoints_diffusion/EDMPrecondSR.0.3200000.mdlus
-generation.io.reg_ckpt_filename	/raid/bentian/ssp/corrdiff_cwa/outputs_LR-2/reg_1n_w8_amp/checkpoints_regression/UNet.0.3200000.mdlus
+generation.io.res_ckpt_filename	/raid/bentian/ssp/corrdiff_cwa/outputs_LR-4/reg_1n_w8_amp/checkpoints_diffusion/EDMPrecondSR.0.3200000.mdlus
+generation.io.reg_ckpt_filename	/raid/bentian/ssp/corrdiff_cwa/outputs_LR-4/reg_1n_w8_amp/checkpoints_regression/UNet.0.3200000.mdlus
