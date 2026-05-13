@@ -60,16 +60,16 @@ function generateExperimentGroupFiles(group) {
             vars.map(k => [k, [`${k}/mean_cmp.png`, ...extra(k)]])
         );
 
+    const hasDecadal = !["DM", "LR"].includes(group);
     const filesList = [{
-        title: group === "DM" ? "Metrics Mean" : "Metrics Mean & Decadal Trends",
-        files: makeFiles(k => (group === "DM" ? [] : [`${k}/nyear_cmp.png`]))
+        title: hasDecadal ? "Metrics Mean & Decadal Trends" : "Metrics Mean",
+        files: makeFiles(k => (hasDecadal ? [`${k}/nyear_cmp.png`] : []))
     }];
 
     if (group === "CropW") {
         // Helper to build comparison files
         const makeComparison = (label) => {
             const suffix = label[0].toLowerCase();
-
             return {
                 title: `[all] Comparison with ${label}`,
                 files: Object.fromEntries(

@@ -36,7 +36,7 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
 
-EXP_GROUP = "CropW"
+EXP_GROUP = "LR"
 GROUPS = (EXP_GROUP,)  # e.g., (EXP_GROUP, "BCSD")
 FILENAME_SUFFIX = ""  # e.g., "w1_" to differentiate
 
@@ -300,13 +300,15 @@ def main():
         CMP_FOLDER_PATH / EXP_GROUP,
         FILENAME_SUFFIX,
     )
-    plot_nyear_metrics_cmp(
-        extract_nyear_metrics(EXP_FOLDER_PATH),
-        METRICS,
-        VARS,
-        CMP_FOLDER_PATH / EXP_GROUP,
-        FILENAME_SUFFIX,
-    )
+
+    if EXP_GROUP not in ["DM", "LR"]:
+        plot_nyear_metrics_cmp(
+            extract_nyear_metrics(EXP_FOLDER_PATH),
+            METRICS,
+            VARS,
+            CMP_FOLDER_PATH / EXP_GROUP,
+            FILENAME_SUFFIX,
+        )
 
 
 if __name__ == "__main__":
