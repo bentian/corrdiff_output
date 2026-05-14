@@ -217,7 +217,6 @@ def _plot_metric_all_groups(
 
         ax.set_xticks(x)
         ax.set_xticklabels(exp_names, rotation=45, ha="right")
-        ax.set_xlabel("Experiment")
 
     elif kind == "line":
         for (group, label), g in sub.groupby(["group", "label"], sort=False):
