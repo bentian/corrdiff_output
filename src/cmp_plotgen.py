@@ -27,7 +27,7 @@ Typical workflow
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable, Sequence, Optional, Union
 import re
 import pandas as pd
 
@@ -36,18 +36,23 @@ from plot_helper import plot_metrics_cmp, plot_nyear_metrics_cmp
 EXP_FOLDER_PATH = Path("../docs/experiments")
 CMP_FOLDER_PATH = Path("../docs/comparisons")
 
-EXP_GROUP = "LR"
+EXP_GROUP = "CropW"
 GROUPS = (EXP_GROUP,)  # e.g., (EXP_GROUP, "BCSD")
 FILENAME_SUFFIX = ""  # e.g., "w1_" to differentiate
 
 VARS = ["prcp", "t2m"] if "BCSD" in GROUPS else ["prcp", "t2m", "u10m", "v10m"]
-LABEL_MODE = "both" if len(GROUPS) == 1 else "all"  # Only plot "all" for single group
+LABELS = (
+    ("all",) if len(GROUPS) >= 1 else ("all", "reg")  # Only plot both for single group
+)
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
 
+BASE_COLS = ["group", "experiment", "label", "metric", "variable", "value"]
+NYEAR_COLS = ["group", "experiment", "label", "metric", "year_bin", "variable", "value"]
 
-def _parse_experiment_name(name: str) -> tuple[str, str]:
+
+def _experiment_info(exp_dir: Path) -> tuple[str, str]:
     """
-    Extract group and experiment base name from a directory name.
+    Extract group and experiment name from a directory name.
 
     Examples
     --------
@@ -57,26 +62,25 @@ def _parse_experiment_name(name: str) -> tuple[str, str]:
 
     Parameters
     ----------
-    name : str
-        Directory name.
+    exp_dir : Path
+        Experiment directory.
 
     Returns
     -------
     tuple[str, str]
-        (group, experiment_base)
+        (group, experiment)
     """
-    base = name.split("_", 1)[0]
-    return base.split("-", 1)[0], base
+    experiment = exp_dir.name.split("_", 1)[0]
+    group = experiment.split("-", 1)[0]
+    return group, experiment
 
 
-def _iter_experiments(folder_path: str):
-    """Iterate over valid experiment directories."""
-    for exp_dir in Path(folder_path).iterdir():
-        if exp_dir.is_dir() and exp_dir.name.startswith(GROUPS):
-            yield exp_dir
+def _experiments(root: Path) -> Iterable[Path]:
+    """Yield experiment directories matching GROUPS."""
+    return (p for p in root.iterdir() if p.is_dir() and p.name.startswith(GROUPS))
 
 
-def _experiment_sort_key(exp: str) -> tuple[int, int, int]:
+def _sort_key(exp: str) -> tuple[bool, int, bool, int, bool, str]:
     """
     Sort order:
         W1a-*, then W1-*
@@ -90,14 +94,13 @@ def _experiment_sort_key(exp: str) -> tuple[int, int, int]:
         (prefix_priority, group_number, group_variant_priority,
          exp_number, letter_priority, letter)
     """
-    m = re.match(r"(Crop)?W(\d+)(a?)-(\d+)([a-z]?)", exp)
-    if not m:
-        return (9999, 9999, 9999, 9999, 1, exp)
+    match = re.match(r"(Crop)?W(\d+)(a?)-(\d+)([a-z]?)", exp)
+    if not match:
+        return (True, 9999, True, 9999, True, exp)
 
-    is_crop, group_num, group_variant, exp_num, letter = m.groups()
-
+    crop, group_num, group_variant, exp_num, letter = match.groups()
     return (
-        is_crop is not None,  # W before CropW
+        crop is not None,  # W before CropW
         int(group_num),
         group_variant != "a",  # W1a before W1
         int(exp_num),
@@ -106,186 +109,135 @@ def _experiment_sort_key(exp: str) -> tuple[int, int, int]:
     )
 
 
-def _sort_df(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
-    """
-    Sort a DataFrame by experiment order and additional columns.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input DataFrame.
-    *cols : str
-        Additional columns for sorting.
-
-    Returns
-    -------
-    pd.DataFrame
-        Sorted DataFrame.
-    """
+def _finish(df: pd.DataFrame, sort_cols: Sequence[str]) -> pd.DataFrame:
+    """Apply label filtering and stable experiment sorting."""
     if df.empty:
         return df
 
-    if LABEL_MODE != "both":
-        df = df[df["label"] == LABEL_MODE]
+    if len(LABELS) == 1:
+        df = df[df["label"] == LABELS[0]]
 
     return (
         df.assign(
-            exp_sort=df["experiment"].map(_experiment_sort_key),
+            exp_sort=df["experiment"].map(_sort_key),
             label_sort=df["label"].map({"all": 0, "reg": 1}),
         )
-        .sort_values(["exp_sort", "label_sort", *cols])
+        .sort_values(["exp_sort", "label_sort", *sort_cols])
         .drop(columns=["exp_sort", "label_sort"])
         .reset_index(drop=True)
     )
 
 
-def _read_mean_metrics(
-    path: Path, *, group: str, experiment: str, label: str
+def _melt_wide_metrics(
+    df: pd.DataFrame,
+    *,
+    id_vars: Union[str, Sequence[str]],
+    metric: Optional[str] = None,
+    group: str,
+    experiment: str,
+    label: str,
 ) -> pd.DataFrame:
-    """
-    Read and reshape mean metrics from a TSV file.
-
-    Parameters
-    ----------
-    path : Path
-        Path to metrics_mean.tsv.
-    group : str
-        Experiment group (e.g. W1).
-    experiment : str
-        Experiment name.
-    label : str
-        Evaluation label ("all" or "reg").
-
-    Returns
-    -------
-    pd.DataFrame
-        Long-form DataFrame (may be empty if file missing).
-    """
-    if not path.exists():
+    """Convert a wide metrics table to the shared long-form schema."""
+    vars_found = df.columns.intersection(VARS)
+    if vars_found.empty:
         return pd.DataFrame()
 
-    wide = pd.read_csv(path, sep="\t", index_col=0)
-    wide = wide.loc[wide.index.intersection(METRICS), wide.columns.intersection(VARS)]
-    if wide.empty:
-        return pd.DataFrame()
+    out = df.melt(
+        id_vars=id_vars, value_vars=vars_found, var_name="variable", value_name="value"
+    )
+    if metric is not None:
+        out["metric"] = metric
 
-    return (
-        wide.rename_axis("metric")
-        .reset_index()
-        .melt(id_vars="metric", var_name="variable", value_name="value")
-        .assign(group=group, experiment=experiment, label=label)[
-            ["group", "experiment", "label", "metric", "variable", "value"]
-        ]
+    return out.assign(
+        group=group,
+        experiment=experiment,
+        label=label,
+        value=lambda d: pd.to_numeric(d["value"], errors="coerce"),
     )
 
 
-def extract_metrics(folder_path: str) -> pd.DataFrame:
-    """
-    Extract mean metrics from experiment directories.
+def extract_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
+    """Extract metrics_mean.tsv files into long form."""
+    frames: list[pd.DataFrame] = []
 
-    Parameters
-    ----------
-    folder_path : str
-        Root directory containing experiment folders.
+    for exp_dir in _experiments(Path(folder_path)):
+        group, experiment = _experiment_info(exp_dir)
 
-    Returns
-    -------
-    pd.DataFrame
-        Long-form DataFrame with columns:
-        ["group", "experiment", "label", "metric", "variable", "value"]
-    """
-    frames = []
+        for label in LABELS:
+            path = exp_dir / label / "overview" / "metrics_mean.tsv"
+            if not path.exists():
+                continue
 
-    for exp_dir in _iter_experiments(folder_path):
-        group, exp_base = _parse_experiment_name(exp_dir.name)
-        for label in ("all", "reg"):
+            df = pd.read_csv(path, sep="\t", index_col=0)
+            df = df.loc[df.index.intersection(METRICS)]
+            if df.empty:
+                continue
+
             frames.append(
-                _read_mean_metrics(
-                    exp_dir / label / "overview" / "metrics_mean.tsv",
+                _melt_wide_metrics(
+                    df.rename_axis("metric").reset_index(),
+                    id_vars="metric",
                     group=group,
-                    experiment=exp_base,
+                    experiment=experiment,
                     label=label,
-                )
+                )[BASE_COLS]
             )
 
-    out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-    return _sort_df(out, "metric", "variable")
+    out = (
+        pd.concat(frames, ignore_index=True)
+        if frames
+        else pd.DataFrame(columns=BASE_COLS)
+    )
+    return _finish(out, ["metric", "variable"])
 
 
-def extract_nyear_metrics(
-    folder_path: str, labels: Sequence[str] = ("all", "reg")
-) -> pd.DataFrame:
-    """
-    Extract decadal (year-bin) metrics from experiment directories.
+def extract_nyear_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
+    """Extract overview/nyear_metrics/*.tsv files into long form."""
+    frames: list[pd.DataFrame] = []
 
-    Parameters
-    ----------
-    folder_path : str
-        Root directory containing experiment folders.
-    labels : Sequence[str], optional
-        Labels to include.
+    for exp_dir in _experiments(Path(folder_path)):
+        group, experiment = _experiment_info(exp_dir)
 
-    Returns
-    -------
-    pd.DataFrame
-        Long-form DataFrame with columns:
-        ["group", "experiment", "label", "metric", "year_bin", "variable", "value"]
-    """
-    frames = []
-
-    for exp_dir in _iter_experiments(folder_path):
-        group, exp_base = _parse_experiment_name(exp_dir.name)
-
-        for label in labels:
-            nyear_dir = exp_dir / label / "overview" / "nyear_metrics"
-            if not nyear_dir.exists():
+        for label in LABELS:
+            metric_dir = exp_dir / label / "overview" / "nyear_metrics"
+            if not metric_dir.exists():
                 continue
 
             for metric in METRICS:
-                f = nyear_dir / f"{metric.lower()}.tsv"
-                if not f.exists():
+                path = metric_dir / f"{metric.lower()}.tsv"
+                if not path.exists():
                     continue
 
-                df = pd.read_csv(f, sep="\t")
-                if "year_bin" not in df.columns:
-                    continue
-
-                common_vars = df.columns.intersection(VARS)
-                if common_vars.empty:
+                df = pd.read_csv(path, sep="\t")
+                if "year_bin" not in df:
                     continue
 
                 frames.append(
-                    df.melt("year_bin", common_vars, "variable", "value").assign(
-                        group=group,
-                        experiment=exp_base,
-                        label=label,
+                    _melt_wide_metrics(
+                        df,
+                        id_vars="year_bin",
                         metric=metric,
-                        value=lambda d: d["value"].astype(float),
-                    )[
-                        [
-                            "group",
-                            "experiment",
-                            "label",
-                            "metric",
-                            "year_bin",
-                            "variable",
-                            "value",
-                        ]
-                    ]
+                        group=group,
+                        experiment=experiment,
+                        label=label,
+                    )[NYEAR_COLS]
                 )
 
-    out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    out = (
+        pd.concat(frames, ignore_index=True)
+        if frames
+        else pd.DataFrame(columns=NYEAR_COLS)
+    )
     if out.empty:
         return out
 
-    year_order = pd.unique(out["year_bin"])
     out["year_bin"] = pd.Categorical(
-        out["year_bin"], categories=year_order, ordered=True
+        out["year_bin"], categories=pd.unique(out["year_bin"]), ordered=True
     )
-    return _sort_df(out, "metric", "variable", "year_bin")
+    return _finish(out, ["metric", "variable", "year_bin"])
 
 
-def main():
+def main() -> None:
     """
     Run full extraction and plotting pipeline.
 
@@ -293,11 +245,13 @@ def main():
     - Extract decadal metrics
     - Generate and save comparison plots
     """
+    out_dir = CMP_FOLDER_PATH / EXP_GROUP
+
     plot_metrics_cmp(
         extract_metrics(EXP_FOLDER_PATH),
         METRICS,
         VARS,
-        CMP_FOLDER_PATH / EXP_GROUP,
+        out_dir,
         FILENAME_SUFFIX,
     )
 
@@ -306,7 +260,7 @@ def main():
             extract_nyear_metrics(EXP_FOLDER_PATH),
             METRICS,
             VARS,
-            CMP_FOLDER_PATH / EXP_GROUP,
+            out_dir,
             FILENAME_SUFFIX,
         )
 

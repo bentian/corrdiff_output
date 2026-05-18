@@ -161,7 +161,7 @@ def _plot_metric_all_groups(
     *,
     metric: str,
     variable: str,
-    kind: str = "bar",
+    kind: str = "line",
 ) -> None:
     """
     Plot mean metric values across experiments in a single subplot.
