@@ -42,7 +42,7 @@ FILENAME_SUFFIX = ""  # e.g., "w1_" to differentiate
 
 VARS = ["prcp", "t2m"] if "BCSD" in GROUPS else ["prcp", "t2m", "u10m", "v10m"]
 LABELS = (
-    ("all",) if len(GROUPS) >= 1 else ("all", "reg")  # Only plot both for single group
+    ("all",) if len(GROUPS) > 1 else ("all", "reg")  # Only plot "all" for single group
 )
 METRICS = ["RMSE", "CORR", "MAE", "CRPS"]
 
@@ -131,7 +131,6 @@ def _finish(df: pd.DataFrame, sort_cols: Sequence[str]) -> pd.DataFrame:
 def _melt_wide_metrics(
     df: pd.DataFrame,
     *,
-    id_vars: Union[str, Sequence[str]],
     metric: Optional[str] = None,
     group: str,
     experiment: str,
@@ -143,7 +142,10 @@ def _melt_wide_metrics(
         return pd.DataFrame()
 
     out = df.melt(
-        id_vars=id_vars, value_vars=vars_found, var_name="variable", value_name="value"
+        id_vars="year_bin" if metric is not None else "metric",
+        value_vars=vars_found,
+        var_name="variable",
+        value_name="value",
     )
     if metric is not None:
         out["metric"] = metric
@@ -176,7 +178,6 @@ def extract_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
             frames.append(
                 _melt_wide_metrics(
                     df.rename_axis("metric").reset_index(),
-                    id_vars="metric",
                     group=group,
                     experiment=experiment,
                     label=label,
@@ -215,7 +216,6 @@ def extract_nyear_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
                 frames.append(
                     _melt_wide_metrics(
                         df,
-                        id_vars="year_bin",
                         metric=metric,
                         group=group,
                         experiment=experiment,
