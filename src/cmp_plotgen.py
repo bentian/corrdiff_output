@@ -27,7 +27,7 @@ Typical workflow
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Sequence, Optional, Union
+from typing import Iterable, Sequence, Optional
 import re
 import pandas as pd
 
@@ -158,7 +158,7 @@ def _melt_wide_metrics(
     )
 
 
-def extract_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
+def extract_metrics(folder_path: Path) -> pd.DataFrame:
     """Extract metrics_mean.tsv files into long form."""
     frames: list[pd.DataFrame] = []
 
@@ -192,7 +192,7 @@ def extract_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
     return _finish(out, ["metric", "variable"])
 
 
-def extract_nyear_metrics(folder_path: Union[str, Path]) -> pd.DataFrame:
+def extract_nyear_metrics(folder_path: Path) -> pd.DataFrame:
     """Extract overview/nyear_metrics/*.tsv files into long form."""
     frames: list[pd.DataFrame] = []
 
