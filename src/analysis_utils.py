@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 
 import pandas as pd
 import xarray as xr
@@ -41,7 +41,7 @@ def ensure_directory_exists(directory: Path, subdir: Optional[str] = None) -> Pa
 # -----------------------------------------------------------------------------
 def read_tensorboard_log(
     log_dir: Path, scalar_name: str = "training_loss", max_duration: float = None
-) -> Tuple[List[datetime], List[float]]:
+) -> Tuple[Union[List[datetime], List[int]], List[float]]:
     """
     Read TensorBoard event files in `log_dir` and extract (wall_time, value) pairs
     for `scalar_name`. Optionally filter by `step <= max_duration`.
@@ -65,6 +65,7 @@ def read_tensorboard_log(
         )
 
     return wall_times, values
+    # return steps, values for duration x-axis
 
 
 def read_training_loss_and_plot(
