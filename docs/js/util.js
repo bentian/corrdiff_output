@@ -88,7 +88,7 @@ function generateExperimentGroupFiles(group) {
         };
 
         filesList.push(
-            makeComparison("W*"),
+            // makeComparison("W*"),
             makeComparison("BCSD-*")
         );
     }
