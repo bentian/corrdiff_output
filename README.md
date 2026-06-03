@@ -45,6 +45,18 @@ This will:
 - ✅ Generate PNG plots & TSV tables
 - ✅ Disable landmask if specified
 
+### Evaluate Specific Area
+
+If you need to analyze a specific area—such as the 128 x 96 center grid—from the NetCDF files,
+you can activate the cropping flag when accessing samples in `src/sample_handler/processing.py`:
+
+```python
+# Crop to (128, 96) if needed
+crop_center = False
+```
+
+This functionality can be adjusted within the code to meet varying area requirements.
+
 # 📊 Generated Outputs
 
 The script produces:
