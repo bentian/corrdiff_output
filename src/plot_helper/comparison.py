@@ -37,23 +37,23 @@ import matplotlib.pyplot as plt
 
 Y_LIMITS = {
     "prcp": {
-        "RMSE": (9.0, None),
-        "MAE": (4, None),
-        "CRPS": (4, None),
-        "CORR": (0.1, 0.5),
+        "RMSE": (2, None),
+        "MAE": (1, None),
+        "CRPS": (1, None),
+        "CORR": (0.1, None),
     },
     "t2m": {
-        "RMSE": (0.7, None),
-        "MAE": (0.4, None),
-        "CRPS": (0.4, None),
-        "CORR": (0.9, 1.0),
+        "RMSE": (0.4, None),
+        "MAE": (0.2, None),
+        "CRPS": (0.2, None),
+        "CORR": (0.9, None),
     },
     **{
         k: {
-            "RMSE": (0.4, None),
-            "MAE": (0.2, None),
-            "CRPS": (0.2, None),
-            "CORR": (0.4, 1.0),
+            "RMSE": (0.2, None),
+            "MAE": (0.1, None),
+            "CRPS": (0.1, None),
+            "CORR": (0.4, None),
         }
         for k in ["u10m", "v10m"]
     },
