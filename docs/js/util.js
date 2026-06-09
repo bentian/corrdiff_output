@@ -103,50 +103,60 @@ function generateExperimentGroupFiles(group) {
  * @param {string} exp2 - Experiment 2 name (optional).
  */
 function generateExperimentFiles(exp1, exp2) {
-    const hasSSP = [exp1, exp2].some(e => ["W", "CropW"].some(prefix => e?.startsWith(prefix)));
-    const bothBCSD = [exp1, exp2].filter(Boolean).every(e => e.startsWith("BCSD"));
+    const exps = [exp1, exp2].filter(Boolean);
+    const hasSSP = exps.some(e => e.startsWith("W") || e.startsWith("CropW"));
+    const bothBCSD = exps.every(e => e.startsWith("BCSD"));
 
     // Overview files
     const metrics = ["rmse", "mae", "corr", "crps", "std_dev"];
-    const periods = ["monthly_metrics", "nyear_metrics"];
     const exts = ["tsv", "png"];
-    const overviewFiles = [
-        "metrics_mean.tsv",
-        "metrics_mean.png",
-        ...periods.flatMap(period =>
-            metrics.flatMap(metric =>
-                exts.map(ext => `${period}/${metric}.${ext}`)
-            )
-        ),
-    ];
-
-    // Variable files
-    const variableFiles = [
-        "pdf.png", "monthly_error.png",
-        "cnt_rmse.png", "top_samples_rmse.png",
-        "cnt_mae.png", "top_samples_mae.png",
-    ];
-    const ensembleFile = "metrics_v_ensembles.png";
-    const p90File = "p90_by_nyear.png";
-
-    // Prefixes & variables
+    const variables = bothBCSD ? ["prcp", "t2m"] : ["prcp", "t2m", "u10m", "v10m"];
     const prefixes = bothBCSD ? ["all"] : ["all", "reg"];
-    const variables = bothBCSD ? ["prcp", "t2m"] : ["prcp", "t2m", "u10m", "v10m"]
-    const p90Vars = new Set(["prcp", "t2m"]);
+
+    const buildMetricFiles = period =>
+        metrics.flatMap(metric =>
+            exts.map(ext => `${period}/${metric}.${ext}`)
+        );
+
+    const overviewFiles = ["metrics_mean.tsv", "metrics_mean.png"]
+    const variableFiles = [
+        "pdf.png",
+        "monthly_error.png",
+        "cnt_rmse.png",
+        "top_samples_rmse.png",
+        "cnt_mae.png",
+        "top_samples_mae.png",
+        "rank_histogram.png",
+    ];
 
     // Create basic file groups
+    const showDecadal = hasSSP || exps.some(e => e.startsWith("BCSD")); /* W/CropW/BCSD only */
+    const overviewGroup = (path) => ({
+        overview: overviewFiles.map(file => `${path}/${file}`),
+        monthly: buildMetricFiles("monthly_metrics").map(file => `${path}/${file}`),
+        ...(showDecadal && {
+            decadal: buildMetricFiles("nyear_metrics").map(
+                file => `${path}/${file}`
+            ),
+        }),
+    });
+
     const filesList = prefixes.map(prefix => {
         const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
-            ...(hasSSP && p90Vars.has(varName) ? [buildPath(varName, p90File)] : []),
-            ...(hasSSP && prefix === "all" ? [buildPath(varName, ensembleFile)] : [])
+            ...(hasSSP && ["prcp", "t2m"].includes(varName)
+                ? [buildPath(varName, "p90_by_nyear.png")]
+                : []),
+            ...(hasSSP && prefix === "all"
+                ? [buildPath(varName, "metrics_v_ensembles.png")]
+                : []),
         ];
 
         return {
             title: `[${prefix}] Metrics`,
             files: {
-                overview: overviewFiles.map(f => buildPath("overview", f)),
+                ...overviewGroup(`${prefix}/overview`),
                 ...Object.fromEntries(variables.map(varName => [varName, buildVarFiles(varName)]))
             }
         };
@@ -157,7 +167,7 @@ function generateExperimentFiles(exp1, exp2) {
         filesList.push(
             {
                 title: "[all - reg] Metrics",
-                files: overviewFiles.map(f => `minus_reg/${f}`)
+                files: overviewGroup("minus_reg"),
             },
             {
                 title: "Training Loss",
