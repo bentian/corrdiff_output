@@ -52,7 +52,7 @@ async function fetchExperimentLink(key, isExperimentGroup = false) {
  * @param {string} group - Experiment group name.
  */
 function generateExperimentGroupFiles(group) {
-    const vars = group === "BCSD" ? ["prcp", "t2m"] : ["prcp", "t2m", "u10m", "v10m"];
+    const vars = group === "BCSD" ? ["pr", "tas"] : ["pr", "tas", "uas", "vas"];
 
     // Helper to build files for each variable
     const makeFiles = (extra = []) =>
@@ -74,7 +74,7 @@ function generateExperimentGroupFiles(group) {
                 title: `[all] Comparison with ${label}`,
                 files: Object.fromEntries(
                     vars
-                        .filter(k => suffix !== "b" || ["prcp", "t2m"].includes(k))
+                        .filter(k => suffix !== "b" || ["pr", "tas"].includes(k))
                         .map(k => [
                             k,
                             [
@@ -144,7 +144,7 @@ function generateExperimentFiles(exp1, exp2) {
         const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
-            ...(hasSSP && ["prcp", "t2m"].includes(varName)
+            ...(hasSSP && ["pr", "tas"].includes(varName)
                 ? [buildPath(varName, "p90_by_nyear.png")]
                 : []),
             ...(hasSSP && prefix === "all"

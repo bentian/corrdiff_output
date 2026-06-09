@@ -125,7 +125,7 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
         pred_flat = p.values.ravel()
 
         # Avoid log(0)
-        log_scale = var == "prcp"  # Apply log scale for 'prcp' only
+        log_scale = var == "pr"  # Apply log scale for 'pr' only
         if log_scale:
             eps = 1e-10
             truth_flat = np.clip(truth_flat, eps, None)

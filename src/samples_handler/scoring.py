@@ -168,7 +168,7 @@ def _window_time_quantile_2d(
     q01 = (
         NTH_PERCENTILE / 100
     )  # Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
-    var_names = ["prcp", "t2m"]  # list(truth.data_vars)
+    var_names = ["pr", "tas"]  # list(truth.data_vars)
 
     # Use end - 1ns to mimic [start, end) given slice end is inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
@@ -266,14 +266,14 @@ def _get_var_mapping(is_bcsd: bool = False) -> Dict[str, str]:
         dict: Variable mapping dictionary.
     """
     mapping = {
-        "precipitation": "prcp",
-        "temperature_2m": "t2m",
+        "precipitation": "pr",
+        "temperature_2m": "tas",
     }
 
     # Add wind velocity variables if not BCSD data
     if not is_bcsd:
-        mapping["eastward_wind_10m"] = "u10m"
-        mapping["northward_wind_10m"] = "v10m"
+        mapping["eastward_wind_10m"] = "uas"
+        mapping["northward_wind_10m"] = "vas"
 
     return mapping
 
@@ -305,7 +305,7 @@ def _concat_from_results(
         return _rename_and_order(xr.concat(datasets, dim=dim), var_mapping)
 
     # --- Case 2: per-variable dims --
-    # Handle inconsistent # of points between prcp and t2m in raw BCSD data
+    # Handle inconsistent # of points between pr and tas in raw BCSD data
     out = {}
     for var in var_mapping:
         arrays = [ds[var] for ds in datasets if var in ds]
