@@ -108,7 +108,7 @@ function generateExperimentFiles(exp1, exp2) {
     const bothBCSD = exps.every(e => e.startsWith("BCSD"));
 
     // Overview files
-    const metrics = ["rmse", "mae", "corr", "crps", "std_dev"];
+    const metrics = ["rmse", "mae", "corr", "crps", "std_dev", "ssr"];
     const exts = ["tsv", "png"];
     const variables = bothBCSD ? ["pr", "tas"] : ["pr", "tas", "uas", "vas"];
     const prefixes = bothBCSD ? ["all"] : ["all", "reg"];

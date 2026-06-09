@@ -55,6 +55,11 @@ except ImportError as exc:
 # -----------------------------------------------------------------------------
 # Metrics / transforms
 # -----------------------------------------------------------------------------
+def _metric_dataset(items: Dict[str, xr.Dataset]) -> xr.Dataset:
+    """Return a dataset with metrics concatenated along the 'metric' dimension."""
+    return (
+        xr.concat(items.values(), dim="metric").assign_coords(metric=list(items)).load()
+    )
 
 
 def _mask_valid_points(
@@ -86,7 +91,7 @@ def _compute_rank_histogram(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
 
 def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
-    Compute RMSE, MAE, CORR, CRPS, and STD_DEV between truth and prediction ensembles.
+    Compute RMSE, MAE, CORR, CRPS, STD_DEV, and SSR between truth and prediction ensembles.
 
     Parameters:
         truth (xr.Dataset): The truth dataset.
@@ -98,21 +103,23 @@ def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     dim = ["x", "y"]
     pred_mean = pred.mean("ensemble")
 
-    rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
-    mae = xs.mae(truth, pred_mean, dim=dim, skipna=True)
-    corr = xs.pearson_r(truth, pred_mean, dim=dim, skipna=True)
-
-    # Compute CRPS and STD_DEV (suppress expected NaN-related warnings)
     with warnings.catch_warnings():
+        # Suppress expected NaN-related warnings
         warnings.simplefilter("ignore", RuntimeWarning)
-        std_dev = pred.std("ensemble").mean(dim, skipna=True)
-        crps = _compute_crps(truth, pred)
 
-    return (
-        xr.concat([rmse, mae, corr, crps, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "MAE", "CORR", "CRPS", "STD_DEV"])
-        .load()
-    )
+        rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
+        std_dev = pred.std("ensemble").mean(dim, skipna=True)
+
+        return _metric_dataset(
+            {
+                "RMSE": rmse,
+                "MAE": xs.mae(truth, pred_mean, dim=dim, skipna=True),
+                "CORR": xs.pearson_r(truth, pred_mean, dim=dim, skipna=True),
+                "CRPS": _compute_crps(truth, pred),
+                "STD_DEV": std_dev,
+                "SSR": std_dev / rmse,
+            }
+        )
 
 
 def _flatten_and_filter_nan(

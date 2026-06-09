@@ -63,10 +63,7 @@ def _get_nc_path(in_dir: Path, label: str, masked: bool) -> Path:
     )
 
 
-def _plot_diagnostics(
-    scored: tuple,
-    output_path: Path,
-) -> xr.Dataset:
+def _plot_diagnostics(scored: tuple, output_path: Path) -> xr.Dataset:
     """Generate per-variable diagnostic plots."""
     metrics, rank_histograms, spatial_error, top_samples, flats, p90s = scored
 
