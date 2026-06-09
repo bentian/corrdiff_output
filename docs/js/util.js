@@ -103,7 +103,7 @@ function generateExperimentGroupFiles(group) {
  * @param {string} exp2 - Experiment 2 name (optional).
  */
 function generateExperimentFiles(exp1, exp2) {
-    const hasSSP = [exp1, exp2].some(e => e?.startsWith("W"));
+    const hasSSP = [exp1, exp2].some(e => ["W", "CropW"].some(prefix => e?.startsWith(prefix)));
     const bothBCSD = [exp1, exp2].filter(Boolean).every(e => e.startsWith("BCSD"));
 
     // Overview files
