@@ -104,7 +104,7 @@ function generateExperimentGroupFiles(group) {
  */
 function generateExperimentFiles(exp1, exp2) {
     const exps = [exp1, exp2].filter(Boolean);
-    const hasSSP = exps.some(e => e.startsWith("W") || e.startsWith("CropW"));
+    const hasSSP = exps.some(e => e.startsWith("CropW"));
     const bothBCSD = exps.every(e => e.startsWith("BCSD"));
 
     // Overview files
