@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Optional
 
 import xarray as xr
 
@@ -45,12 +46,82 @@ OVERVIEW_METRIC_FMT = ".2f"
 DIFF_METRIC_FMT = ".3f"
 
 
-def is_bcsd(in_dir: Path) -> bool:
+# -----------------------------------------------------------------------------
+# Helper functions
+# -----------------------------------------------------------------------------
+def _is_bcsd(in_dir: Path) -> bool:
     """Check if the input directory contains BCSD data."""
     return (in_dir / "bcsd_masked.nc").exists()
 
 
+def _get_nc_path(in_dir: Path, label: str, masked: bool) -> Path:
+    """Get the NetCDF path for the given model label and masking option."""
+    return (
+        in_dir / "bcsd_masked.nc"
+        if _is_bcsd(in_dir)
+        else in_dir / "netcdf" / f"output_0_{label}{'_masked' if masked else ''}.nc"
+    )
+
+
+def _plot_diagnostics(
+    scored: tuple,
+    output_path: Path,
+) -> xr.Dataset:
+    """Generate per-variable diagnostic plots."""
+    metrics, rank_histograms, spatial_error, top_samples, flats, p90s = scored
+
+    # Create per-variable output directories
+    for var in spatial_error.data_vars.keys():
+        ensure_directory_exists(output_path, var)
+
+    # Plots per variable
+    plot_pdf(*flats, output_path)
+    plot_rank_histogram(rank_histograms, output_path)
+    plot_monthly_error(spatial_error, output_path)
+    plot_p90_by_nyear(*p90s, output_path)
+    for metric in ["MAE", "RMSE"]:
+        plot_metrics_cnt(metrics, metric, output_path)
+        plot_top_samples(top_samples, metric, output_path)
+
+    return metrics
+
+
+def _plot_metrics_vs_ensembles(
+    nc_path: Path, metrics: xr.Dataset, output_path: Path
+) -> None:
+    """Plot metrics vs. number of ensembles."""
+    metrics_by_n = score_samples_multi_ensemble(nc_path, n_ensembles=(1, 4, 16))
+    plot_metrics_vs_ensembles(
+        [metrics_by_n[1], metrics_by_n[4], metrics_by_n[16], metrics],
+        output_path,
+    )
+
+
+def _save_overview(metrics: xr.Dataset, output_path: Path) -> None:
+    """Save overview plots and tables."""
+    save_tables_and_plots(
+        metrics.mean(dim="time"),
+        metrics.groupby("time.month").mean(dim="time"),  # group by month
+        group_by_nyear(metrics, N_YEARS),  # group by nyear
+        ensure_directory_exists(output_path, "overview"),
+        number_format=OVERVIEW_METRIC_FMT,
+    )
+
+
+def _mean_diff(
+    a: xr.Dataset, b: xr.Dataset, groupby: Optional[str] = None
+) -> xr.Dataset:
+    """Compute the mean difference between two datasets, optionally grouped by a time dimension."""
+    return (
+        a.groupby(groupby).mean("time") - b.groupby(groupby).mean("time")
+        if groupby
+        else a.mean("time") - b.mean("time")
+    )
+
+
+# -----------------------------------------------------------------------------
 # Model processing functions
+# -----------------------------------------------------------------------------
 def process_model(
     in_dir: Path, out_dir: Path, label: str, n_ensemble: int, masked: bool
 ) -> xr.Dataset:
@@ -67,49 +138,19 @@ def process_model(
     Returns:
         xr.Dataset: Computed metrics dataset.
     """
-    nc_path = (
-        in_dir / "bcsd_masked.nc"
-        if is_bcsd(in_dir)
-        else in_dir / "netcdf" / f"output_0_{label}{'_masked' if masked else ''}.nc"
-    )
-
-    # Score samples
-    metrics, rank_histograms, spatial_error, top_samples, flats, p90s = score_samples(
-        nc_path,
-        n_ensemble,
-        is_bcsd=is_bcsd(in_dir),
-    )
-
-    # Create output directory and sub directories for each variable
+    nc_path = _get_nc_path(in_dir, label, masked)
     output_path = ensure_directory_exists(out_dir, label)
-    for var in spatial_error.data_vars.keys():
-        ensure_directory_exists(output_path, var)
 
-    # Plots per variable
-    plot_pdf(*flats, output_path)
-    plot_rank_histogram(rank_histograms, output_path)
-    plot_monthly_error(spatial_error, output_path)
-    plot_p90_by_nyear(*p90s, output_path)
-    for metric in ["MAE", "RMSE"]:
-        plot_metrics_cnt(metrics, metric, output_path)
-        plot_top_samples(top_samples, metric, output_path)
+    # Score samples and generate plots
+    metrics = _plot_diagnostics(
+        score_samples(nc_path, n_ensemble, is_bcsd=_is_bcsd(in_dir)),
+        output_path,
+    )
+    _save_overview(metrics, output_path)
 
     # Plot metrics vs. # ensembles
     if label == "all" and n_ensemble == 64:
-        metrics_by_n = score_samples_multi_ensemble(nc_path, n_ensembles=(1, 4, 16))
-        plot_metrics_vs_ensembles(
-            [metrics_by_n[1], metrics_by_n[4], metrics_by_n[16]] + [metrics],
-            output_path,
-        )
-
-    # Overview plots and tables
-    save_tables_and_plots(
-        metrics.mean(dim="time"),
-        metrics.groupby("time.month").mean(dim="time"),  # group by month
-        group_by_nyear(metrics, N_YEARS),  # group by nyear
-        ensure_directory_exists(output_path, "overview"),
-        number_format=OVERVIEW_METRIC_FMT,
-    )
+        _plot_metrics_vs_ensembles(nc_path, metrics, output_path)
 
     return metrics
 
@@ -125,20 +166,18 @@ def compare_models(
         metrics_reg (xr.Dataset): Metrics dataset for the regression-only model.
         output_path (Path): Output directory where comparison results should be saved.
     """
-    metrics_mean_diff = metrics_all.mean(dim="time") - metrics_reg.mean(dim="time")
-    metrics_monthly_diff = metrics_all.groupby("time.month").mean(
-        dim="time"
-    ) - metrics_reg.groupby("time.month").mean(dim="time")
     save_tables_and_plots(
-        metrics_mean_diff,
-        metrics_monthly_diff,
+        _mean_diff(metrics_all, metrics_reg),
+        _mean_diff(metrics_all, metrics_reg, "time.month"),
         group_by_nyear(metrics_all - metrics_reg, N_YEARS),
         output_path,
         number_format=DIFF_METRIC_FMT,
     )
 
 
+# -----------------------------------------------------------------------------
 # Main workflow
+# -----------------------------------------------------------------------------
 def process_models(in_dir: Path, out_dir: Path, n_ensemble: int, masked: bool) -> None:
     """
     Process models and generate results.
@@ -190,7 +229,7 @@ def main():
     )
 
     # Handle BCSD input
-    if is_bcsd(args.in_dir):
+    if _is_bcsd(args.in_dir):
         process_model(args.in_dir, args.out_dir, "all", n_ensemble=1, masked=True)
         return
 
