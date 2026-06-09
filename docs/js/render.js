@@ -142,7 +142,8 @@ function renderTabs(content, folder, files, id1, id2) {
     Object.entries(files).forEach(([key, value], index) => {
         const tab = document.createElement("div");
         tab.className = "tab";
-        tab.classList.toggle("tab-group-start", key === "prcp");  // Add divider before `pr`
+        // Add divider before `prcp` except the first tab
+        tab.classList.toggle("tab-group-start", key === "prcp" && index !== 0);
         tab.textContent = key;
         tabs.appendChild(tab);
 
