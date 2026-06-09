@@ -126,7 +126,6 @@ function generateExperimentFiles(exp1, exp2) {
         "top_samples_rmse.png",
         "cnt_mae.png",
         "top_samples_mae.png",
-        "rank_histogram.png",
     ];
 
     // Create basic file groups
