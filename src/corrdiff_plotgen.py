@@ -33,6 +33,7 @@ from analysis_utils import (
 )
 from plot_helper import (
     plot_pdf,
+    plot_rank_histogram,
     plot_monthly_error,
     plot_p90_by_nyear,
     plot_metrics_cnt,
@@ -73,7 +74,7 @@ def process_model(
     )
 
     # Score samples
-    metrics, spatial_error, top_samples, flats, p90s = score_samples(
+    metrics, rank_histograms, spatial_error, top_samples, flats, p90s = score_samples(
         nc_path,
         n_ensemble,
         is_bcsd=is_bcsd(in_dir),
@@ -86,6 +87,7 @@ def process_model(
 
     # Plots per variable
     plot_pdf(*flats, output_path)
+    plot_rank_histogram(rank_histograms, output_path)
     plot_monthly_error(spatial_error, output_path)
     plot_p90_by_nyear(*p90s, output_path)
     for metric in ["MAE", "RMSE"]:

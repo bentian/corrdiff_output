@@ -110,7 +110,7 @@ function generateExperimentFiles(exp1, exp2) {
     // Overview files
     const metrics = ["rmse", "mae", "corr", "crps", "std_dev"];
     const exts = ["tsv", "png"];
-    const variables = bothBCSD ? ["prcp", "t2m"] : ["prcp", "t2m", "u10m", "v10m"];
+    const variables = bothBCSD ? ["pr", "tas"] : ["pr", "tas", "uas", "vas"];
     const prefixes = bothBCSD ? ["all"] : ["all", "reg"];
 
     const buildMetricFiles = period =>
