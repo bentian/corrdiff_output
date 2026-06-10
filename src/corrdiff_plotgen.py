@@ -146,8 +146,8 @@ def process_model(
     _save_overview(metrics, output_path)
 
     # Plot metrics vs. # ensembles
-    # if label == "all" and n_ensemble == 64:
-    #     _plot_metrics_vs_ensembles(nc_path, metrics, output_path)
+    if label == "all" and n_ensemble == 64:
+        _plot_metrics_vs_ensembles(nc_path, metrics, output_path)
 
     return metrics
 
