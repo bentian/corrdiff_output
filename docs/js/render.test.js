@@ -55,7 +55,7 @@ function setUpRenderPageDOM() {
     <h1 id="render-heading"></h1>
     <div id="render-output"></div>
     <div id="lightbox" style="display:none">
-      <span id="close-lightbox">×</span>
+      <span id="close-lightbox">x</span>
       <img id="lightbox-img" src="" />
     </div>
   `;
@@ -78,7 +78,7 @@ async function triggerWithParams(search) {
 // =========================================================================
 // DOMContentLoaded – error state
 // =========================================================================
-describe("render.js DOMContentLoaded – no params", () => {
+describe("render.js DOMContentLoaded - no params", () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -107,7 +107,7 @@ describe("render.js DOMContentLoaded – no params", () => {
 // =========================================================================
 // DOMContentLoaded – experiment group mode
 // =========================================================================
-describe("render.js DOMContentLoaded – group mode", () => {
+describe("render.js DOMContentLoaded - group mode", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockFetchExperimentLink.mockResolvedValue("https://example.com/sheet&range=X1");
@@ -121,7 +121,7 @@ describe("render.js DOMContentLoaded – group mode", () => {
   });
 
   it("renders the group heading with a link", async () => {
-    await triggerWithParams("?group=W");
+    await triggerWithParams("?group=CropW");
 
     const heading = document.getElementById("render-heading");
     expect(heading.textContent).toContain("Experiment Group:");
@@ -141,7 +141,7 @@ describe("render.js DOMContentLoaded – group mode", () => {
   });
 
   it("renders collapsible sections with correct title", async () => {
-    await triggerWithParams("?group=W");
+    await triggerWithParams("?group=CropW");
 
     const collapsibles = document.querySelectorAll(".collapsible");
     expect(collapsibles.length).toBe(1);
@@ -149,30 +149,30 @@ describe("render.js DOMContentLoaded – group mode", () => {
   });
 
   it("renders content div after each collapsible", async () => {
-    await triggerWithParams("?group=W");
+    await triggerWithParams("?group=CropW");
 
     const content = document.querySelectorAll(".content");
     expect(content.length).toBe(1);
   });
 
   it("calls addCollapsibleEventListeners and initializeLightbox", async () => {
-    await triggerWithParams("?group=W");
+    await triggerWithParams("?group=CropW");
 
     expect(mockAddCollapsibleEventListeners).toHaveBeenCalled();
     expect(mockInitializeLightbox).toHaveBeenCalled();
   });
 
   it("calls handleHashChange", async () => {
-    await triggerWithParams("?group=W");
+    await triggerWithParams("?group=CropW");
 
     expect(mockHandleHashChange).toHaveBeenCalled();
   });
 
   it("uses 'comparisons' folder for group mode", async () => {
-    await triggerWithParams("?group=W");
+    await triggerWithParams("?group=CropW");
 
     const img = document.querySelector("img");
-    expect(img.src).toContain("comparisons/W/");
+    expect(img.src).toContain("comparisons/CropW/");
   });
 });
 
@@ -193,25 +193,25 @@ describe("render.js DOMContentLoaded – experiment mode", () => {
   });
 
   it("renders single experiment heading", async () => {
-    await triggerWithParams("?exp1=W-a");
+    await triggerWithParams("?exp1=CropW-a");
 
     const heading = document.getElementById("render-heading");
     expect(heading.textContent).toContain("Experiment:");
-    expect(heading.textContent).toContain("W-a");
+    expect(heading.textContent).toContain("CropW-a");
   });
 
   it("renders comparison heading with two experiments", async () => {
     mockFetchExperimentLink.mockImplementation((key) =>
-      Promise.resolve(key === "W-a" ? "https://link/a" : "https://link/b")
+      Promise.resolve(key === "CropW-a" ? "https://link/a" : "https://link/b")
     );
 
-    await triggerWithParams("?exp1=W-a&exp2=W-b");
+    await triggerWithParams("?exp1=CropW-a&exp2=CropW-b");
 
     const heading = document.getElementById("render-heading");
     expect(heading.textContent).toContain("Comparison:");
-    expect(heading.textContent).toContain("W-a");
+    expect(heading.textContent).toContain("CropW-a");
     expect(heading.textContent).toContain("vs.");
-    expect(heading.textContent).toContain("W-b");
+    expect(heading.textContent).toContain("CropW-b");
 
     const links = heading.querySelectorAll("a");
     expect(links.length).toBe(2);
@@ -241,7 +241,7 @@ describe("render.js DOMContentLoaded – experiment mode", () => {
 // =========================================================================
 // renderCollapsibleSection – flat file list (array)
 // =========================================================================
-describe("renderCollapsibleSection – flat file array", () => {
+describe("renderCollapsibleSection - flat file array", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockFetchExperimentLink.mockResolvedValue(null);
@@ -325,7 +325,7 @@ describe("renderCollapsibleSection – flat file array", () => {
 // =========================================================================
 // renderCollapsibleSection – tabbed files (object)
 // =========================================================================
-describe("renderCollapsibleSection – tabbed files (object)", () => {
+describe("renderCollapsibleSection - tabbed files (object)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockFetchExperimentLink.mockResolvedValue(null);

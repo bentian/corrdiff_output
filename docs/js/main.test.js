@@ -85,8 +85,8 @@ describe("DOMContentLoaded integration", () => {
   it("populates exp1/exp2 dropdowns with grouped experiments", async () => {
     mockFetchExperimentKeys.mockImplementation((isGroup) =>
       isGroup
-        ? Promise.resolve(["W", "BCSD"])
-        : Promise.resolve(["W-a", "W-b", "BCSD-x"])
+        ? Promise.resolve(["CropW", "BCSD"])
+        : Promise.resolve(["CropW-a", "CropW-b", "BCSD-x"])
     );
 
     await initWithDOMContentLoaded();
@@ -94,21 +94,21 @@ describe("DOMContentLoaded integration", () => {
     const exp1 = document.getElementById("exp1");
     const groups = exp1.querySelectorAll("optgroup");
     expect(groups.length).toBe(2);
-    expect(groups[0].label).toBe("W");
+    expect(groups[0].label).toBe("CropW");
     expect(groups[1].label).toBe("BCSD");
 
     const options = exp1.querySelectorAll("optgroup option");
     expect(options.length).toBe(3);
-    expect(options[0].value).toBe("W-a");
-    expect(options[1].value).toBe("W-b");
+    expect(options[0].value).toBe("CropW-a");
+    expect(options[1].value).toBe("CropW-b");
     expect(options[2].value).toBe("BCSD-x");
   });
 
   it("populates exp2 dropdown identically to exp1", async () => {
     mockFetchExperimentKeys.mockImplementation((isGroup) =>
       isGroup
-        ? Promise.resolve(["W"])
-        : Promise.resolve(["W-a", "W-b"])
+        ? Promise.resolve(["CropW"])
+        : Promise.resolve(["CropW-a", "CropW-b"])
     );
 
     await initWithDOMContentLoaded();
@@ -121,8 +121,8 @@ describe("DOMContentLoaded integration", () => {
   it("sets exp1 value to the first option (placeholder)", async () => {
     mockFetchExperimentKeys.mockImplementation((isGroup) =>
       isGroup
-        ? Promise.resolve(["W"])
-        : Promise.resolve(["W-a", "W-b"])
+        ? Promise.resolve(["CropW"])
+        : Promise.resolve(["CropW-a", "CropW-b"])
     );
 
     await initWithDOMContentLoaded();
@@ -137,8 +137,8 @@ describe("DOMContentLoaded integration", () => {
   it("preserves placeholder option in exp1", async () => {
     mockFetchExperimentKeys.mockImplementation((isGroup) =>
       isGroup
-        ? Promise.resolve(["W"])
-        : Promise.resolve(["W-a"])
+        ? Promise.resolve(["CropW"])
+        : Promise.resolve(["CropW-a"])
     );
 
     await initWithDOMContentLoaded();
@@ -169,7 +169,7 @@ describe("DOMContentLoaded integration", () => {
   it("selects the first group option by default", async () => {
     mockFetchExperimentKeys.mockImplementation((isGroup) =>
       isGroup
-        ? Promise.resolve(["W"])
+        ? Promise.resolve(["CropW"])
         : Promise.resolve([])
     );
 
@@ -343,31 +343,6 @@ describe("handleSummarySubmit", () => {
 
     expect(hrefSpy).toHaveBeenCalledWith(
       "render.html?group=CropW#prcp_mean_cmp_png"
-    );
-    window.location = origLocation;
-  });
-
-  it("extracts 'W' prefix from 'W* (SSP scenarios)'", async () => {
-    await initWithDOMContentLoaded();
-
-    const grp = document.getElementById("summary-grp");
-    grp.innerHTML = "";
-    const opt = document.createElement("option");
-    opt.value = "W* (SSP scenarios)";
-    grp.appendChild(opt);
-    grp.value = "W* (SSP scenarios)";
-
-    const origLocation = window.location;
-    delete window.location;
-    window.location = { ...origLocation, href: "" };
-    const hrefSpy = vi.spyOn(window.location, "href", "set");
-
-    document
-      .getElementById("summary-form")
-      .dispatchEvent(new Event("submit", { cancelable: true }));
-
-    expect(hrefSpy).toHaveBeenCalledWith(
-      "render.html?group=W#prcp_mean_cmp_png"
     );
     window.location = origLocation;
   });

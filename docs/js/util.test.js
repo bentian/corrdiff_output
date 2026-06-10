@@ -118,7 +118,7 @@ describe("generateExperimentFiles", () => {
   // --- basic structure ---------------------------------------------------
 
   it("returns an array of file groups", () => {
-    const result = generateExperimentFiles("W1");
+    const result = generateExperimentFiles("CropW1");
     expect(Array.isArray(result)).toBe(true);
     result.forEach((g) => {
       expect(g).toHaveProperty("title");
@@ -466,7 +466,7 @@ describe("initializeLightbox", () => {
 
     document.body.innerHTML = `
       <div id="lightbox" style="display:none">
-        <span id="close-lightbox">×</span>
+        <span id="close-lightbox">x</span>
         <img id="lightbox-img" src="" />
       </div>
       <img class="render-plot" src="test-image.png" />
