@@ -148,9 +148,9 @@ function generateExperimentFiles(exp1, exp2) {
             ...(hasSSP && ["pr", "tas"].includes(varName)
                 ? [buildPath(varName, "p90_by_nyear.png")]
                 : []),
-            ...(hasSSP && prefix === "all"
-                ? [buildPath(varName, "metrics_v_ensembles.png")]
-                : []),
+            // ...(hasSSP && prefix === "all"
+            //     ? [buildPath(varName, "metrics_v_ensembles.png")]
+            //     : []),
         ];
 
         return {

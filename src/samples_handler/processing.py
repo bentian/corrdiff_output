@@ -66,7 +66,7 @@ def _mask_valid_points(
     truth: xr.Dataset, pred: xr.Dataset
 ) -> tuple[xr.Dataset, xr.Dataset]:
     """Mask locations where truth is invalid or all ensemble members are NaN."""
-    valid = np.isfinite(truth) & pred.notnull().any("ensemble")
+    valid = np.isfinite(truth) & pred.notnull().all("ensemble")
     return truth.where(valid), pred.where(valid)
 
 
