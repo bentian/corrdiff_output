@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 /** Helper: reset module caches by re-importing a fresh copy. */
 async function loadFreshModule() {
   // Vitest caches modules; bust it by appending a unique query param.
-  const id = `../js/util.js?t=${Date.now()}-${Math.random()}`;
+  const id = `../util.js?t=${Date.now()}-${Math.random()}`;
   return await import(id);
 }
 

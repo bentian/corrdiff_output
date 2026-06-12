@@ -36,7 +36,7 @@ const {
   mockInitializeLightbox: vi.fn(),
 }));
 
-vi.mock("./util.js", () => ({
+vi.mock("../util.js", () => ({
   fetchExperimentLink: mockFetchExperimentLink,
   generateExperimentGroupFiles: mockGenerateExperimentGroupFiles,
   generateExperimentFiles: mockGenerateExperimentFiles,
@@ -47,7 +47,7 @@ vi.mock("./util.js", () => ({
 }));
 
 // Import render.js once — it registers a DOMContentLoaded listener
-import "./render.js";
+import "../render.js";
 
 /** Set up the minimal DOM that render.js expects. */
 function setUpRenderPageDOM() {

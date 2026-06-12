@@ -19,13 +19,13 @@ const { mockFetchExperimentKeys, MOCK_URL_EXP_SHEET } = vi.hoisted(() => ({
   MOCK_URL_EXP_SHEET: "https://example.com/sheet",
 }));
 
-vi.mock("./util.js", () => ({
+vi.mock("../util.js", () => ({
   fetchExperimentKeys: mockFetchExperimentKeys,
   URL_EXP_SHEET: MOCK_URL_EXP_SHEET,
 }));
 
 // Import main.js once — it registers a DOMContentLoaded listener
-import "./main.js";
+import "../main.js";
 
 // ---------------------------------------------------------------------------
 // Standard DOM fixture
