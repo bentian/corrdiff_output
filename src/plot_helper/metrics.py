@@ -12,6 +12,7 @@ metrics such as RMSE, MAE, CORR, CRPS, and ensemble spread. It supports:
 All functions operate on xarray Datasets produced by the evaluation
 pipeline and save publication-ready figures to disk.
 """
+
 from pathlib import Path
 from typing import List
 
@@ -41,10 +42,16 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
         bars = ax.bar(x + i * width, data_array[i], width, label=var)
         for plt_bar in bars:
             height = plt_bar.get_height()
-            ax.annotate(f"{height:{number_format}}",
-                        xy=(plt_bar.get_x() + plt_bar.get_width() / 2, height),
-                        xytext=(0, 5), textcoords="offset points",
-                        ha='center', va='bottom', fontsize=10, color='black')
+            ax.annotate(
+                f"{height:{number_format}}",
+                xy=(plt_bar.get_x() + plt_bar.get_width() / 2, height),
+                xytext=(0, 5),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=10,
+                color="black",
+            )
 
     ax.set_title("Metrics Mean", fontsize=14)
     ax.set_xlabel("Metrics", fontsize=12)
@@ -59,8 +66,9 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     plt.close()
 
 
-def plot_monthly_metrics(ds: xr.Dataset, metric: str,
-                         output_path: Path, number_format: str) -> None:
+def plot_monthly_metrics(
+    ds: xr.Dataset, metric: str, output_path: Path, number_format: str
+) -> None:
     """
     Plot monthly mean values for a given metric.
 
@@ -76,8 +84,14 @@ def plot_monthly_metrics(ds: xr.Dataset, metric: str,
     for variable in df_grouped.columns:
         ax.plot(df_grouped.index, df_grouped[variable], marker="o", label=variable)
         for x, y in zip(df_grouped.index, df_grouped[variable]):
-            ax.annotate(f"{y:{number_format}}", (x, y), textcoords="offset points",
-                        xytext=(0, 5), ha="center", fontsize=8)
+            ax.annotate(
+                f"{y:{number_format}}",
+                (x, y),
+                textcoords="offset points",
+                xytext=(0, 5),
+                ha="center",
+                fontsize=8,
+            )
 
     ax.set_title(f"Monthly Mean for {metric}", fontsize=14)
     ax.set_xlabel("Month", fontsize=12)
@@ -91,8 +105,9 @@ def plot_monthly_metrics(ds: xr.Dataset, metric: str,
     plt.close()
 
 
-def plot_nyear_metrics(ds: xr.Dataset, metric: str,
-                       output_path: Path, number_format: str) -> None:
+def plot_nyear_metrics(
+    ds: xr.Dataset, metric: str, output_path: Path, number_format: str
+) -> None:
     """
     Plot N-year mean values for a given metric.
 
@@ -113,9 +128,14 @@ def plot_nyear_metrics(ds: xr.Dataset, metric: str,
         ax.plot(x, y, marker="o", label=variable)
         # Annotate values
         for xi, yi in zip(x, y):
-            ax.annotate(f"{yi:{number_format}}", (xi, yi),
-                        textcoords="offset points", xytext=(0, 5),
-                        ha="center", fontsize=8)
+            ax.annotate(
+                f"{yi:{number_format}}",
+                (xi, yi),
+                textcoords="offset points",
+                xytext=(0, 5),
+                ha="center",
+                fontsize=8,
+            )
 
     ax.set_title(f"Decadal Mean for {metric}", fontsize=14)
     ax.set_xlabel("Decade", fontsize=12)
@@ -143,17 +163,20 @@ def plot_metrics_vs_ensembles(datasets: List[xr.Dataset], output_path: Path):
     # Extract number of ensembles from attributes
     ensemble_sizes = np.array([ds.attrs["n_ensemble"] for ds in datasets])
 
-    # Variables to plot
+    # Variables & metrics to plot
     variables = datasets[0].data_vars
-    metrics = datasets[0].metric.values  # ['RMSE', 'MAE', 'CRPS', 'STD_DEV']
+    metrics = datasets[0].metric.values
 
     for var in variables:
         plt.figure(figsize=(10, 6))
 
         for metric_idx, metric_name in enumerate(metrics):
-            values = np.array([
-                ds[var].isel(metric=metric_idx).mean(dim="time").values for ds in datasets
-            ])
+            values = np.array(
+                [
+                    ds[var].isel(metric=metric_idx).mean(dim="time").values
+                    for ds in datasets
+                ]
+            )
 
             # Filter out missing data (NaNs)
             valid_mask = ~np.isnan(values)

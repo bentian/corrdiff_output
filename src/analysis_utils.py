@@ -139,7 +139,7 @@ def save_tables_and_plots(
     save_to_tsv(ds_mean, filename.with_suffix(".tsv"), number_format)
     plot_metrics(ds_mean, filename.with_suffix(".png"), number_format)
 
-    for metric in ["MAE", "RMSE", "CORR", "CRPS", "STD_DEV"]:
+    for metric in ["MAE", "RMSE", "CORR", "CRPS", "STD_DEV", "SSR"]:
         save_metric_table_and_plot(
             ds_group_by_month,
             metric,

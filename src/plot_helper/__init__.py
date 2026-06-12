@@ -25,7 +25,7 @@ from .metrics import (
     plot_nyear_metrics,
     plot_metrics_vs_ensembles,
 )
-from .distributions import plot_metrics_cnt, plot_pdf
+from .distributions import plot_metrics_cnt, plot_pdf, plot_rank_histogram
 from .samples import plot_top_samples, plot_p90_by_nyear, plot_monthly_error
 from .training import plot_training_loss
 from .comparison import plot_metrics_cmp, plot_nyear_metrics_cmp
@@ -37,6 +37,7 @@ __all__ = [
     "plot_metrics_vs_ensembles",
     "plot_metrics_cnt",
     "plot_pdf",
+    "plot_rank_histogram",
     "plot_top_samples",
     "plot_p90_by_nyear",
     "plot_monthly_error",

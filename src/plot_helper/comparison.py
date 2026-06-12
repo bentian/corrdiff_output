@@ -36,13 +36,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 Y_LIMITS = {
-    "prcp": {
+    "pr": {
         "RMSE": (2, None),
         "MAE": (1, None),
         "CRPS": (1, None),
         "CORR": (0.1, None),
     },
-    "t2m": {
+    "tas": {
         "RMSE": (0.4, None),
         "MAE": (0.2, None),
         "CRPS": (0.2, None),
@@ -55,7 +55,7 @@ Y_LIMITS = {
             "CRPS": (0.1, None),
             "CORR": (0.4, None),
         }
-        for k in ["u10m", "v10m"]
+        for k in ["uas", "vas"]
     },
 }
 LabelMode = Literal["all", "reg", "both"]

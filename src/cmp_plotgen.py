@@ -40,7 +40,7 @@ EXP_GROUP = "CropW"
 GROUPS = (EXP_GROUP,)  # e.g., (EXP_GROUP, "BCSD")
 FILENAME_SUFFIX = ""  # e.g., "w1_" to differentiate
 
-VARS = ["prcp", "t2m"] if "BCSD" in GROUPS else ["prcp", "t2m", "u10m", "v10m"]
+VARS = ["pr", "tas"] if "BCSD" in GROUPS else ["pr", "tas", "uas", "vas"]
 LABELS = (
     ("all",) if len(GROUPS) > 1 else ("all", "reg")  # Only plot "all" for single group
 )

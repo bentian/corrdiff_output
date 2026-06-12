@@ -12,12 +12,15 @@ Typical use cases:
 
 Inputs are expected to be 1D or flattened xarray datasets.
 """
+
 from pathlib import Path
 from typing import Tuple, Union
 
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
+
+from .samples import COLOR_MAPS
 
 
 def _get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
@@ -81,13 +84,19 @@ def plot_metrics_cnt(ds: xr.Dataset, metric: str, output_path: Path) -> None:
     # Plot and save for each variable
     for i, (var, data) in enumerate(metric_data.data_vars.items()):
         plt.figure(figsize=(6, 4))
-        plt.hist(data.values, bins=36, alpha=0.5, color=colors[i % len(colors)], edgecolor='black')
+        plt.hist(
+            data.values,
+            bins=36,
+            alpha=0.5,
+            color=colors[i % len(colors)],
+            edgecolor="black",
+        )
 
         _, note = _get_bin_count_n_note(data.values)
-        plt.title(f'{metric} count for {var}\n{note}')
+        plt.title(f"{metric} count for {var}\n{note}")
 
-        plt.xlabel(f'{metric} values')
-        plt.ylabel('# of days')
+        plt.xlabel(f"{metric} values")
+        plt.ylabel("# of days")
         plt.grid(alpha=0.3, linestyle="--")
         plt.tight_layout()
 
@@ -113,14 +122,14 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
         t = truth[var]
 
         truth_flat = t.values.ravel()
-        pred_flat  = p.values.ravel()
+        pred_flat = p.values.ravel()
 
         # Avoid log(0)
-        log_scale = var == 'prcp'  # Apply log scale for 'prcp' only
+        log_scale = var == "pr"  # Apply log scale for 'pr' only
         if log_scale:
             eps = 1e-10
             truth_flat = np.clip(truth_flat, eps, None)
-            pred_flat  = np.clip(pred_flat,  eps, None)
+            pred_flat = np.clip(pred_flat, eps, None)
 
         # Get bin counts
         truth_bin_count, truth_note = _get_bin_count_n_note(truth_flat)
@@ -130,10 +139,20 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
         #       f"{pred_bin_count} (pred)")
 
         plt.figure(figsize=(10, 6))
-        plt.hist(truth_flat, bins=_make_bins(truth_flat, truth_bin_count, log_scale),
-                 alpha=0.5, label="Truth", density=True)
-        plt.hist(pred_flat,  bins=_make_bins(pred_flat,  pred_bin_count, log_scale),
-                 alpha=0.5, label="Prediction", density=True)
+        plt.hist(
+            truth_flat,
+            bins=_make_bins(truth_flat, truth_bin_count, log_scale),
+            alpha=0.5,
+            label="Truth",
+            density=True,
+        )
+        plt.hist(
+            pred_flat,
+            bins=_make_bins(pred_flat, pred_bin_count, log_scale),
+            alpha=0.5,
+            label="Prediction",
+            density=True,
+        )
 
         # Apply log scales where needed
         if log_scale:
@@ -147,4 +166,50 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
         plt.grid(which="both" if log_scale else "major", linestyle="--", linewidth=0.5)
 
         plt.savefig(output_path / f"{var}" / "pdf.png")
+        plt.close()
+
+
+def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
+    """
+    Plot rank histograms (Talagrand diagrams) for each variable.
+
+    Parameters
+    ----------
+    rank_histograms : xr.Dataset
+        Output from ``xskillscore.rank_histogram`` merged into a dataset, with one
+        variable per forecast variable and a ``rank`` dimension.
+    output_path : Path
+        Base output directory. Each figure is saved to ``<output_path>/<var>/rank_histogram.png``.
+    """
+    if "rank" not in rank_histograms.dims:
+        raise ValueError("rank_histograms must include a 'rank' dimension")
+
+    for i, (var, hist) in enumerate(rank_histograms.data_vars.items()):
+        ranks = hist["rank"].values
+        counts = hist.values
+
+        # xskillscore returns rank labels as floats in examples; use compact
+        # integer-like labels when possible.
+        labels = [str(int(r)) if float(r).is_integer() else str(r) for r in ranks]
+        total = int(np.nansum(counts))
+        n_members = len(ranks) - 1
+        color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(labels, counts, color=color, edgecolor="black", alpha=0.75)
+        plt.axhline(
+            total / len(ranks) if len(ranks) else 0,
+            linestyle="--",
+            linewidth=1,
+            label="Uniform reference",
+        )
+
+        plt.title(f"Rank histogram of {var}\n({total:,} pts, {n_members} members)")
+        plt.xlabel("Observation rank among ensemble members")
+        plt.ylabel("Count")
+        plt.legend()
+        plt.grid(axis="y", alpha=0.3, linestyle="--")
+        plt.tight_layout()
+
+        plt.savefig(output_path / f"{var}" / "rank_histogram.png")
         plt.close()

@@ -9,6 +9,7 @@ This module contains functions for plotting spatial fields such as:
 Plots are typically arranged in multi-row, multi-column grids to
 facilitate visual comparison across time steps or periods.
 """
+
 from pathlib import Path
 from typing import List
 
@@ -27,7 +28,7 @@ def _plot_sample_images(
     index: int,
     images: List[np.ndarray],
     titles: List[str],
-    error_cmap: str
+    error_cmap: str,
 ) -> None:
     """
     Plots truth, prediction, and error for a given time step within a subplot grid.
@@ -63,9 +64,20 @@ def _plot_sample_images(
 
     for j, title in enumerate(titles):
         # Use the same color scale for truth and prediction for comparison
-        im = axes[index, j].imshow(images[j], cmap="viridis_r", aspect="auto", origin="lower",
-                                   vmin=vmin, vmax=vmax) if j < 2 else \
-             axes[index, j].imshow(images[j], cmap=error_cmap, aspect="auto", origin="lower")
+        im = (
+            axes[index, j].imshow(
+                images[j],
+                cmap="viridis_r",
+                aspect="auto",
+                origin="lower",
+                vmin=vmin,
+                vmax=vmax,
+            )
+            if j < 2
+            else axes[index, j].imshow(
+                images[j], cmap=error_cmap, aspect="auto", origin="lower"
+            )
+        )
 
         axes[index, j].set_title(title)
         axes[index, j].axis("off")
@@ -104,7 +116,9 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
         metric_values = var_data["metric_value"].values
 
         _, axes = plt.subplots(len(times), 3, figsize=(12, 4 * len(times)))
-        axes = [axes] if len(times) == 1 else axes # Ensure axes is iterable for single-row cases
+        axes = (
+            [axes] if len(times) == 1 else axes
+        )  # Ensure axes is iterable for single-row cases
 
         for i, time in enumerate(times):
             images = [
@@ -129,8 +143,12 @@ def plot_top_samples(metric_array: dict, metric: str, output_path: Path) -> None
         plt.close()
 
 
-def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
-                      output_path: Path, period_dim: str = "period") -> None:
+def plot_p90_by_nyear(
+    truth_p90: xr.Dataset,
+    pred_p90: xr.Dataset,
+    output_path: Path,
+    period_dim: str = "period",
+) -> None:
     """
     Plot p90 maps by period. For each variable, save one figure where each row is a period and
     columns are: (1) truth p90, (2) pred p90, (3) pred p90 - truth p90.
@@ -138,7 +156,7 @@ def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
     Parameters
     ----------
     truth_p90 : xr.Dataset
-        Dataset with dims (period_dim, y, x) and data_vars like prcp, t2m, ...
+        Dataset with dims (period_dim, y, x) and data_vars like pr, tas, ...
     pred_p90 : xr.Dataset
         Same structure as truth_p90.
     output_path : Path
@@ -164,14 +182,15 @@ def plot_p90_by_nyear(truth_p90: xr.Dataset, pred_p90: xr.Dataset,
 
             # Generate plot for each period
             _plot_sample_images(
-                axes, i,
+                axes,
+                i,
                 [t2d, p2d, p2d - t2d],  # images
-                [   # titles
+                [  # titles
                     f"Truth p90 ({label})",
                     f"Prediction p90 ({label})",
                     f"Prediction - Truth ({label})",
                 ],
-                "plasma_r"  # error
+                "plasma_r",  # error
             )
 
         plt.tight_layout()

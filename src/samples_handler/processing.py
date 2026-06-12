@@ -55,29 +55,43 @@ except ImportError as exc:
 # -----------------------------------------------------------------------------
 # Metrics / transforms
 # -----------------------------------------------------------------------------
+def _metric_dataset(items: Dict[str, xr.Dataset]) -> xr.Dataset:
+    """Return a dataset with metrics concatenated along the 'metric' dimension."""
+    return (
+        xr.concat(items.values(), dim="metric").assign_coords(metric=list(items)).load()
+    )
+
+
+def _mask_valid_points(
+    truth: xr.Dataset, pred: xr.Dataset
+) -> tuple[xr.Dataset, xr.Dataset]:
+    """Mask locations where truth is invalid or all ensemble members are NaN."""
+    valid = np.isfinite(truth) & pred.notnull().all("ensemble")
+    return truth.where(valid), pred.where(valid)
+
+
 def _compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-    """
-    Computes the CRPS while filtering out NaN values.
+    """Computes the CRPS while filtering out NaN values."""
+    truth_valid, pred_valid = _mask_valid_points(truth, pred)
+    return xs.crps_ensemble(
+        truth_valid, pred_valid, member_dim="ensemble", dim=["x", "y"]
+    )
 
-    Parameters:
-        truth (xr.Dataset): The truth dataset.
-        pred (xr.Dataset): The prediction dataset.
 
-    Returns:
-        xr.Dataset: CRPS values computed only for valid points.
-    """
-    dim = ["x", "y"]
+def _compute_rank_histogram(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
+    """Computes the rank histogram while filtering out NaN values."""
+    truth_valid, pred_valid = _mask_valid_points(truth, pred)
 
-    valid_mask = np.isfinite(truth) & pred.notnull().any(dim="ensemble")
-    truth_valid = truth.where(valid_mask)
-    pred_valid = pred.where(valid_mask)
-
-    return xs.crps_ensemble(truth_valid, pred_valid, member_dim="ensemble", dim=dim)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        return xs.rank_histogram(
+            truth_valid, pred_valid, member_dim="ensemble", dim=["x", "y"]
+        )
 
 
 def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     """
-    Compute RMSE, MAE, CORR, CRPS, and STD_DEV between truth and prediction ensembles.
+    Compute RMSE, MAE, CORR, CRPS, STD_DEV, and SSR between truth and prediction ensembles.
 
     Parameters:
         truth (xr.Dataset): The truth dataset.
@@ -89,21 +103,23 @@ def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
     dim = ["x", "y"]
     pred_mean = pred.mean("ensemble")
 
-    rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
-    mae = xs.mae(truth, pred_mean, dim=dim, skipna=True)
-    corr = xs.pearson_r(truth, pred_mean, dim=dim, skipna=True)
-
-    # Compute CRPS and STD_DEV (suppress expected NaN-related warnings)
     with warnings.catch_warnings():
+        # Suppress expected NaN-related warnings
         warnings.simplefilter("ignore", RuntimeWarning)
-        std_dev = pred.std("ensemble").mean(dim, skipna=True)
-        crps = _compute_crps(truth, pred)
 
-    return (
-        xr.concat([rmse, mae, corr, crps, std_dev], dim="metric")
-        .assign_coords(metric=["RMSE", "MAE", "CORR", "CRPS", "STD_DEV"])
-        .load()
-    )
+        rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
+        std_dev = pred.std("ensemble").mean(dim, skipna=True)
+
+        return _metric_dataset(
+            {
+                "RMSE": rmse,
+                "MAE": xs.mae(truth, pred_mean, dim=dim, skipna=True),
+                "CORR": xs.pearson_r(truth, pred_mean, dim=dim, skipna=True),
+                "CRPS": _compute_crps(truth, pred),
+                "STD_DEV": std_dev,
+                "SSR": std_dev / rmse,
+            }
+        )
 
 
 def _flatten_and_filter_nan(
@@ -143,7 +159,10 @@ def _flatten_and_filter_nan(
         pred_data[var] = (dim, pred_flat[valid])
         coords[dim] = np.arange(valid.sum())
 
-    return xr.Dataset(truth_data, coords=coords), xr.Dataset(pred_data, coords=coords)
+    return {
+        "truth_flat": xr.Dataset(truth_data, coords=coords),
+        "pred_flat": xr.Dataset(pred_data, coords=coords),
+    }
 
 
 def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
@@ -215,14 +234,11 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
         and flattened truth/prediction datasets.
     """
     truth_t, pred_t = _select_time_and_ensemble(filepath, index, n_ensemble)
-
-    truth_flat, pred_flat = _flatten_and_filter_nan(truth_t, pred_t)
-
     return {
         "metrics": _compute_metrics(truth_t, pred_t),
+        "rank_histogram": _compute_rank_histogram(truth_t, pred_t),
         "error": compute_abs_difference(truth_t, pred_t),
-        "truth_flat": truth_flat,
-        "pred_flat": pred_flat,
+        **_flatten_and_filter_nan(truth_t, pred_t),
     }
 
 

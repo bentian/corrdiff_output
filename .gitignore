@@ -6,3 +6,6 @@ __pycache__/
 
 # Ignore netcdf folders
 data/
+
+# Node modules
+docs/node_modules/

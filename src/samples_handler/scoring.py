@@ -168,7 +168,7 @@ def _window_time_quantile_2d(
     q01 = (
         NTH_PERCENTILE / 100
     )  # Quantile in [0, 1] (e.g., 0.9 for the 90th percentile).
-    var_names = ["prcp", "t2m"]  # list(truth.data_vars)
+    var_names = ["pr", "tas"]  # list(truth.data_vars)
 
     # Use end - 1ns to mimic [start, end) given slice end is inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
@@ -266,16 +266,24 @@ def _get_var_mapping(is_bcsd: bool = False) -> Dict[str, str]:
         dict: Variable mapping dictionary.
     """
     mapping = {
-        "precipitation": "prcp",
-        "temperature_2m": "t2m",
+        "precipitation": "pr",
+        "temperature_2m": "tas",
     }
 
     # Add wind velocity variables if not BCSD data
     if not is_bcsd:
-        mapping["eastward_wind_10m"] = "u10m"
-        mapping["northward_wind_10m"] = "v10m"
+        mapping["eastward_wind_10m"] = "uas"
+        mapping["northward_wind_10m"] = "vas"
 
     return mapping
+
+
+def _rename_and_order(
+    ds: xr.Dataset,
+    var_mapping: dict[str, str],
+) -> xr.Dataset:
+    """Rename variables and reorder them according to var_mapping."""
+    return ds.rename(var_mapping)[list(var_mapping.values())]
 
 
 def _concat_from_results(
@@ -285,7 +293,7 @@ def _concat_from_results(
     dim: Optional[str] = None,
 ) -> xr.Dataset:
     """
-    Concat results[i][key] datasets and apply variable renaming.
+    Concat result datasets, then rename and order variables.
 
     - If `dim` is provided → use shared dimension
     - If `dim` is None → concat per variable using its own dimension
@@ -294,24 +302,17 @@ def _concat_from_results(
 
     # --- Case 1: shared dim ---
     if dim is not None:
-        return xr.concat(datasets, dim=dim).rename(var_mapping)
+        return _rename_and_order(xr.concat(datasets, dim=dim), var_mapping)
 
     # --- Case 2: per-variable dims --
-    # Handle inconsistent # of points between prcp and t2m in raw BCSD data
+    # Handle inconsistent # of points between pr and tas in raw BCSD data
     out = {}
-
-    vars_all = set()
-    for ds in datasets:
-        vars_all.update(ds.data_vars)
-
-    for var in vars_all:
+    for var in var_mapping:
         arrays = [ds[var] for ds in datasets if var in ds]
+        if arrays:
+            out[var] = xr.concat(arrays, dim=arrays[0].dims[0])
 
-        # Infer dimension from first array
-        var_dim = arrays[0].dims[0]
-        out[var] = xr.concat(arrays, dim=var_dim)
-
-    return xr.Dataset(out).rename(var_mapping)
+    return _rename_and_order(xr.Dataset(out), var_mapping)
 
 
 # -----------------------------------------------------------------------------
@@ -374,8 +375,16 @@ def score_samples(
     var_mapping = _get_var_mapping(is_bcsd)
 
     # Metrics
-    metrics = _concat_from_results(results, "metrics", var_mapping, dim="time")
-    metrics.attrs["n_ensemble"] = n_ensemble
+    metrics = _concat_from_results(
+        results, "metrics", var_mapping, dim="time"
+    ).assign_attrs(n_ensemble=n_ensemble)
+
+    # Rank histogram
+    rank_histograms = (
+        _concat_from_results(results, "rank_histogram", var_mapping, dim="time")
+        .sum("time", skipna=True)
+        .assign_attrs(n_ensemble=n_ensemble)
+    )
 
     # Spatial error & flattened truth/pred
     error = _concat_from_results(results, "error", var_mapping, dim="time")
@@ -398,7 +407,7 @@ def score_samples(
 
     print(f"[{get_timestamp()}] score_samples completed")
 
-    return metrics, error, top_samples, flats, p90s
+    return metrics, rank_histograms, error, top_samples, flats, p90s
 
 
 def score_samples_multi_ensemble(

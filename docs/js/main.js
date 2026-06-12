@@ -31,7 +31,6 @@ async function loadExperimentGroups() {
         }
 
         const fullNameMap = {
-            W: "W* (SSP scenarios)",
             CropW: "CropW* (SSP scenarios cropped)",
             BCSD: "BCSD-* (bias-corrected spatial disaggregation)",
             DM: "DM-* (input domains)",
