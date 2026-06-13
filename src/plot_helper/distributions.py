@@ -186,7 +186,8 @@ def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
 
     for i, (var, hist) in enumerate(rank_histograms.data_vars.items()):
         ranks = hist["rank"].values
-        counts = hist.values
+        counts = hist.values.astype(float)
+        freq = counts / np.nansum(counts)
 
         # xskillscore returns rank labels as floats in examples; use compact
         # integer-like labels when possible.
@@ -196,17 +197,17 @@ def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
         color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
 
         plt.figure(figsize=(10, 6))
-        plt.bar(labels, counts, color=color, edgecolor="black", alpha=0.75)
+        plt.bar(labels, freq, color=color, edgecolor="black", alpha=0.75)
         plt.axhline(
-            total / len(ranks) if len(ranks) else 0,
+            1 / len(ranks) if len(ranks) else 0,
             linestyle="--",
             linewidth=1,
             label="Uniform reference",
         )
 
         plt.title(f"Rank histogram of {var}\n({total:,} pts, {n_members} members)")
-        plt.xlabel("Observation rank among ensemble members")
-        plt.ylabel("Count")
+        plt.xlabel("Truth rank among ensemble members")
+        plt.ylabel("Relative frequency")
         plt.legend()
         plt.grid(axis="y", alpha=0.3, linestyle="--")
         plt.tight_layout()
