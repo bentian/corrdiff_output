@@ -1,13 +1,13 @@
 """
-Utilities for computing evaluation metrics and diagnostics on spatiotemporal
-ensemble prediction datasets using xarray and xskillscore.
+Utilities for per-time-step processing of ensemble prediction datasets.
 
-This module provides low-level building blocks to:
-- compute common skill metrics (RMSE, MAE, CORR, CRPS, ensemble spread)
-- handle NaN-safe reductions over space, time, and ensemble dimensions
-- extract flattened truth/prediction pairs for distributional analysis
-- process individual time steps (optionally for multiple ensemble sizes)
-- support efficient multiprocessing workflows
+This module provides building blocks for:
+- computing forecast verification metrics and diagnostics
+- generating rank histograms for ensemble calibration analysis
+- computing spatial error fields
+- extracting flattened truth/prediction pairs for PDF analysis
+- processing individual time steps for multiprocessing workflows
+- evaluating multiple ensemble sizes efficiently
 
 Assumed data layout
 -------------------
@@ -20,173 +20,25 @@ Prediction datasets:
 
 Key design notes
 ----------------
-- Ensemble reductions always use explicit `skipna=True` for robustness.
-- Expensive I/O and reductions are structured to minimize repeated work
-  in multiprocessing contexts.
-- All metric computations are NaN-aware and spatially consistent.
-
-Dependencies
-------------
-- numpy
-- xarray
-- xskillscore
-
-This module does not perform any plotting or file writing; it focuses
-purely on computation and data transformation.
+- Metrics include RMSE, MAE, CORR, CRPS, ensemble spread, and SSR.
+- Rank histograms are computed from valid grid points only.
+- Expensive I/O is minimized for multiprocessing workloads.
+- Variable naming is preserved for downstream aggregation.
 """
 
 from __future__ import annotations
 
-import warnings
 from typing import Dict, Tuple
 from functools import partial
 
-import numpy as np
 import xarray as xr
 
-try:
-    import xskillscore as xs
-except ImportError as exc:
-    raise ImportError(
-        "xskillscore not installed. Try `pip install xskillscore`"
-    ) from exc
-
-
-# -----------------------------------------------------------------------------
-# Metrics / transforms
-# -----------------------------------------------------------------------------
-def _metric_dataset(items: Dict[str, xr.Dataset]) -> xr.Dataset:
-    """Return a dataset with metrics concatenated along the 'metric' dimension."""
-    return (
-        xr.concat(items.values(), dim="metric").assign_coords(metric=list(items)).load()
-    )
-
-
-def _mask_valid_points(
-    truth: xr.Dataset, pred: xr.Dataset
-) -> tuple[xr.Dataset, xr.Dataset]:
-    """Mask locations where truth is invalid or all ensemble members are NaN."""
-    valid = np.isfinite(truth) & pred.notnull().all("ensemble")
-    return truth.where(valid), pred.where(valid)
-
-
-def _compute_crps(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-    """Computes the CRPS while filtering out NaN values."""
-    truth_valid, pred_valid = _mask_valid_points(truth, pred)
-    return xs.crps_ensemble(
-        truth_valid, pred_valid, member_dim="ensemble", dim=["x", "y"]
-    )
-
-
-def _compute_rank_histogram(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-    """Computes the rank histogram while filtering out NaN values."""
-    truth_valid, pred_valid = _mask_valid_points(truth, pred)
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=RuntimeWarning)
-        return xs.rank_histogram(
-            truth_valid, pred_valid, member_dim="ensemble", dim=["x", "y"]
-        )
-
-
-def _compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-    """
-    Compute RMSE, MAE, CORR, CRPS, STD_DEV, and SSR between truth and prediction ensembles.
-
-    Parameters:
-        truth (xr.Dataset): The truth dataset.
-        pred (xr.Dataset): The prediction dataset.
-
-    Returns:
-        xr.Dataset: A dataset containing computed metrics.
-    """
-    dim = ["x", "y"]
-    pred_mean = pred.mean("ensemble")
-
-    with warnings.catch_warnings():
-        # Suppress expected NaN-related warnings
-        warnings.simplefilter("ignore", RuntimeWarning)
-
-        rmse = xs.rmse(truth, pred_mean, dim=dim, skipna=True)
-        std_dev = pred.std("ensemble").mean(dim, skipna=True)
-
-        return _metric_dataset(
-            {
-                "RMSE": rmse,
-                "MAE": xs.mae(truth, pred_mean, dim=dim, skipna=True),
-                "CORR": xs.pearson_r(truth, pred_mean, dim=dim, skipna=True),
-                "CRPS": _compute_crps(truth, pred),
-                "STD_DEV": std_dev,
-                "SSR": std_dev / rmse,
-            }
-        )
-
-
-def _flatten_and_filter_nan(
-    truth: xr.Dataset, pred: xr.Dataset
-) -> Tuple[xr.Dataset, xr.Dataset]:
-    """
-    Extract flattened truth and prediction for all variables in the truth dataset.
-
-    Parameters:
-        truth (xarray.Dataset): The truth dataset.
-        pred (xarray.Dataset): The prediction dataset.
-
-    Returns:
-        tuple: Two xarray.Datasets, one for truth and one for prediction.
-    """
-    truth_data: Dict[str, Tuple[str, np.ndarray]] = {}
-    pred_data: Dict[str, Tuple[str, np.ndarray]] = {}
-    coords = {}
-
-    for var in truth.data_vars:
-        if var not in pred:
-            continue
-
-        truth_flat = truth[var].values.ravel()
-        pred_flat = (
-            pred[var].mean("ensemble").values.ravel()
-            if "ensemble" in pred[var].dims
-            else pred[var].values.ravel()
-        )
-
-        # Filter out NaNs and align truth and pred
-        valid = np.isfinite(truth_flat) & np.isfinite(pred_flat)
-
-        # Use per-variable dimension to avoid mismatched non-NaN sample sizes (e.g., BCSD data)
-        dim = f"points_{var}"
-        truth_data[var] = (dim, truth_flat[valid])
-        pred_data[var] = (dim, pred_flat[valid])
-        coords[dim] = np.arange(valid.sum())
-
-    return {
-        "truth_flat": xr.Dataset(truth_data, coords=coords),
-        "pred_flat": xr.Dataset(pred_data, coords=coords),
-    }
-
-
-def compute_abs_difference(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
-    """
-    Computes the absolute difference between truth and prediction datasets
-    while filtering NaN values.
-
-    Parameters:
-        truth (xr.Dataset): The truth dataset.
-        pred (xr.Dataset): The prediction dataset.
-
-    Returns:
-        xr.Dataset: The absolute difference dataset with NaNs removed.
-    """
-    pred_mean = (
-        pred.mean("ensemble").expand_dims("ensemble")
-        if "ensemble" in pred.dims
-        else pred
-    )
-    abs_diff = abs(pred_mean - truth)
-
-    # Filter out NaNs by setting them to NaN where either truth or pred is NaN
-    valid_mask = np.isfinite(truth) & np.isfinite(pred_mean)
-    return abs_diff.where(valid_mask)
+from .computing import (
+    compute_abs_difference,
+    compute_metrics,
+    compute_flattened_samples,
+    compute_rank_histogram,
+)
 
 
 # -----------------------------------------------------------------------------
@@ -235,10 +87,10 @@ def process_sample(index: int, filepath: str, n_ensemble: int) -> Dict[str, xr.D
     """
     truth_t, pred_t = _select_time_and_ensemble(filepath, index, n_ensemble)
     return {
-        "metrics": _compute_metrics(truth_t, pred_t),
-        "rank_histogram": _compute_rank_histogram(truth_t, pred_t),
+        "metrics": compute_metrics(truth_t, pred_t),
+        "rank_histogram": compute_rank_histogram(truth_t, pred_t),
         "error": compute_abs_difference(truth_t, pred_t),
-        **_flatten_and_filter_nan(truth_t, pred_t),
+        **compute_flattened_samples(truth_t, pred_t),
     }
 
 
@@ -279,7 +131,7 @@ def process_sample_multi_ensemble(
             if "ensemble" in pred_t.dims
             else pred_t
         )
-        out[n_ens] = _compute_metrics(truth_t, pred_n)
+        out[n_ens] = compute_metrics(truth_t, pred_n)
 
     return {"metrics_by_n": out}
 

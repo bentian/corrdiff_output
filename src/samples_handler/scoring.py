@@ -63,9 +63,9 @@ import pandas as pd
 import xarray as xr
 
 from .masking import get_timestamp
+from .computing import compute_abs_difference
 from .processing import (
     open_samples,
-    compute_abs_difference,
     process_sample,
     process_sample_multi_ensemble,
 )
@@ -315,6 +315,58 @@ def _concat_from_results(
     return _rename_and_order(xr.Dataset(out), var_mapping)
 
 
+def _aggregate_results(
+    results: List[dict], var_mapping: dict[str, str], n_ensemble: int
+) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, Tuple[xr.Dataset, xr.Dataset]]:
+    """Aggregate per-time results into metrics, rank histograms, errors, and flats."""
+    metrics = _concat_from_results(
+        results, "metrics", var_mapping, dim="time"
+    ).assign_attrs(n_ensemble=n_ensemble)
+
+    rank_histograms = (
+        _concat_from_results(results, "rank_histogram", var_mapping, dim="time")
+        .sum("time", skipna=True)
+        .assign_attrs(n_ensemble=n_ensemble)
+    )
+
+    spatial_errors = _concat_from_results(results, "error", var_mapping, dim="time")
+    flats = (
+        _concat_from_results(results, "truth_flat", var_mapping),
+        _concat_from_results(results, "pred_flat", var_mapping),
+    )
+
+    return (
+        metrics,
+        rank_histograms,
+        spatial_errors,
+        flats,
+    )
+
+
+def _build_top_samples_and_p90(
+    truth: xr.Dataset,
+    pred: xr.Dataset,
+    metrics: xr.Dataset,
+    var_mapping: dict[str, str],
+    n_ensemble: int,
+) -> Tuple[dict, Tuple[xr.Dataset, xr.Dataset]]:
+    """Build top samples and p90 grids from full truth/pred datasets."""
+    truth_m = truth.rename(var_mapping)
+    pred_mean = (
+        pred.isel(ensemble=slice(0, n_ensemble))
+        .mean("ensemble", skipna=True)
+        .rename(var_mapping)
+    )
+
+    return (
+        {
+            metric: _extract_top_samples(truth_m, pred_mean, metrics, metric)
+            for metric in ("MAE", "RMSE")
+        },
+        p90_by_nyear_period(truth_m, pred_mean),
+    )
+
+
 # -----------------------------------------------------------------------------
 # Scoring entrypoints
 # -----------------------------------------------------------------------------
@@ -351,8 +403,7 @@ def score_samples(
         Dictionary of top-N worst samples per metric and variable, including
         truth, prediction, and error maps.
     flats : tuple of xr.Dataset
-        Flattened truth and prediction values (points dimension), useful for
-        PDFs and scatter plots.
+        Flattened truth and prediction values (points dimension), useful for PDFs and scatter plots.
     p90s : tuple of xr.Dataset
         Tuple of (truth_p90, pred_p90) decadal p90 grids computed over N-year windows.
 
@@ -367,6 +418,7 @@ def score_samples(
         f"n_ensemble={n_ensemble}, is_bcsd={is_bcsd}"
     )
 
+    # Process the data
     truth, pred, _ = open_samples(filepath)
     results = _run_over_time(
         truth.sizes["time"],
@@ -374,36 +426,13 @@ def score_samples(
     )
     var_mapping = _get_var_mapping(is_bcsd)
 
-    # Metrics
-    metrics = _concat_from_results(
-        results, "metrics", var_mapping, dim="time"
-    ).assign_attrs(n_ensemble=n_ensemble)
-
-    # Rank histogram
-    rank_histograms = (
-        _concat_from_results(results, "rank_histogram", var_mapping, dim="time")
-        .sum("time", skipna=True)
-        .assign_attrs(n_ensemble=n_ensemble)
+    # Aggregate the results
+    metrics, rank_histograms, error, flats = _aggregate_results(
+        results, var_mapping, n_ensemble
     )
-
-    # Spatial error & flattened truth/pred
-    error = _concat_from_results(results, "error", var_mapping, dim="time")
-    flats = (
-        _concat_from_results(results, "truth_flat", var_mapping),
-        _concat_from_results(results, "pred_flat", var_mapping),
+    top_samples, p90s = _build_top_samples_and_p90(
+        truth, pred, metrics, var_mapping, n_ensemble
     )
-
-    # Top samples & p90 grids
-    truth_m = truth.rename(var_mapping)
-    pred_mean = (
-        pred.isel(ensemble=slice(0, n_ensemble))
-        .mean("ensemble", skipna=True)
-        .rename(var_mapping)
-    )
-    top_samples = {
-        m: _extract_top_samples(truth_m, pred_mean, metrics, m) for m in ["MAE", "RMSE"]
-    }
-    p90s = p90_by_nyear_period(truth_m, pred_mean)
 
     print(f"[{get_timestamp()}] score_samples completed")
 
