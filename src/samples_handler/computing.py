@@ -92,7 +92,7 @@ def compute_rank_histogram(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         return xs.rank_histogram(
             truth_valid, pred_valid, member_dim="ensemble", dim=["x", "y"]
-        )
+        ).assign_coords(time=truth.coords["time"])
 
 
 def compute_metrics(truth: xr.Dataset, pred: xr.Dataset) -> xr.Dataset:

@@ -1,16 +1,21 @@
 """
-Distribution and PDF plotting utilities.
+Plotting utilities for forecast distributions and error diagnostics.
 
-This module provides helpers for visualizing value distributions,
-typically using flattened truth and prediction datasets. It is mainly
-used to compare probability density functions (PDFs) between model
-outputs and reference data.
+This module provides visualizations for comparing forecast and
+observation distributions and for analyzing the temporal distribution
+of forecast errors.
 
-Typical use cases:
-- Plotting global PDFs of truth vs prediction
-- Inspecting distributional bias or spread
+Available plots include:
 
-Inputs are expected to be 1D or flattened xarray datasets.
+- probability density function (PDF) comparisons
+- metric occurrence histograms (e.g., RMSE and MAE distributions)
+
+Notes
+-----
+- PDFs compare flattened observation values against ensemble-mean forecasts.
+- Precipitation PDFs are displayed on logarithmic axes to better represent heavy-tailed behavior.
+- Metric occurrence plots summarize how forecast errors vary across time steps.
+- All figures are generated independently for each forecast variable.
 """
 
 from pathlib import Path
@@ -19,8 +24,6 @@ from typing import Tuple, Union
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-
-from .samples import COLOR_MAPS
 
 
 def _get_bin_count_n_note(ds: xr.DataArray, bin_width: int = 1) -> Tuple[int, str]:
@@ -166,51 +169,4 @@ def plot_pdf(truth: xr.Dataset, pred: xr.Dataset, output_path: Path) -> None:
         plt.grid(which="both" if log_scale else "major", linestyle="--", linewidth=0.5)
 
         plt.savefig(output_path / f"{var}" / "pdf.png")
-        plt.close()
-
-
-def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
-    """
-    Plot rank histograms (Talagrand diagrams) for each variable.
-
-    Parameters
-    ----------
-    rank_histograms : xr.Dataset
-        Output from ``xskillscore.rank_histogram`` merged into a dataset, with one
-        variable per forecast variable and a ``rank`` dimension.
-    output_path : Path
-        Base output directory. Each figure is saved to ``<output_path>/<var>/rank_histogram.png``.
-    """
-    if "rank" not in rank_histograms.dims:
-        raise ValueError("rank_histograms must include a 'rank' dimension")
-
-    for i, (var, hist) in enumerate(rank_histograms.data_vars.items()):
-        ranks = hist["rank"].values
-        counts = hist.values.astype(float)
-        freq = counts / np.nansum(counts)
-
-        # xskillscore returns rank labels as floats in examples; use compact
-        # integer-like labels when possible.
-        labels = [str(int(r)) if float(r).is_integer() else str(r) for r in ranks]
-        total = int(np.nansum(counts))
-        n_members = len(ranks) - 1
-        color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
-
-        plt.figure(figsize=(10, 6))
-        plt.bar(labels, freq, color=color, edgecolor="black", alpha=0.75)
-        plt.axhline(
-            1 / len(ranks) if len(ranks) else 0,
-            linestyle="--",
-            linewidth=1,
-            label="Uniform reference",
-        )
-
-        plt.title(f"Rank histogram of {var}\n({total:,} pts, {n_members} members)")
-        plt.xlabel("Truth rank among ensemble members")
-        plt.ylabel("Relative frequency")
-        plt.legend()
-        plt.grid(axis="y", alpha=0.3, linestyle="--")
-        plt.tight_layout()
-
-        plt.savefig(output_path / f"{var}" / "rank_histogram.png")
         plt.close()

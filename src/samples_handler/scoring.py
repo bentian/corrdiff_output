@@ -323,11 +323,9 @@ def _aggregate_results(
         results, "metrics", var_mapping, dim="time"
     ).assign_attrs(n_ensemble=n_ensemble)
 
-    rank_histograms = (
-        _concat_from_results(results, "rank_histogram", var_mapping, dim="time")
-        .sum("time", skipna=True)
-        .assign_attrs(n_ensemble=n_ensemble)
-    )
+    rank_histograms = _concat_from_results(
+        results, "rank_histogram", var_mapping, dim="time"
+    ).assign_attrs(n_ensemble=n_ensemble)
 
     spatial_errors = _concat_from_results(results, "error", var_mapping, dim="time")
     flats = (
@@ -343,14 +341,14 @@ def _aggregate_results(
     )
 
 
-def _build_top_samples_and_p90(
+def _extract_top_samples_and_p90(
     truth: xr.Dataset,
     pred: xr.Dataset,
     metrics: xr.Dataset,
     var_mapping: dict[str, str],
     n_ensemble: int,
 ) -> Tuple[dict, Tuple[xr.Dataset, xr.Dataset]]:
-    """Build top samples and p90 grids from full truth/pred datasets."""
+    """Extract top samples and p90 grids from full truth/pred datasets."""
     truth_m = truth.rename(var_mapping)
     pred_mean = (
         pred.isel(ensemble=slice(0, n_ensemble))
@@ -430,7 +428,7 @@ def score_samples(
     metrics, rank_histograms, error, flats = _aggregate_results(
         results, var_mapping, n_ensemble
     )
-    top_samples, p90s = _build_top_samples_and_p90(
+    top_samples, p90s = _extract_top_samples_and_p90(
         truth, pred, metrics, var_mapping, n_ensemble
     )
 
@@ -471,9 +469,9 @@ def score_samples_multi_ensemble(
     for n_ens in n_ensembles:
         # Reuse _concat_from_results without changing signature
         wrapped = [{"metrics": res["metrics_by_n"][n_ens]} for res in results]
-        ds = _concat_from_results(wrapped, "metrics", _get_var_mapping(), dim="time")
-        ds.attrs["n_ensemble"] = n_ens
-        combined[n_ens] = ds
+        combined[n_ens] = _concat_from_results(
+            wrapped, "metrics", _get_var_mapping(), dim="time"
+        ).assign_attrs(n_ensemble=n_ens)
 
     print(f"[{get_timestamp()}] score_samples_multi_ensemble completed")
 

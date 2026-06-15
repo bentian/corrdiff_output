@@ -14,6 +14,7 @@ Submodules
 ----------
 - metrics       : Metric curves, tables, and ensemble comparisons
 - distributions : PDFs and value distributions
+- ensembles     : Ensemble-specific diagnostics
 - samples       : Spatial sample plots and error maps
 - training      : Training loss visualization
 - comparison    : Metrics comparison among experiments
@@ -25,7 +26,8 @@ from .metrics import (
     plot_nyear_metrics,
     plot_metrics_vs_ensembles,
 )
-from .distributions import plot_metrics_cnt, plot_pdf, plot_rank_histogram
+from .distributions import plot_metrics_cnt, plot_pdf
+from .ensembles import plot_rank_histogram, plot_monthly_rank_scores
 from .samples import plot_top_samples, plot_p90_by_nyear, plot_monthly_error
 from .training import plot_training_loss
 from .comparison import plot_metrics_cmp, plot_nyear_metrics_cmp
@@ -38,6 +40,7 @@ __all__ = [
     "plot_metrics_cnt",
     "plot_pdf",
     "plot_rank_histogram",
+    "plot_monthly_rank_scores",
     "plot_top_samples",
     "plot_p90_by_nyear",
     "plot_monthly_error",
