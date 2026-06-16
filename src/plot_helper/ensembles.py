@@ -134,28 +134,26 @@ def plot_rank_histogram(
     n_members = rank_histograms.sizes["rank"] - 1
 
     for i, (var, hist) in enumerate(rank_histograms.data_vars.items()):
-        ranks = hist["rank"].values
-        counts = hist.values.astype(float)
-        freq = counts / np.nansum(counts)
-
-        # xskillscore returns rank labels as floats in examples; use compact
-        # integer-like labels when possible.
-        labels = [str(int(r)) if float(r).is_integer() else str(r) for r in ranks]
-        total = int(np.nansum(counts))
-        color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
+        values = hist.values.astype(float)
+        bias_score, dispersion_score = scores[var].values
 
         plt.figure(figsize=(10, 6))
-        plt.bar(labels, freq, color=color, edgecolor="black", alpha=0.75)
+        plt.bar(
+            [f"{r:g}" for r in hist["rank"].values],  # labels
+            values / np.nansum(values),  # freq
+            color=plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6),
+            edgecolor="black",
+            alpha=0.75,
+        )
         plt.axhline(
-            1 / len(ranks) if len(ranks) else 0,
+            1 / hist.sizes["rank"],
             linestyle="--",
             linewidth=1,
             label="Uniform reference",
         )
 
-        bias_score, dispersion_score = scores[var].values
         plt.title(
-            f"Rank histogram of {var}\n({total:,} pts, {n_members} members; "
+            f"Rank histogram of {var}\n({int(np.nansum(values)):,} pts, {n_members} members; "
             f"BiasScore={bias_score:.2f}, DispersionScore={dispersion_score:.2f})"
         )
         plt.xlabel("Truth rank among ensemble members")
