@@ -19,15 +19,16 @@ Rank histogram
     reference line.
 
 BiasScore
-    Derived from the mean rank relative to the center rank:
-    - < 0 : forecast tends to be too large
-    - > 0 : forecast tends to be too small
+    Derived from the center rank (forecast) relative to the weighted mean rank (truth):
+    - > 0 : forecast tends to be too large (pos_bias)
+    - < 0 : forecast tends to be too small (neg_bias)
     - ≈ 0 : unbiased
 
     Defined as:
-        BiasScore = (mean_rank - center_rank) / half_rank_range
+        BiasScore = (center_rank - weighted_mean_rank) / half_rank_range
     where:
         center_rank = mean(rank)
+        weighted_mean_rank = sum(rank * hist) where hist is the count of each rank
         half_rank_range = (max(rank) - min(rank)) / 2
 
     This normalizes the score to approximately [-1, 1],
@@ -80,8 +81,8 @@ def _score_rank_histogram(rank_histograms: xr.Dataset) -> xr.Dataset:
     Returns:
         xr.Dataset with score dimension:
             bias:
-                < 0 forecast positive bias
-                > 0 forecast negative bias
+                > 0 forecast positive bias
+                < 0 forecast negative bias
                 ~ 0 unbiased
 
             dispersion:
@@ -102,11 +103,11 @@ def _score_rank_histogram(rank_histograms: xr.Dataset) -> xr.Dataset:
     out = {}
     for var, hist in rank_histograms.data_vars.items():
         total = hist.sum("rank")
-        mean_rank = (hist * ranks).sum("rank") / total
-        rank_var = (hist * (ranks - mean_rank) ** 2).sum("rank") / total
+        weighted_mean_rank = (hist * ranks).sum("rank") / total
+        rank_var = (hist * (ranks - weighted_mean_rank) ** 2).sum("rank") / total
 
         out[var] = xr.concat(
-            [(mean_rank - center) / half_range, 1 - rank_var / uniform_var],
+            [(center - weighted_mean_rank) / half_range, 1 - rank_var / uniform_var],
             dim=xr.IndexVariable("score", ["bias", "dispersion"]),
         )
 
