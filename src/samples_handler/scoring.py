@@ -71,7 +71,7 @@ from .processing import (
 )
 
 
-DEBUG = False  # Enable to dump p90 netcdf
+DUMP_P90 = False  # Enable to dump p90 netcdf
 TOP_NUM = 5  # Number of top samples to extract
 N_YEARS = 10  # Number of years per period
 NTH_PERCENTILE = 90  # N-th percentile value to compute 2D grids per period
@@ -231,7 +231,7 @@ def p90_by_nyear_period(
     pred_p90 = xr.concat(pred_blocks, dim=xr.IndexVariable("period", labels))
 
     # Optional NetCDF export
-    if DEBUG:
+    if DUMP_P90:
         encoding = {v: {"zlib": True, "complevel": 4} for v in truth_p90.data_vars}
         truth_p90.to_netcdf(f"truth_p{NTH_PERCENTILE}.nc", encoding=encoding)
         pred_p90.to_netcdf(f"pred_p{NTH_PERCENTILE}.nc", encoding=encoding)
