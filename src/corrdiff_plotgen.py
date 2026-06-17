@@ -35,7 +35,7 @@ from analysis_utils import (
 from plot_helper import (
     plot_pdf,
     plot_rank_histogram,
-    plot_monthly_rank_scores,
+    plot_monthly_rank_histogram,
     plot_monthly_error,
     plot_p90_by_nyear,
     plot_metrics_cnt,
@@ -75,7 +75,9 @@ def _plot_diagnostics(scored: tuple, output_path: Path) -> xr.Dataset:
     # Plots per variable
     plot_pdf(*flats, output_path)
     plot_rank_histogram(rank_histograms.sum("time"), output_path)
-    plot_monthly_rank_scores(rank_histograms.groupby("time.month").sum(), output_path)
+    plot_monthly_rank_histogram(
+        rank_histograms.groupby("time.month").sum(), output_path
+    )
     plot_monthly_error(spatial_error, output_path)
     plot_p90_by_nyear(*p90s, output_path)
     for metric in ["MAE", "RMSE"]:

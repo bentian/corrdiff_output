@@ -18,46 +18,13 @@ Rank histogram
     ensemble forecasts. Histograms are plotted as relative frequencies with a uniform-
     reference line.
 
-BiasScore
-    Derived from the center rank (forecast) relative to the weighted mean rank (truth):
-    - > 0 : forecast tends to be too large (pos_bias)
-    - < 0 : forecast tends to be too small (neg_bias)
-    - ≈ 0 : unbiased
-
-    Defined as:
-        BiasScore = (center_rank - weighted_mean_rank) / half_rank_range
-    where:
-        center_rank = mean(rank)
-        weighted_mean_rank = sum(rank * hist) where hist is the count of each rank
-        half_rank_range = (max(rank) - min(rank)) / 2
-
-    This normalizes the score to approximately [-1, 1],
-    with 0 corresponding to a symmetric rank histogram.
-
-DispersionScore
-    Measures deviation from a uniform rank histogram:
-    - < 0 : U-shaped / under-dispersed
-    - > 0 : dome-shaped / over-dispersed
-    - ≈ 0 : well dispersed
-
-    Defined as:
-        DispersionScore = 1 - rank_var / uniform_var
-    where:
-        rank_var = variance of the rank histogram
-        uniform_var = variance of a uniform rank histogram
-
-    Thus zero corresponds to a perfectly uniform rank histogram.
-
-Monthly rank-score plot
-    Displays monthly BiasScore and DispersionScore on a 2-D plane,
-    allowing seasonal changes in ensemble calibration to be identified.
+Monthly rank histogram
+    Same as rank histogram, but for each month.
 
 Notes
 -----
 - Functions operate on aggregated xarray datasets produced by the scoring pipeline.
 - Figures are saved to variable-specific output directories.
-- Rank-histogram scores can be computed from fully aggregated,
-  monthly-aggregated, or other grouped rank histograms.
 """
 
 from pathlib import Path
@@ -68,55 +35,49 @@ import matplotlib.pyplot as plt
 
 from .samples import COLOR_MAPS
 
-DUMP_MONTHLY_RANK_HISTOGRAM = False  # Enable to dump monthly rank histograms into PNG
 
-
-def _score_rank_histogram(rank_histograms: xr.Dataset) -> xr.Dataset:
-    """
-    Compute bias and dispersion scores from aggregated rank histograms.
-
-    Expected input:
-        rank_histograms[var]: dims (..., rank)
-
-    Returns:
-        xr.Dataset with score dimension:
-            bias:
-                > 0 forecast positive bias
-                < 0 forecast negative bias
-                ~ 0 unbiased
-
-            dispersion:
-                < 0 U-shape / under-dispersed
-                > 0 dome-shape / over-dispersed
-                ~ 0 well dispersed
-    """
-    if "rank" not in rank_histograms.dims:
-        raise ValueError("rank_histograms must include a 'rank' dimension")
-
-    ranks = rank_histograms["rank"]
-    n_rank = rank_histograms.sizes["rank"]
-
-    center = ranks.mean()
-    half_range = (ranks.max() - ranks.min()) / 2
-    uniform_var = (n_rank**2 - 1) / 12
-
-    out = {}
-    for var, hist in rank_histograms.data_vars.items():
-        total = hist.sum("rank")
-        weighted_mean_rank = (hist * ranks).sum("rank") / total
-        rank_var = (hist * (ranks - weighted_mean_rank) ** 2).sum("rank") / total
-
-        out[var] = xr.concat(
-            [(center - weighted_mean_rank) / half_range, 1 - rank_var / uniform_var],
-            dim=xr.IndexVariable("score", ["bias", "dispersion"]),
+def _require_dims(ds: xr.Dataset, dims: set[str]) -> None:
+    """Ensure the dataset contains the required dimensions."""
+    missing = dims - set(ds.dims)
+    if missing:
+        raise ValueError(
+            f"rank_histograms missing dimensions: {', '.join(sorted(missing))}"
         )
 
-    return xr.Dataset(out)
+
+def _rank_labels(hist: xr.DataArray) -> list[str]:
+    """Get rank labels from the rank histogram."""
+    return [f"{r:g}" for r in hist["rank"].values]
 
 
-def plot_rank_histogram(
-    rank_histograms: xr.Dataset, output_path: Path, suffix: str = ""
-) -> None:
+def _rank_freq(hist: xr.DataArray) -> np.ndarray:
+    """Get normalized rank frequencies from the rank histogram."""
+    values = hist.values.astype(float)
+    total = np.nansum(values)
+    return values / total if total else values
+
+
+def _plot_rank_bars(ax, hist: xr.DataArray, color) -> None:
+    """Plot rank histogram bars on the given axes."""
+    ax.bar(
+        _rank_labels(hist),
+        _rank_freq(hist),
+        color=color,
+        edgecolor="black",
+        alpha=0.75,
+    )
+    ax.axhline(
+        1 / hist.sizes["rank"],
+        linestyle="--",
+        linewidth=1,
+        color="black",
+        alpha=0.6,
+        label="Uniform reference",
+    )
+    ax.grid(axis="y", alpha=0.3, linestyle="--")
+
+
+def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
     """
     Plot rank histograms (Talagrand diagrams) for each variable.
 
@@ -128,103 +89,74 @@ def plot_rank_histogram(
     output_path : Path
         Base output directory. Each figure is saved to ``<output_path>/<var>/rank_histogram.png``.
     """
-    if "rank" not in rank_histograms.dims:
-        raise ValueError("rank_histograms must include a 'rank' dimension")
-
-    scores = _score_rank_histogram(rank_histograms)
+    _require_dims(rank_histograms, {"rank"})
     n_members = rank_histograms.sizes["rank"] - 1
 
     for i, (var, hist) in enumerate(rank_histograms.data_vars.items()):
         values = hist.values.astype(float)
-        bias_score, dispersion_score = scores[var].values
+        color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
 
-        plt.figure(figsize=(10, 6))
-        plt.bar(
-            [f"{r:g}" for r in hist["rank"].values],  # labels
-            values / np.nansum(values),  # freq
-            color=plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6),
-            edgecolor="black",
-            alpha=0.75,
-        )
-        plt.axhline(
-            1 / hist.sizes["rank"],
-            linestyle="--",
-            linewidth=1,
-            label="Uniform reference",
-        )
+        _, ax = plt.subplots(figsize=(10, 6))
+        _plot_rank_bars(ax, hist, color)
 
-        plt.title(
-            f"Rank histogram of {var}\n({int(np.nansum(values)):,} pts, {n_members} members; "
-            f"BiasScore={bias_score:.2f}, DispersionScore={dispersion_score:.2f})"
+        ax.set_title(
+            f"Rank histogram of {var}\n({int(np.nansum(values)):,} pts, {n_members} members)"
         )
-        plt.xlabel("Truth rank among ensemble members")
-        plt.ylabel("Relative frequency")
-        plt.legend()
-        plt.grid(axis="y", alpha=0.3, linestyle="--")
+        ax.set_xlabel("Truth rank among ensemble members")
+        ax.set_ylabel("Relative frequency")
+        ax.legend()
+
         plt.tight_layout()
-
-        plt.savefig(output_path / f"{var}" / f"rank_histogram{suffix}.png")
+        plt.savefig(output_path / var / "rank_histogram.png")
         plt.close()
 
 
-def plot_monthly_rank_scores(rank_histograms: xr.Dataset, output_path: Path) -> None:
+def plot_monthly_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
     """
-    Plot monthly rank-histogram scores for each variable.
-        X-axis: Bias Score
-        Y-axis: Dispersion Score
+    Plot monthly rank histograms as a 3x4 panel for each variable.
 
-    Each point represents one month and is labeled 1-12.
+    Each subplot shows the rank histogram for one calendar month, normalized to relative frequency
+    and compared against the uniform reference distribution. The resulting figure provides
+    a compact view of seasonal changes in ensemble calibration.
+
+    Parameters
+    ----------
+    rank_histograms : xr.Dataset
+        Monthly aggregated rank histograms with dimensions ``month`` and ``rank``.
+        Each data variable corresponds to a forecast variable.
+    output_path : Path
+        Base output directory. Figures are saved to
+        ``<output_path>/<var>/monthly_rank_histogram.png``
+        for each forecast variable.
     """
-    if "rank" not in rank_histograms.dims:
-        raise ValueError("rank_histograms must include a 'rank' dimension")
-    if "month" not in rank_histograms.dims:
-        raise ValueError("rank_histograms must include a 'month' dimension")
 
-    # Dump monthly rank histograms
-    if DUMP_MONTHLY_RANK_HISTOGRAM:
-        out_dir = output_path / "monthly_rank_histograms"
-        for var in rank_histograms.data_vars:
-            (out_dir / var).mkdir(parents=True, exist_ok=True)
-        for month in rank_histograms.month.values:
-            plot_rank_histogram(
-                rank_histograms.sel(month=month), out_dir, f"-{int(month):02d}"
-            )
-
-    scores = _score_rank_histogram(rank_histograms)
+    _require_dims(rank_histograms, {"rank", "month"})
     n_members = rank_histograms.sizes["rank"] - 1
 
-    for i, var in enumerate(scores.data_vars):
-        bias = scores[var].sel(score="bias")
-        dispersion = scores[var].sel(score="dispersion")
+    for i, var in enumerate(rank_histograms.data_vars):
+        fig, axes = plt.subplots(3, 4, figsize=(16, 12))
+        axes = axes.flatten()
         color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
 
-        plt.figure(figsize=(8, 6))
-        plt.scatter(
-            bias.values,
-            dispersion.values,
-            color=color,
-            edgecolor="black",
-            alpha=0.85,
-            zorder=3,
-        )
+        for month, ax in zip(range(1, 13), axes):
+            hist = rank_histograms[var].sel(month=month)
 
-        for month, x, y in zip(scores["month"].values, bias.values, dispersion.values):
-            plt.annotate(
-                str(int(month)),
-                (x, y),
-                textcoords="offset points",
-                xytext=(5, 5),
-                fontsize=9,
+            _plot_rank_bars(ax, hist, color)
+            ax.set_title(f"Month {month}", fontsize=10)
+            ax.set_ylim(
+                0,
+                max(
+                    np.nanmax(_rank_freq(hist)) * 1.15,
+                    1 / hist.sizes["rank"] * 1.5,
+                ),
             )
 
-        plt.axvline(0, color="black", linestyle="--", linewidth=1, alpha=0.6)
-        plt.axhline(0, color="black", linestyle="--", linewidth=1, alpha=0.6)
+        fig.suptitle(
+            f"Monthly Rank Histogram of {var}\n({n_members} members)", fontsize=16
+        )
+        fig.supxlabel("Truth rank among ensemble members")
+        fig.supylabel("Relative frequency")
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
 
-        plt.title(f"Monthly rank histogram scores of {var}\n({n_members} members)")
-        plt.xlabel("Bias Score")
-        plt.ylabel("Dispersion Score")
-        plt.grid(alpha=0.3, linestyle="--")
-        plt.tight_layout()
-
-        plt.savefig(output_path / f"{var}" / "monthly_rank_scores.png")
+        plt.savefig(output_path / var / "monthly_rank_histogram.png")
         plt.close()
