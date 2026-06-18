@@ -4,15 +4,11 @@ Plotting utilities for ensemble forecast diagnostics and calibration.
 This module provides visualizations and summary diagnostics for evaluating
 ensemble forecast performance, including:
 
-- forecast metrics versus ensemble size
-- rank histograms (Talagrand diagrams)
-- monthly calibration summaries based on rank-histogram scores
+- rank histogram (Talagrand diagram)
+- monthly rank histogram
 
 Available diagnostics
 ---------------------
-Ensemble-size sensitivity
-    Shows how forecast metrics change as the number of ensemble members increases.
-
 Rank histogram
     Evaluates ensemble calibration by comparing the rank of observations relative to
     ensemble forecasts. Histograms are plotted as relative frequencies with a uniform-
@@ -90,7 +86,6 @@ def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
         Base output directory. Each figure is saved to ``<output_path>/<var>/rank_histogram.png``.
     """
     _require_dims(rank_histograms, {"rank"})
-    n_members = rank_histograms.sizes["rank"] - 1
 
     for i, (var, hist) in enumerate(rank_histograms.data_vars.items()):
         values = hist.values.astype(float)
@@ -99,9 +94,7 @@ def plot_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) -> None:
         _, ax = plt.subplots(figsize=(10, 6))
         _plot_rank_bars(ax, hist, color)
 
-        ax.set_title(
-            f"Rank histogram of {var}\n({int(np.nansum(values)):,} pts, {n_members} members)"
-        )
+        ax.set_title(f"Rank histogram of {var}\n({int(np.nansum(values)):,} pts)")
         ax.set_xlabel("Truth rank among ensemble members")
         ax.set_ylabel("Relative frequency")
         ax.legend()
@@ -131,7 +124,6 @@ def plot_monthly_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) 
     """
 
     _require_dims(rank_histograms, {"rank", "month"})
-    n_members = rank_histograms.sizes["rank"] - 1
 
     for i, var in enumerate(rank_histograms.data_vars):
         fig, axes = plt.subplots(3, 4, figsize=(16, 12))
@@ -151,9 +143,7 @@ def plot_monthly_rank_histogram(rank_histograms: xr.Dataset, output_path: Path) 
                 ),
             )
 
-        fig.suptitle(
-            f"Monthly Rank Histogram of {var}\n({n_members} members)", fontsize=16
-        )
+        fig.suptitle(f"Monthly Rank Histogram of {var}", fontsize=16)
         fig.supxlabel("Truth rank among ensemble members")
         fig.supylabel("Relative frequency")
         plt.tight_layout(rect=[0, 0, 1, 0.95])

@@ -1,10 +1,9 @@
 """
 Plotting utilities for CorDiff model evaluation.
 
-This package provides modular plotting helpers used throughout the
-evaluation and analysis pipeline. Functions are organized by purpose
-(e.g., metrics, distributions, samples, training) but re-exported here
-to present a clean public API.
+This package provides modular plotting helpers used throughout the evaluation and analysis
+pipeline. Functions are organized by purpose (e.g., metrics, distributions, samples, training)
+but re-exported here to present a clean public API.
 
 Typical usage:
     >>> import plot_helpers as ph
@@ -14,10 +13,10 @@ Submodules
 ----------
 - metrics       : Metric curves, tables, and ensemble comparisons
 - distributions : PDFs and value distributions
-- ensembles     : Ensemble-specific diagnostics
+- ensembles     : Rank histogram and monthly rank histogram
 - samples       : Spatial sample plots and error maps
 - training      : Training loss visualization
-- comparison    : Metrics comparison among experiments
+- comparison    : Metrics comparison among experiments inside group
 """
 
 from .metrics import (

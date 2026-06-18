@@ -57,8 +57,7 @@ def _select_time_and_ensemble(
         n_ensemble (int): Number of ensemble members to consider.
 
     Returns:
-        Dict[str, xr.Dataset]: A dictionary containing computed metrics, errors,
-        and flattened truth/prediction datasets.
+        A tuple containing truth and prediction datasets at the given time index.
     """
     truth, pred, _ = open_samples(filepath)
 

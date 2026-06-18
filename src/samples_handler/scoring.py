@@ -370,7 +370,7 @@ def _extract_top_samples_and_p90(
 # -----------------------------------------------------------------------------
 def score_samples(
     filepath: str, n_ensemble: int = 1, is_bcsd: bool = False
-) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
+) -> Tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset, dict]:
     """
     Compute evaluation metrics and diagnostics for all time steps in a sample dataset.
 
@@ -395,25 +395,26 @@ def score_samples(
     -------
     metrics : xr.Dataset
         Time-series dataset of computed evaluation metrics (e.g., RMSE, MAE, CRPS).
+    rank_histograms : xr.Dataset
+        Time-series dataset of rank histograms for each variable.
     error : xr.Dataset
         Spatial error fields for each time step.
     top_samples : dict
         Dictionary of top-N worst samples per metric and variable, including
         truth, prediction, and error maps.
     flats : tuple of xr.Dataset
-        Flattened truth and prediction values (points dimension), useful for PDFs and scatter plots.
+        Flattened truth and prediction values (points dimension) for PDFs and scatter plots.
     p90s : tuple of xr.Dataset
         Tuple of (truth_p90, pred_p90) decadal p90 grids computed over N-year windows.
 
     Notes
     -----
-    - This function may be computationally expensive for long time series or
-      large ensemble sizes.
+    - This function may be computationally expensive for long time series or large ensemble sizes.
     - For best performance, ensure datasets are properly chunked if using Dask.
     """
     print(
-        f"[{get_timestamp()}] score_samples: filepath={filepath}, "
-        f"n_ensemble={n_ensemble}, is_bcsd={is_bcsd}"
+        f"[{get_timestamp()}] score_samples{' BCSD' if is_bcsd else ''}: filepath={filepath}, "
+        f"n_ensemble={n_ensemble}"
     )
 
     # Process the data

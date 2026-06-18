@@ -5,9 +5,6 @@ This module provides helper functions for plotting training loss curves
 extracted from experiment logs (e.g., TensorBoard). It focuses on simple,
 clear visualizations with optional smoothing to highlight long-term
 training trends.
-
-Typical usage:
-    >>> plot_training_loss(wall_times, loss_values, Path("training_loss.png"))
 """
 
 from datetime import datetime
@@ -19,7 +16,9 @@ import matplotlib.pyplot as plt
 
 
 def plot_training_loss(
-    x_values: Union[List[datetime], List[int]], loss_values: List[float], output_file: Path
+    x_values: Union[List[datetime], List[int]],
+    loss_values: List[float],
+    output_file: Path,
 ) -> None:
     """
     Create a training loss plot with time on the x-axis and save it to a PNG file.
@@ -35,7 +34,9 @@ def plot_training_loss(
     )
 
     plt.figure(figsize=(10, 6))
-    plt.plot(x_values, loss_values, alpha=0.5, label="Raw Loss", color="gray", linewidth=1)
+    plt.plot(
+        x_values, loss_values, alpha=0.5, label="Raw Loss", color="gray", linewidth=1
+    )
     plt.plot(
         x_values[: len(smoothed_loss_values)],
         smoothed_loss_values,

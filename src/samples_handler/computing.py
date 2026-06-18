@@ -33,16 +33,9 @@ Prediction datasets:
 Design notes
 ------------
 - Spatial reductions are performed over (x, y).
-- Probabilistic metrics use only grid points with valid observations
-  and valid ensemble members.
+- Probabilistic metrics use only grid points with valid observations and valid ensemble members.
 - NaN handling is consistent across metrics and diagnostics.
 - Functions operate on in-memory xarray datasets and perform no I/O.
-
-Dependencies
-------------
-- numpy
-- xarray
-- xskillscore
 """
 
 from __future__ import annotations

@@ -109,10 +109,7 @@ def save_to_tsv(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
 
 
 def save_metric_table_and_plot(
-    ds: xr.Dataset,
-    metric: str,
-    output_path: Path,
-    number_format: str,
+    ds: xr.Dataset, metric: str, output_path: Path, number_format: str
 ) -> None:
     """Save TSV + plot for `metric` for the given dataset."""
     ds_filtered = ds.sel(metric=metric).drop_vars("metric")
