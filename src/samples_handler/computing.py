@@ -158,7 +158,7 @@ def compute_flattened_samples(
     Returns:
         tuple: Two xarray.Datasets, one for truth and one for prediction.
     """
-    truth_out, pred_out = {}, {}
+    truth_out, pred_out, coords = {}, {}, {}
 
     for var in truth.data_vars:
         if var not in pred:
@@ -171,11 +171,17 @@ def compute_flattened_samples(
             else pred[var].values.ravel()
         )
 
+        # Filter out NaNs and align truth and pred
         valid = np.isfinite(t) & np.isfinite(p)
-        truth_out[var] = ("points", t[valid])
-        pred_out[var] = ("points", p[valid])
+        t_valid, p_valid = t[valid], p[valid]
+
+        # Use per-variable dimension to avoid mismatched non-NaN sample sizes (e.g., BCSD data)
+        dim = f"points-{var}"
+        truth_out[var] = (dim, t_valid)
+        pred_out[var] = (dim, p_valid)
+        coords[dim] = np.arange(len(t_valid))
 
     return {
-        "truth_flat": xr.Dataset(truth_out),
-        "pred_flat": xr.Dataset(pred_out),
+        "truth_flat": xr.Dataset(truth_out, coords=coords),
+        "pred_flat": xr.Dataset(pred_out, coords=coords),
     }
