@@ -66,32 +66,29 @@ function generateExperimentGroupFiles(group) {
         files: makeFiles(k => (hasDecadal ? [`${k}/nyear_cmp.png`] : []))
     }];
 
-    if (group === "CropW") {
-        // Helper to build comparison files
-        const makeComparison = (label) => {
-            const suffix = label[0].toLowerCase();
-            return {
-                title: `[all] Comparison with ${label}`,
-                files: Object.fromEntries(
-                    vars
-                        .filter(k => suffix !== "b" || ["pr", "tas"].includes(k))
-                        .map(k => [
-                            k,
-                            [
-                                `${k}/mean_${suffix}_cmp.png`,
-                                `${k}/nyear_${suffix}1_cmp.png`,
-                                `${k}/nyear_${suffix}2_cmp.png`
-                            ]
-                        ])
-                )
-            };
-        };
+    // if (group === "CropW") {
+    //     // Helper to build comparison files
+    //     const makeComparison = (label) => {
+    //         const suffix = label[0].toLowerCase();
+    //         return {
+    //             title: `[all] Comparison with ${label}`,
+    //             files: Object.fromEntries(
+    //                 vars
+    //                     .filter(k => suffix !== "b" || ["pr", "tas"].includes(k))
+    //                     .map(k => [
+    //                         k,
+    //                         [
+    //                             `${k}/mean_${suffix}_cmp.png`,
+    //                             `${k}/nyear_${suffix}1_cmp.png`,
+    //                             `${k}/nyear_${suffix}2_cmp.png`
+    //                         ]
+    //                     ])
+    //             )
+    //         };
+    //     };
 
-        filesList.push(
-            // makeComparison("W*"),
-            makeComparison("BCSD-*")
-        );
-    }
+    //     filesList.push(makeComparison("BCSD-*"));
+    // }
 
     return filesList;
 }
@@ -104,7 +101,6 @@ function generateExperimentGroupFiles(group) {
  */
 function generateExperimentFiles(exp1, exp2) {
     const exps = [exp1, exp2].filter(Boolean);
-    const hasSSP = exps.some(e => e.startsWith("CropW"));
     const bothBCSD = exps.every(e => e.startsWith("BCSD"));
 
     // Overview files
@@ -131,7 +127,7 @@ function generateExperimentFiles(exp1, exp2) {
     ];
 
     // Create basic file groups
-    const showDecadal = hasSSP || exps.some(e => e.startsWith("BCSD")); /* W/CropW/BCSD only */
+    const showDecadal = exps.some(e => e.startsWith("BCSD")); /* W/CropW/BCSD only */
     const overviewGroup = (path) => ({
         overview: overviewFiles.map(file => `${path}/${file}`),
         monthly: buildMetricFiles("monthly_metrics").map(file => `${path}/${file}`),
@@ -146,12 +142,12 @@ function generateExperimentFiles(exp1, exp2) {
         const buildPath = (folder, file) => `${prefix}/${folder}/${file}`;
         const buildVarFiles = varName => [
             ...variableFiles.map(f => buildPath(varName, f)),
-            ...(hasSSP && ["pr", "tas"].includes(varName)
+            ...(showDecadal && ["pr", "tas"].includes(varName)
                 ? [buildPath(varName, "p90_by_nyear.png")]
                 : []),
-            ...(hasSSP && prefix === "all"
-                ? [buildPath(varName, "metrics_v_ensembles.png")]
-                : []),
+            // ...(hasSSP && prefix === "all"
+            //     ? [buildPath(varName, "metrics_v_ensembles.png")]
+            //     : []),
         ];
 
         return {
