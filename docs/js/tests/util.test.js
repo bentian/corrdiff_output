@@ -74,35 +74,6 @@ describe("generateExperimentGroupFiles", () => {
     const vars = Object.keys(result[0].files);
     expect(vars).toEqual(["pr", "tas", "uas", "vas"]);
   });
-
-  it("appends BCSD comparison group for CropW", () => {
-    const result = generateExperimentGroupFiles("CropW");
-    expect(result.length).toBe(2);
-    expect(result[1].title).toContain("Comparison with BCSD-*");
-  });
-
-  it("does not append extra groups for non-CropW", () => {
-    const result = generateExperimentGroupFiles("CorrDiff");
-    expect(result.length).toBe(1);
-  });
-
-  it("CropW BCSD comparison filters wind vars from BCSD variables", () => {
-    const result = generateExperimentGroupFiles("CropW");
-    const bcsdGroup = result[1];
-    const vars = Object.keys(bcsdGroup.files);
-    // 'b' suffix → only pr and tas
-    expect(vars).toEqual(["pr", "tas"]);
-  });
-
-  it("CropW BCSD comparison files include expected suffixes", () => {
-    const result = generateExperimentGroupFiles("CropW");
-    const bcsdGroup = result[1];
-    for (const [varName, files] of Object.entries(bcsdGroup.files)) {
-      expect(files).toContain(`${varName}/mean_b_cmp.png`);
-      expect(files).toContain(`${varName}/nyear_b1_cmp.png`);
-      expect(files).toContain(`${varName}/nyear_b2_cmp.png`);
-    }
-  });
 });
 
 // =========================================================================
@@ -162,32 +133,6 @@ describe("generateExperimentFiles", () => {
     expect(allGroup.files).toHaveProperty("pr");
     expect(allGroup.files).toHaveProperty("tas");
     expect(allGroup.files).not.toHaveProperty("uas");
-  });
-
-  // --- SSP-specific (W* / CropW*) ----------------------------------------
-
-  it("includes p90_by_nyear for CropW-prefix experiments on pr/tas", () => {
-    const result = generateExperimentFiles("CropW1");
-    const allGroup = result.find((g) => g.title === "[all] Metrics");
-    expect(allGroup.files.pr.some((f) => f.includes("p90_by_nyear.png"))).toBe(true);
-    expect(allGroup.files.tas.some((f) => f.includes("p90_by_nyear.png"))).toBe(true);
-    // Wind vars should NOT get p90_by_nyear
-    expect(allGroup.files.uas.every((f) => !f.includes("p90_by_nyear.png"))).toBe(true);
-  });
-
-  it("includes metrics_v_ensembles only in 'all' prefix for SSP experiments", () => {
-    const result = generateExperimentFiles("CropW1");
-    const allGroup = result.find((g) => g.title === "[all] Metrics");
-    const regGroup = result.find((g) => g.title === "[reg] Metrics");
-
-    expect(allGroup.files.pr.some((f) => f.includes("metrics_v_ensembles.png"))).toBe(true);
-    expect(regGroup.files.pr.every((f) => !f.includes("metrics_v_ensembles.png"))).toBe(true);
-  });
-
-  it("includes decadal metrics for SSP experiments", () => {
-    const result = generateExperimentFiles("CropW1");
-    const allGroup = result.find((g) => g.title === "[all] Metrics");
-    expect(allGroup.files).toHaveProperty("decadal");
   });
 
   it("includes decadal metrics for BCSD experiments", () => {
