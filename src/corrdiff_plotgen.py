@@ -40,6 +40,7 @@ from plot_helper import (
     plot_p90_by_nyear,
     plot_metrics_cnt,
     plot_top_samples,
+    plot_spread_vs_rmse,
     plot_metrics_vs_ensembles,
 )
 
@@ -87,7 +88,7 @@ def _plot_diagnostics(scored: tuple, output_path: Path) -> xr.Dataset:
     return metrics
 
 
-def _plot_metrics_vs_ensembles(
+def _score_and_plot_metrics_by_ensemble_size(
     nc_path: Path, metrics: xr.Dataset, output_path: Path
 ) -> None:
     """Plot metrics vs. number of ensembles."""
@@ -149,9 +150,12 @@ def process_model(
     )
     _save_overview(metrics, output_path)
 
-    # Plot metrics vs. # ensembles
-    if label == "all" and n_ensemble == 64:
-        _plot_metrics_vs_ensembles(nc_path, metrics, output_path)
+    # If model is 'all' and n_ensemble > 1, plot spread vs. RMSE for all variables
+    if label == "all" and n_ensemble > 1:
+        plot_spread_vs_rmse(metrics, n_ensemble, output_path)
+        # If n_ensemble == 64, also plot metrics vs. # ensembles trend
+        if n_ensemble == 64:
+            _score_and_plot_metrics_by_ensemble_size(nc_path, metrics, output_path)
 
     return metrics
 

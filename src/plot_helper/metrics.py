@@ -20,6 +20,8 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
+from .samples import COLOR_MAPS
+
 
 def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     """
@@ -64,6 +66,88 @@ def plot_metrics(ds: xr.Dataset, output_path: Path, number_format: str) -> None:
     plt.tight_layout()
     plt.savefig(output_path)
     plt.close()
+
+
+def plot_spread_vs_rmse(
+    ds: xr.Dataset,
+    n_ensemble: int,
+    output_path: Path
+) -> None:
+    """
+    Plot ensemble spread (STD_DEV) versus RMSE for each variable.
+
+    Each figure contains one scatter plot where each point represents one date,
+    along with a linear regression line and a 1:1 reference line.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset containing metrics with dimensions ``time`` and ``metric``.
+    n_ensemble : int
+        Number of ensemble members.
+    output_path : Path
+        Base output directory. Figures are saved to ``<output_path>/<var>/spread_vs_rmse.png``
+        for each forecast variable.
+    """
+    variables = list(ds.data_vars)
+
+    for i, var in enumerate(variables):
+        plt.figure(figsize=(8, 8))
+
+        rmse = ds[var].sel(metric="RMSE").values
+        spread = ds[var].sel(metric="STD_DEV").values
+        color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
+
+        # Remove NaN and Inf values
+        valid = np.isfinite(spread) & np.isfinite(rmse)
+        x = spread[valid]
+        y = rmse[valid]
+
+        # Scatter
+        plt.scatter(x, y, color=color, alpha=0.6)
+
+        # Linear regression and correlation
+        if len(x) >= 2 and np.ptp(x) > 0:
+            slope, intercept = np.polyfit(x, y, 1)
+            x_fit = np.linspace(x.min(), x.max(), 100)
+            y_fit = slope * x_fit + intercept
+            corr = np.corrcoef(x, y)[0, 1]
+
+            plt.plot(
+                x_fit,
+                y_fit,
+                color="black",
+                linewidth=2,
+                label=f"y = {slope:.3f}x "
+                f"{' + ' if intercept >= 0 else '-'} {abs(intercept):.3f}\n"
+                f"(r={corr:.2f})",
+            )
+
+        # 1:1 reference line
+        if len(x) > 0:
+            max_value = max(x.max(), y.max())
+
+            if max_value > 0:
+                plt.plot(
+                    [0, max_value],
+                    [0, max_value],
+                    color="black",
+                    linestyle="--",
+                    alpha=0.5
+                )
+
+                plt.xlim(0, max_value)
+                plt.ylim(0, max_value)
+
+        plt.xlabel("Ensemble spread (STD_DEV)")
+        plt.ylabel("RMSE")
+        plt.title(f"Ensemble spread vs. RMSE of {var}\n(ensemble={n_ensemble})")
+        plt.legend()
+        plt.grid(alpha=0.3, linestyle="--")
+        plt.tight_layout()
+
+        plt.savefig(output_path / var / "spread_vs_rmse.png")
+        plt.close()
 
 
 def plot_monthly_metrics(

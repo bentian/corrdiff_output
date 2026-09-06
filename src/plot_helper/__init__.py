@@ -21,6 +21,7 @@ Submodules
 
 from .metrics import (
     plot_metrics,
+    plot_spread_vs_rmse,
     plot_monthly_metrics,
     plot_nyear_metrics,
     plot_metrics_vs_ensembles,
@@ -33,6 +34,7 @@ from .comparison import plot_metrics_cmp, plot_nyear_metrics_cmp
 
 __all__ = [
     "plot_metrics",
+    "plot_spread_vs_rmse",
     "plot_monthly_metrics",
     "plot_nyear_metrics",
     "plot_metrics_vs_ensembles",
