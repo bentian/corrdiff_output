@@ -103,6 +103,10 @@ function generateExperimentFiles(exp1, exp2) {
     const exps = [exp1, exp2].filter(Boolean);
     const bothBCSD = exps.every(e => e.startsWith("BCSD"));
 
+    // TODO: Revise per experiment name
+    const hasMultipleEnsembles = false; // Whether the experiment has ensemble size > 1
+    const has64Ensembles = false;       // Whether the experiment has ensemble size = 64
+
     // Overview files
     const metrics = ["rmse", "mae", "corr", "crps", "std_dev", "ssr"];
     const exts = ["tsv", "png"];
@@ -145,9 +149,12 @@ function generateExperimentFiles(exp1, exp2) {
             ...(showDecadal && ["pr", "tas"].includes(varName)
                 ? [buildPath(varName, "p90_by_nyear.png")]
                 : []),
-            // ...(hasSSP && prefix === "all"
-            //     ? [buildPath(varName, "metrics_v_ensembles.png")]
-            //     : []),
+            ...(prefix === "all"
+                ? [
+                    ...(hasMultipleEnsembles ? [buildPath(varName, "spread_vs_rmse.png")] : []),
+                    ...(has64Ensembles ? [buildPath(varName, "metrics_v_ensembles.png")] : []),
+                ]
+                : []),
         ];
 
         return {
