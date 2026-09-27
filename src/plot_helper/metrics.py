@@ -93,18 +93,20 @@ def plot_spread_vs_rmse(
 
     for i, var in enumerate(variables):
         plt.figure(figsize=(8, 8))
-
-        rmse = ds[var].sel(metric="RMSE").values
-        spread = ds[var].sel(metric="STD_DEV").values
-        color = plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6)
+        x = ds[var].sel(metric="STD_DEV").values
+        y = ds[var].sel(metric="RMSE").values
 
         # Remove NaN and Inf values
-        valid = np.isfinite(spread) & np.isfinite(rmse)
-        x = spread[valid]
-        y = rmse[valid]
+        valid = np.isfinite(x) & np.isfinite(y)
+        x = x[valid]
+        y = y[valid]
 
         # Scatter
-        plt.scatter(x, y, color=color, alpha=0.6)
+        plt.scatter(
+            x, y,
+            color=plt.get_cmap(COLOR_MAPS[i % len(COLOR_MAPS)])(0.6),
+            alpha=0.6
+        )
 
         # Linear regression and correlation
         if len(x) >= 2 and np.ptp(x) > 0:
