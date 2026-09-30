@@ -13,6 +13,7 @@ This script orchestrates:
 from __future__ import annotations
 
 import argparse
+import gc
 from pathlib import Path
 from typing import Optional
 
@@ -73,17 +74,28 @@ def _plot_diagnostics(scored: tuple, output_path: Path) -> xr.Dataset:
     for var in spatial_error.data_vars.keys():
         ensure_directory_exists(output_path, var)
 
-    # Plots per variable
+    # Plots per variable — delete large intermediates after each use
     plot_pdf(*flats, output_path)
+    del flats
+
     plot_rank_histogram(rank_histograms.sum("time"), output_path)
     plot_monthly_rank_histogram(
         rank_histograms.groupby("time.month").sum(), output_path
     )
+    del rank_histograms
+
     plot_monthly_error(spatial_error, output_path)
+    del spatial_error
+
     plot_p90_by_nyear(*p90s, output_path)
+    del p90s
+
     for metric in ["MAE", "RMSE"]:
         plot_metrics_cnt(metrics, metric, output_path)
         plot_top_samples(top_samples, metric, output_path)
+    del top_samples
+
+    gc.collect()
 
     return metrics
 

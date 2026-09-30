@@ -53,6 +53,7 @@ for flexible downstream analysis and visualization.
 
 from __future__ import annotations
 
+import gc
 import multiprocessing
 from functools import partial
 from typing import Iterable, Dict, List, Tuple, Callable, Optional
@@ -81,7 +82,8 @@ NTH_PERCENTILE = 90  # N-th percentile value to compute 2D grids per period
 # Top samples
 # -----------------------------------------------------------------------------
 def _extract_top_samples(
-    truth: xr.Dataset, pred_mean: xr.Dataset, metrics_ds: xr.Dataset, metric: str
+    truth: xr.Dataset, pred: xr.Dataset, n_ensemble: int,
+    metrics_ds: xr.Dataset, metric: str,
 ) -> dict:
     """
     Extracts truth and pred data for selected times based on a given metric,
@@ -89,7 +91,9 @@ def _extract_top_samples(
 
     Parameters:
     - truth (xarray.Dataset): The ground truth dataset.
-    - pred_mean (xarray.Dataset): The dataset of prediction mean on ensembles
+    - pred (xarray.Dataset): The prediction dataset (ensemble-mean is computed internally
+        for only the selected top-N time steps).
+    - n_ensemble (int): Number of ensemble members to use.
     - metrics_ds (xarray.Dataset): Dataset containing top date selections.
     - metric (str): The metric to use for selecting top dates (e.g., "RMSE").
 
@@ -110,7 +114,10 @@ def _extract_top_samples(
         times = np.array(top.index, dtype="datetime64[ns]")
 
         t = truth[var].sel(time=times).load()
-        p = pred_mean[var].sel(time=times).load()
+        p_sel = pred[var].sel(time=times)
+        if "ensemble" in p_sel.dims:
+            p_sel = p_sel.isel(ensemble=slice(0, n_ensemble)).mean("ensemble", skipna=True)
+        p = p_sel.load()
 
         abs_error = compute_abs_difference(t, p)
         error = abs_error if metric == "MAE" else abs_error**2
@@ -131,15 +138,19 @@ def _extract_top_samples(
 # P90 grids
 # -----------------------------------------------------------------------------
 def _window_time_quantile_2d(
-    truth: xr.Dataset, pred_mean: xr.Dataset, start: pd.Timestamp, end: pd.Timestamp
+    truth: xr.Dataset, pred: xr.Dataset, n_ensemble: int,
+    start: pd.Timestamp, end: pd.Timestamp,
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute per-variable time-quantile (e.g., p90) 2D fields over a fixed time window.
 
     For the interval [start, end), this function:
-      1) selects the corresponding time slice from `truth` and `pred`
-      2) reduces `pred` by ensemble mean if an ``ensemble`` dimension is present
-      3) computes the q01-th quantile over the ``time`` dimension for each variable
+      1) selects the corresponding time slice from ``truth`` and ``pred``
+      2) reduces ``pred`` by ensemble mean over the window only (if present)
+      3) computes the q-th quantile over the ``time`` dimension for each variable
+
+    Truth and prediction windows are processed **sequentially** so that at
+    most one full window is resident in memory at a time.
 
     The result for each variable is a 2D field (y, x).
 
@@ -152,8 +163,12 @@ def _window_time_quantile_2d(
 
     Parameters
     ----------
-    truth, pred_mean : xr.Dataset
+    truth : xr.Dataset
         Dataset with variables shaped (time, y, x).
+    pred : xr.Dataset
+        Dataset with variables shaped ([ensemble,] time, y, x).
+    n_ensemble : int
+        Number of ensemble members to use for the prediction mean.
     start : pd.Timestamp
         Inclusive start of the time window.
     end : pd.Timestamp
@@ -163,7 +178,7 @@ def _window_time_quantile_2d(
     -------
     (truth_q, pred_q) : Tuple[xr.Dataset, xr.Dataset]
         Two datasets containing per-variable quantile fields with dims (y, x).
-        Variable names match those in `truth`.
+        Variable names match those in ``truth``.
     """
     q01 = (
         NTH_PERCENTILE / 100
@@ -172,17 +187,28 @@ def _window_time_quantile_2d(
 
     # Use end - 1ns to mimic [start, end) given slice end is inclusive in label-based selection.
     sel_end = end - pd.Timedelta("1ns")
-    truth_w = truth[var_names].sel(time=slice(start, sel_end))
-    pred_w = pred_mean[var_names].sel(time=slice(start, sel_end))
 
-    return (
-        truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
-        pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True),
-    )
+    # --- truth: load window, compute quantile, free ---
+    truth_w = truth[var_names].sel(time=slice(start, sel_end)).load()
+    truth_q = truth_w.quantile(q01, "time", skipna=True).squeeze(drop=True)
+    del truth_w
+
+    # --- pred: select window, ensemble-mean, compute quantile, free ---
+    pred_w = pred[var_names].sel(time=slice(start, sel_end))
+    if "ensemble" in pred_w.dims:
+        pred_w = pred_w.isel(ensemble=slice(0, n_ensemble)).mean(
+            "ensemble", skipna=True
+        )
+    pred_w = pred_w.load()
+    pred_q = pred_w.quantile(q01, "time", skipna=True).squeeze(drop=True)
+    del pred_w
+
+    gc.collect()
+    return truth_q, pred_q
 
 
 def p90_by_nyear_period(
-    truth: xr.Dataset, pred_mean: xr.Dataset
+    truth: xr.Dataset, pred: xr.Dataset, n_ensemble: int,
 ) -> Tuple[xr.Dataset, xr.Dataset]:
     """
     Compute two 2D percentile datasets (y, x):
@@ -191,15 +217,17 @@ def p90_by_nyear_period(
 
     Requirements enforced:
       - returns TWO datasets: (truth_pXX_ds, pred_pXX_ds)
-      - uses a time window of `years` (default 10)
+      - uses a time window of ``N_YEARS``
 
     Assumes your layouts:
       truth[var]: (time, y, x)
-      pred_mean[var]: (time, y, x)
+      pred[var]:  ([ensemble,] time, y, x)
 
     Parameters
     ----------
-    truth, pred_mean : xr.Dataset
+    truth : xr.Dataset
+    pred : xr.Dataset
+    n_ensemble : int
 
     Returns
     -------
@@ -207,7 +235,7 @@ def p90_by_nyear_period(
         Each dataset has variables for each requested var, dims (y, x).
         Variable names are the same as input variable names.
     """
-    if "time" not in truth.dims or "time" not in pred_mean.dims:
+    if "time" not in truth.dims or "time" not in pred.dims:
         raise ValueError("Both truth and pred must have a 'time' dimension")
 
     start = pd.to_datetime(truth.time.min().item())
@@ -218,7 +246,7 @@ def p90_by_nyear_period(
     while start <= tmax:
         end = start + pd.DateOffset(years=N_YEARS)
 
-        t_blk, p_blk = _window_time_quantile_2d(truth, pred_mean, start, end)
+        t_blk, p_blk = _window_time_quantile_2d(truth, pred, n_ensemble, start, end)
         truth_blocks.append(t_blk)
         pred_blocks.append(p_blk)
 
@@ -348,21 +376,22 @@ def _extract_top_samples_and_p90(
     var_mapping: dict[str, str],
     n_ensemble: int,
 ) -> Tuple[dict, Tuple[xr.Dataset, xr.Dataset]]:
-    """Extract top samples and p90 grids from full truth/pred datasets."""
-    truth_m = truth.rename(var_mapping)
-    pred_mean = (
-        pred.isel(ensemble=slice(0, n_ensemble))
-        .mean("ensemble", skipna=True)
-        .rename(var_mapping)
-    )
+    """Extract top samples and p90 grids from full truth/pred datasets.
 
-    return (
-        {
-            metric: _extract_top_samples(truth_m, pred_mean, metrics, metric)
-            for metric in ("MAE", "RMSE")
-        },
-        p90_by_nyear_period(truth_m, pred_mean),
-    )
+    Ensemble-mean is deferred to each sub-function so that only the
+    required time slices are loaded into memory at any given time.
+    """
+    # Lazy renames — no data is loaded here
+    truth_m = truth.rename(var_mapping)
+    pred_m = pred.rename(var_mapping)
+
+    top_samples = {
+        metric: _extract_top_samples(truth_m, pred_m, n_ensemble, metrics, metric)
+        for metric in ("MAE", "RMSE")
+    }
+    p90s = p90_by_nyear_period(truth_m, pred_m, n_ensemble)
+
+    return top_samples, p90s
 
 
 # -----------------------------------------------------------------------------
@@ -425,13 +454,21 @@ def score_samples(
     )
     var_mapping = _get_var_mapping(is_bcsd)
 
-    # Aggregate the results
+    # Aggregate per-time-step results from multiprocessing workers
     metrics, rank_histograms, error, flats = _aggregate_results(
         results, var_mapping, n_ensemble
     )
+    del results  # free per-time-step dicts
+
+    # Extract top samples and p90 grids (loads only needed time slices)
     top_samples, p90s = _extract_top_samples_and_p90(
         truth, pred, metrics, var_mapping, n_ensemble
     )
+
+    # Release file-backed datasets and reclaim memory
+    truth.close()
+    pred.close()
+    gc.collect()
 
     print(f"[{get_timestamp()}] score_samples completed")
 
@@ -459,8 +496,11 @@ def score_samples_multi_ensemble(
     )
 
     truth, _, _ = open_samples(filepath)
+    n_time = truth.sizes["time"]
+    truth.close()
+
     results = _run_over_time(
-        truth.sizes["time"],
+        n_time,
         partial(
             process_sample_multi_ensemble, filepath=filepath, n_ensembles=n_ensembles
         ),
